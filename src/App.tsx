@@ -14,6 +14,13 @@ import AuditInfectionControlNew from "./pages/AuditInfectionControlNew.tsx";
 import AuditDispenserNew from "./pages/AuditDispenserNew.tsx";
 import AuditCTINew from "./pages/AuditCTINew.tsx";
 import AuditAntibiogramNew from "./pages/AuditAntibiogramNew.tsx";
+import DashboardBundles from "./pages/DashboardBundles.tsx";
+import DashboardInfectionControl from "./pages/DashboardInfectionControl.tsx";
+import DashboardHygiene from "./pages/DashboardHygiene.tsx";
+import DashboardDispenser from "./pages/DashboardDispenser.tsx";
+import DashboardStructure from "./pages/DashboardStructure.tsx";
+import DashboardPrecautions from "./pages/DashboardPrecautions.tsx";
+import DashboardAntimicrobials from "./pages/DashboardAntimicrobials.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -40,6 +47,13 @@ const App = () => (
             <Route path="/audits/dispenser/new" element={<AuditDispenserNew />} />
             <Route path="/audits/infrastructure/cti/new" element={<AuditCTINew />} />
             <Route path="/audits/antimicrobial-sensitivity/new" element={<AuditAntibiogramNew />} />
+            <Route path="/dashboard/bundles-compliance" element={<DashboardBundles />} />
+            <Route path="/dashboard/infection-control" element={<DashboardInfectionControl />} />
+            <Route path="/hygiene/monitoring" element={<DashboardHygiene />} />
+            <Route path="/dashboard/dispenser" element={<DashboardDispenser />} />
+            <Route path="/dashboard/structure" element={<DashboardStructure />} />
+            <Route path="/precautions/monitoring" element={<DashboardPrecautions />} />
+            <Route path="/antimicrobials/monitoring" element={<DashboardAntimicrobials />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
