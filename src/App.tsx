@@ -11,6 +11,9 @@ import Dashboard from "./pages/Dashboard.tsx";
 import AuditBundlesNew from "./pages/AuditBundlesNew.tsx";
 import AuditHandHygieneNew from "./pages/AuditHandHygieneNew.tsx";
 import AuditInfectionControlNew from "./pages/AuditInfectionControlNew.tsx";
+import AuditDispenserNew from "./pages/AuditDispenserNew.tsx";
+import AuditCTINew from "./pages/AuditCTINew.tsx";
+import AuditAntibiogramNew from "./pages/AuditAntibiogramNew.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
