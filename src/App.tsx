@@ -25,6 +25,8 @@ import DashboardDispenser from "./pages/DashboardDispenser.tsx";
 import DashboardStructure from "./pages/DashboardStructure.tsx";
 import DashboardPrecautions from "./pages/DashboardPrecautions.tsx";
 import DashboardAntimicrobials from "./pages/DashboardAntimicrobials.tsx";
+import ReportsAnalytics from "./pages/ReportsAnalytics.tsx";
+import Forms from "./pages/Forms.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -62,6 +64,8 @@ const App = () => (
             <Route path="/cases/investigation" element={<CasesInvestigation />} />
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/laboratory-results" element={<LaboratoryResults />} />
+            <Route path="/reports/analytics" element={<ReportsAnalytics />} />
+            <Route path="/forms" element={<Forms />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
