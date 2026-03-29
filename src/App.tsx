@@ -28,6 +28,10 @@ import DashboardAntimicrobials from "./pages/DashboardAntimicrobials.tsx";
 import ReportsAnalytics from "./pages/ReportsAnalytics.tsx";
 import Forms from "./pages/Forms.tsx";
 import PatientsMonitoring from "./pages/PatientsMonitoring.tsx";
+import AdminSettings from "./pages/AdminSettings.tsx";
+import CRM from "./pages/CRM.tsx";
+import Marketplace from "./pages/Marketplace.tsx";
+import UserProfile from "./pages/UserProfile.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -68,6 +72,10 @@ const App = () => (
             <Route path="/reports/analytics" element={<ReportsAnalytics />} />
             <Route path="/forms" element={<Forms />} />
             <Route path="/patients/monitoring" element={<PatientsMonitoring />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/crm" element={<CRM />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/settings/profile" element={<UserProfile />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
