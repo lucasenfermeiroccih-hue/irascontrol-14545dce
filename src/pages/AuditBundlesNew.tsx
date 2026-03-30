@@ -71,14 +71,20 @@ export default function AuditBundlesNew() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Auditoria de Bundles CVC/SVD</h1>
-          <p className="text-muted-foreground text-sm">Registro de conformidade de protocolos de cateter</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Auditoria de Bundles CVC/SVD</h1>
+            <p className="text-muted-foreground text-sm">Registro de conformidade de protocolos de cateter</p>
+          </div>
         </div>
+        <Button variant="outline" className="gap-2" onClick={() => navigate("/dashboard/bundles-compliance")}>
+          <BarChart3 className="h-4 w-4" />
+          <span className="hidden sm:inline">Ver Dashboard</span>
+        </Button>
       </div>
 
       {/* Identificação */}
