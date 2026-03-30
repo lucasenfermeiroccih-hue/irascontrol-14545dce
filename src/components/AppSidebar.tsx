@@ -86,8 +86,8 @@ const navSections = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const location = useLocation();
 
   return (
@@ -108,7 +108,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={location.pathname === item.url}>
                       <NavLink to={item.url} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                        <item.icon className="mr-2 h-4 w-4" />
+                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
