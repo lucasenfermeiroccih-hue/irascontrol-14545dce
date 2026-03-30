@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Activity } from "lucide-react";
+import { ArrowLeft, Save, Activity, BarChart3, CheckCircle, XCircle } from "lucide-react";
 
 const sectors = ["UTI Adulto", "UTI Neonatal", "UTI Pediátrica", "Clínica Médica", "Clínica Cirúrgica", "Pronto Socorro"];
 const months = [
