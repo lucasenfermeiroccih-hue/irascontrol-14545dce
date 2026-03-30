@@ -243,6 +243,31 @@ export default function AuditCTINew() {
         })}
       </Accordion>
 
+      {/* Resumo dos Indicadores */}
+      <Card>
+        <CardHeader><CardTitle className="text-lg">Resumo da Auditoria</CardTitle><CardDescription>Prévia dos indicadores antes do fechamento</CardDescription></CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Conformidade</p>
+            <p className="text-2xl font-bold" style={{ color: stats.rate >= 80 ? "hsl(var(--success))" : stats.rate >= 50 ? "hsl(var(--warning))" : "hsl(var(--destructive))" }}>
+              {stats.rate.toFixed(1)}%
+            </p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Conformes</p>
+            <p className="text-2xl font-bold text-success">{stats.conformes}</p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Não Conformes</p>
+            <p className="text-2xl font-bold text-destructive">{stats.naoConformes}</p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Progresso</p>
+            <p className="text-2xl font-bold">{stats.answered}/{allItems.length}</p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Separator />
 
       <div className="flex justify-end gap-3">
