@@ -199,6 +199,46 @@ export default function AuditBundlesNew() {
         </CardContent>
       </Card>
 
+      {/* Resumo dos Indicadores */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Resumo da Auditoria</CardTitle>
+          <CardDescription>Prévia dos indicadores antes do fechamento</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Adesão CVC</p>
+            <p className="text-2xl font-bold" style={{ color: cvcRate >= 80 ? "hsl(var(--success))" : cvcRate >= 50 ? "hsl(var(--warning))" : "hsl(var(--destructive))" }}>
+              {cvcRate.toFixed(1)}%
+            </p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <p className="text-xs text-muted-foreground">Adesão SVD</p>
+            <p className="text-2xl font-bold" style={{ color: svdRate >= 80 ? "hsl(var(--success))" : svdRate >= 50 ? "hsl(var(--warning))" : "hsl(var(--destructive))" }}>
+              {svdRate.toFixed(1)}%
+            </p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <CheckCircle className="h-4 w-4 text-success" />
+              <p className="text-xs text-muted-foreground">Conformes</p>
+            </div>
+            <p className="text-2xl font-bold text-success">
+              {Number(form.cvcCompleteBundles || 0) + Number(form.svdCompleteBundles || 0)}
+            </p>
+          </div>
+          <div className="text-center p-3 rounded-lg border">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <XCircle className="h-4 w-4 text-destructive" />
+              <p className="text-xs text-muted-foreground">Inconformes</p>
+            </div>
+            <p className="text-2xl font-bold text-destructive">
+              {Number(form.cvcIncompleteBundles || 0) + Number(form.svdIncompleteBundles || 0)}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Separator />
 
       <div className="flex justify-end gap-3">
