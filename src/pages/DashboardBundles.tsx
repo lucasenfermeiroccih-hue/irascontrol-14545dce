@@ -108,7 +108,7 @@ export default function DashboardBundles() {
         <CardContent>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis domain={[60, 100]} tick={{ fontSize: 11 }} />
               <Tooltip />
