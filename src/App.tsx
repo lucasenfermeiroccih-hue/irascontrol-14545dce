@@ -34,6 +34,7 @@ import Marketplace from "./pages/Marketplace.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
 import SuperAdmin from "./pages/SuperAdmin.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
+import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
