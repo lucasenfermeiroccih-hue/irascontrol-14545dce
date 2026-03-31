@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Loader2, Building2, UserPlus, ArrowLeft, ArrowRight, CheckCircle } from "lucide-react";
+import { Shield, Loader2, Building2, UserPlus, ArrowLeft, ArrowRight, CheckCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
