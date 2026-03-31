@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Loader2, CheckCircle } from "lucide-react";
+import { Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,32 +50,9 @@ export default function Register() {
       return;
     }
 
-    setSuccess(true);
+    toast.success("Conta criada com sucesso!");
+    navigate("/dashboard");
   };
-
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
-              <CheckCircle className="h-16 w-16 text-primary" />
-            </div>
-            <CardTitle className="text-xl">Verifique seu e-mail</CardTitle>
-            <CardDescription className="mt-2">
-              Enviamos um link de confirmação para <strong>{email}</strong>. 
-              Clique no link para ativar sua conta.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center">
-            <Link to="/login" className="text-sm text-primary hover:underline">
-              Voltar ao login
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-8">
