@@ -13,15 +13,16 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const json = (body: unknown, status = 200) =>
+  // Always return 200 with { success, error } so supabase.functions.invoke gets the body
+  const json = (body: unknown) =>
     new Response(JSON.stringify(body), {
-      status,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Missing authorization" }, 401);
+    if (!authHeader) return json({ success: false, error: "Missing authorization" });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) return json({ error: "Unauthorized" }, 401);
+    if (!caller) return json({ success: false, error: "Unauthorized" });
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
@@ -47,21 +48,22 @@ Deno.serve(async (req) => {
     const isHospitalAdmin = roles.includes("hospital_admin");
 
     if (!isSuperAdmin && !isHospitalAdmin) {
-      return json({ error: "Forbidden: hospital_admin or super_admin required" }, 403);
+      return json({ success: false, error: "Forbidden: hospital_admin or super_admin required" });
     }
 
     // 3. Parse request body
     const { email, full_name, phone, hospital_id, role } = await req.json();
 
     if (!email || !full_name || !hospital_id || !role) {
-      return json({ error: "Missing required fields: email, full_name, hospital_id, role" }, 400);
+      return json({ success: false, error: "Preencha todos os campos obrigatórios: nome, e-mail, hospital e perfil" });
     }
 
-    // 4. Validate role — hospital_admin cannot assign super_admin or hospital_admin
+    // 4. Validate role
     if (!isSuperAdmin && !ALLOWED_ROLES.includes(role)) {
       return json({
-        error: `Forbidden: hospital_admin can only assign roles: ${ALLOWED_ROLES.join(", ")}`,
-      }, 403);
+        success: false,
+        error: `Perfil não permitido. Perfis válidos: ${ALLOWED_ROLES.join(", ")}`,
+      });
     }
 
     // 5. Verify caller belongs to the target hospital (skip for super_admin)
@@ -74,7 +76,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!membership) {
-        return json({ error: "Forbidden: you do not belong to this hospital" }, 403);
+        return json({ success: false, error: "Você não pertence a este hospital" });
       }
     }
 
@@ -85,33 +87,66 @@ Deno.serve(async (req) => {
       .eq("id", hospital_id)
       .maybeSingle();
 
-    if (!hospital) return json({ error: "Hospital not found" }, 404);
+    if (!hospital) return json({ success: false, error: "Hospital não encontrado" });
     if (hospital.status !== "active") {
-      return json({ error: "Hospital is not active" }, 400);
+      return json({ success: false, error: "Hospital não está ativo" });
     }
 
-    // 7. Create the user
-    const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { full_name, phone: phone || null },
-    });
+    // 7. Check if user with this email already exists
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase()
+    );
 
-    if (createError) {
-      return json({ error: createError.message }, 400);
+    let userId: string;
+
+    if (existingUser) {
+      // Check if already linked to this hospital
+      const { data: existingLink } = await adminClient
+        .from("hospital_users")
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .eq("hospital_id", hospital_id)
+        .maybeSingle();
+
+      if (existingLink) {
+        return json({ success: false, error: "Este e-mail já está cadastrado neste hospital" });
+      }
+
+      userId = existingUser.id;
+    } else {
+      // Create the user
+      const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { full_name, phone: phone || null },
+      });
+
+      if (createError) {
+        return json({ success: false, error: `Erro ao criar usuário: ${createError.message}` });
+      }
+      userId = newUser.user.id;
     }
 
-    const userId = newUser.user.id;
-
-    // 8. Assign role
-    const { error: roleError } = await adminClient
+    // 8. Assign role (check if already has this role)
+    const { data: existingRole } = await adminClient
       .from("user_roles")
-      .insert({ user_id: userId, role });
+      .select("id")
+      .eq("user_id", userId)
+      .eq("role", role)
+      .maybeSingle();
 
-    if (roleError) {
-      // Rollback: delete the created user
-      await adminClient.auth.admin.deleteUser(userId);
-      return json({ error: `Failed to assign role: ${roleError.message}` }, 500);
+    if (!existingRole) {
+      const { error: roleError } = await adminClient
+        .from("user_roles")
+        .insert({ user_id: userId, role });
+
+      if (roleError) {
+        if (!existingUser) {
+          await adminClient.auth.admin.deleteUser(userId);
+        }
+        return json({ success: false, error: `Erro ao atribuir perfil: ${roleError.message}` });
+      }
     }
 
     // 9. Link user to hospital
@@ -120,13 +155,30 @@ Deno.serve(async (req) => {
       .insert({ hospital_id, user_id: userId, is_primary_admin: false });
 
     if (linkError) {
-      // Rollback
-      await adminClient.from("user_roles").delete().eq("user_id", userId);
-      await adminClient.auth.admin.deleteUser(userId);
-      return json({ error: `Failed to link user to hospital: ${linkError.message}` }, 500);
+      if (!existingUser) {
+        await adminClient.from("user_roles").delete().eq("user_id", userId);
+        await adminClient.auth.admin.deleteUser(userId);
+      }
+      return json({ success: false, error: `Erro ao vincular usuário ao hospital: ${linkError.message}` });
     }
 
-    // 10. Generate magic link so user can set password
+    // 10. Ensure profile exists
+    const { data: existingProfile } = await adminClient
+      .from("profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      await adminClient.from("profiles").insert({
+        user_id: userId,
+        full_name,
+        email,
+        phone: phone || null,
+      });
+    }
+
+    // 11. Generate magic link
     const { data: linkData } = await adminClient.auth.admin.generateLink({
       type: "magiclink",
       email,
@@ -138,6 +190,6 @@ Deno.serve(async (req) => {
       magic_link: linkData?.properties?.action_link || null,
     });
   } catch (err) {
-    return json({ error: err.message }, 500);
+    return json({ success: false, error: err.message || "Erro interno do servidor" });
   }
 });
