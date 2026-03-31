@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Stethoscope, Search, Users, AlertTriangle, ShieldCheck, Clock, Activity, Thermometer, Pill, FileText } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Stethoscope, Search, Users, AlertTriangle, ShieldCheck, Clock, Activity, Thermometer, Pill, FileText, Plus, Pencil } from "lucide-react";
+import { toast } from "sonner";
 
 type PatientStatus = "internado" | "isolamento" | "alta" | "óbito" | "transferido";
 type RiskLevel = "crítico" | "alto" | "moderado" | "baixo";
@@ -30,7 +33,7 @@ interface Patient {
   notes: string;
 }
 
-const mockPatients: Patient[] = [
+const initialPatients: Patient[] = [
   { id: "1", name: "Maria Silva", record: "PRO-2026-001", sector: "UTI Adulto", bed: "L-01", admissionDate: "2026-03-15", status: "internado", risk: "crítico", infection: "IPCS-CVC", devices: ["CVC", "SVD", "VM"], antibiotics: ["Meropenem", "Vancomicina"], daysHospitalized: 14, temperature: 38.5, notes: "Hemocultura positiva para KPC. Isolamento de contato." },
   { id: "2", name: "João Santos", record: "PRO-2026-002", sector: "UTI Adulto", bed: "L-03", admissionDate: "2026-03-20", status: "internado", risk: "alto", infection: "PAV", devices: ["TOT", "CVC", "SVD"], antibiotics: ["Piperacilina/Tazobactam"], daysHospitalized: 9, temperature: 37.8, notes: "Em desmame ventilatório. Cultura de aspirado traqueal pendente." },
   { id: "3", name: "Ana Oliveira", record: "PRO-2026-003", sector: "UTI Neonatal", bed: "INC-05", admissionDate: "2026-03-22", status: "internado", risk: "alto", infection: "IPCS-CVC", devices: ["PICC", "CPAP"], antibiotics: ["Oxacilina", "Amicacina"], daysHospitalized: 7, temperature: 37.2, notes: "RNPT 32 semanas. PICC em MSE." },
@@ -61,16 +64,30 @@ const riskConfig: Record<RiskLevel, { label: string; color: string; value: numbe
 };
 
 const sectors = ["Todos", "UTI Adulto", "UTI Neonatal", "Clínica Médica", "Cirúrgica", "Emergência"];
+const sectorOptions = ["UTI Adulto", "UTI Neonatal", "Clínica Médica", "Cirúrgica", "Emergência"];
 const statuses: PatientStatus[] = ["internado", "isolamento", "alta", "óbito", "transferido"];
+const riskLevels: RiskLevel[] = ["crítico", "alto", "moderado", "baixo"];
+
+const emptyForm = {
+  name: "", record: "", sector: "UTI Adulto", bed: "", admissionDate: "",
+  status: "internado" as PatientStatus, risk: "baixo" as RiskLevel,
+  infection: "", devices: "", antibiotics: "", temperature: "36.5", notes: "",
+};
 
 export default function PatientsMonitoring() {
+  const [patients, setPatients] = useState<Patient[]>(initialPatients);
   const [search, setSearch] = useState("");
   const [sectorFilter, setSectorFilter] = useState("Todos");
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [riskFilter, setRiskFilter] = useState("Todos");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-  const filtered = mockPatients.filter((p) => {
+  // Form dialog state
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const filtered = patients.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.record.toLowerCase().includes(search.toLowerCase());
     const matchSector = sectorFilter === "Todos" || p.sector === sectorFilter;
     const matchStatus = statusFilter === "Todos" || p.status === statusFilter;
@@ -78,19 +95,93 @@ export default function PatientsMonitoring() {
     return matchSearch && matchSector && matchStatus && matchRisk;
   });
 
-  const activePatients = mockPatients.filter((p) => p.status === "internado" || p.status === "isolamento");
-  const criticalCount = mockPatients.filter((p) => p.risk === "crítico" && p.status !== "alta").length;
-  const isolationCount = mockPatients.filter((p) => p.status === "isolamento").length;
-  const withInfection = mockPatients.filter((p) => p.infection && p.status !== "alta").length;
+  const activePatients = patients.filter((p) => p.status === "internado" || p.status === "isolamento");
+  const criticalCount = patients.filter((p) => p.risk === "crítico" && p.status !== "alta").length;
+  const isolationCount = patients.filter((p) => p.status === "isolamento").length;
+  const withInfection = patients.filter((p) => p.infection && p.status !== "alta").length;
+
+  const openNewForm = () => {
+    setEditingPatient(null);
+    setForm(emptyForm);
+    setFormOpen(true);
+  };
+
+  const openEditForm = (patient: Patient) => {
+    setEditingPatient(patient);
+    setForm({
+      name: patient.name,
+      record: patient.record,
+      sector: patient.sector,
+      bed: patient.bed,
+      admissionDate: patient.admissionDate,
+      status: patient.status,
+      risk: patient.risk,
+      infection: patient.infection || "",
+      devices: patient.devices.join(", "),
+      antibiotics: patient.antibiotics.join(", "),
+      temperature: String(patient.temperature),
+      notes: patient.notes,
+    });
+    setSelectedPatient(null);
+    setFormOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.name.trim() || !form.record.trim()) {
+      toast.error("Nome e prontuário são obrigatórios.");
+      return;
+    }
+
+    const devicesArr = form.devices ? form.devices.split(",").map((d) => d.trim()).filter(Boolean) : [];
+    const antibioticsArr = form.antibiotics ? form.antibiotics.split(",").map((a) => a.trim()).filter(Boolean) : [];
+    const temp = parseFloat(form.temperature) || 36.5;
+
+    if (editingPatient) {
+      setPatients((prev) =>
+        prev.map((p) =>
+          p.id === editingPatient.id
+            ? { ...p, name: form.name, record: form.record, sector: form.sector, bed: form.bed, admissionDate: form.admissionDate, status: form.status, risk: form.risk, infection: form.infection || null, devices: devicesArr, antibiotics: antibioticsArr, temperature: temp, notes: form.notes }
+            : p
+        )
+      );
+      toast.success("Paciente atualizado com sucesso!");
+    } else {
+      const newPatient: Patient = {
+        id: String(Date.now()),
+        name: form.name,
+        record: form.record,
+        sector: form.sector,
+        bed: form.bed,
+        admissionDate: form.admissionDate || new Date().toISOString().slice(0, 10),
+        status: form.status,
+        risk: form.risk,
+        infection: form.infection || null,
+        devices: devicesArr,
+        antibiotics: antibioticsArr,
+        daysHospitalized: 0,
+        temperature: temp,
+        notes: form.notes,
+      };
+      setPatients((prev) => [newPatient, ...prev]);
+      toast.success("Paciente cadastrado com sucesso!");
+    }
+    setFormOpen(false);
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex items-center gap-3">
-        <Stethoscope className="h-7 w-7 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Monitoramento de Pacientes</h1>
-          <p className="text-sm text-muted-foreground">Vigilância epidemiológica e acompanhamento de pacientes</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Stethoscope className="h-7 w-7 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Monitoramento de Pacientes</h1>
+            <p className="text-sm text-muted-foreground">Vigilância epidemiológica e acompanhamento de pacientes</p>
+          </div>
         </div>
+        <Button onClick={openNewForm} className="gap-2">
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Cadastrar Paciente</span>
+        </Button>
       </div>
 
       {/* KPIs */}
@@ -156,7 +247,7 @@ export default function PatientsMonitoring() {
               <SelectTrigger className="w-full md:w-[150px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Todos">Todos Riscos</SelectItem>
-                {(["crítico", "alto", "moderado", "baixo"] as RiskLevel[]).map((r) => <SelectItem key={r} value={r}>{riskConfig[r].label}</SelectItem>)}
+                {riskLevels.map((r) => <SelectItem key={r} value={r}>{riskConfig[r].label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -231,6 +322,13 @@ export default function PatientsMonitoring() {
                 </DialogTitle>
                 <DialogDescription>Prontuário: {selectedPatient.record} | Admissão: {selectedPatient.admissionDate}</DialogDescription>
               </DialogHeader>
+
+              <div className="flex justify-end -mt-2">
+                <Button size="sm" variant="outline" className="gap-2" onClick={() => openEditForm(selectedPatient)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Editar Paciente
+                </Button>
+              </div>
 
               <Tabs defaultValue="geral" className="mt-2">
                 <TabsList className="w-full grid grid-cols-3">
@@ -332,6 +430,101 @@ export default function PatientsMonitoring() {
               </Tabs>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create / Edit Patient Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {editingPatient ? <Pencil className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+              {editingPatient ? "Editar Paciente" : "Cadastrar Paciente"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingPatient ? "Altere os dados do paciente abaixo." : "Preencha os dados para cadastrar um novo paciente."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pat-name">Nome *</Label>
+                <Input id="pat-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome completo" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pat-record">Prontuário *</Label>
+                <Input id="pat-record" value={form.record} onChange={(e) => setForm({ ...form, record: e.target.value })} placeholder="PRO-2026-XXX" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Setor</Label>
+                <Select value={form.sector} onValueChange={(v) => setForm({ ...form, sector: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{sectorOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pat-bed">Leito</Label>
+                <Input id="pat-bed" value={form.bed} onChange={(e) => setForm({ ...form, bed: e.target.value })} placeholder="L-01" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as PatientStatus })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{statuses.map((s) => <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Risco</Label>
+                <Select value={form.risk} onValueChange={(v) => setForm({ ...form, risk: v as RiskLevel })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{riskLevels.map((r) => <SelectItem key={r} value={r}>{riskConfig[r].label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pat-date">Data de Admissão</Label>
+                <Input id="pat-date" type="date" value={form.admissionDate} onChange={(e) => setForm({ ...form, admissionDate: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pat-temp">Temperatura (°C)</Label>
+                <Input id="pat-temp" type="number" step="0.1" value={form.temperature} onChange={(e) => setForm({ ...form, temperature: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pat-infection">Infecção</Label>
+              <Input id="pat-infection" value={form.infection} onChange={(e) => setForm({ ...form, infection: e.target.value })} placeholder="Ex: IPCS-CVC, PAV, ITU-SVD" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pat-devices">Dispositivos (separados por vírgula)</Label>
+              <Input id="pat-devices" value={form.devices} onChange={(e) => setForm({ ...form, devices: e.target.value })} placeholder="CVC, SVD, VM" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pat-antibiotics">Antimicrobianos (separados por vírgula)</Label>
+              <Input id="pat-antibiotics" value={form.antibiotics} onChange={(e) => setForm({ ...form, antibiotics: e.target.value })} placeholder="Meropenem, Vancomicina" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pat-notes">Observações</Label>
+              <Textarea id="pat-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Observações clínicas..." rows={3} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave}>{editingPatient ? "Salvar Alterações" : "Cadastrar"}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
