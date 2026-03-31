@@ -175,8 +175,12 @@ export default function HospitalUsers() {
       },
     });
     setCreating(false);
-    if (error || data?.error) {
-      toast.error("Erro ao criar usuário: " + (data?.error || error?.message));
+    if (error) {
+      toast.error("Erro ao criar usuário: " + error.message);
+      return;
+    }
+    if (data && !data.success) {
+      toast.error(data.error || "Erro desconhecido ao criar usuário");
       return;
     }
     toast.success("Usuário criado com sucesso!");
