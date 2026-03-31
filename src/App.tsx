@@ -75,7 +75,9 @@ const App = () => (
             <Route path="/forms" element={<Forms />} />
             <Route path="/patients/monitoring" element={<PatientsMonitoring />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/super-admin" element={<SuperAdmin />} />
+            <Route element={<RequireSuperAdmin />}>
+              <Route path="/super-admin" element={<SuperAdmin />} />
+            </Route>
             <Route path="/crm" element={<CRM />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/settings/profile" element={<UserProfile />} />
