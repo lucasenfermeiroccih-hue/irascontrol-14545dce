@@ -84,8 +84,8 @@ const statusOptions: { value: ResponseValue; label: string; icon: typeof CheckCi
 const statusBtnClass: Record<string, string> = {
   conforme: "bg-success text-success-foreground hover:bg-success/90",
   nao_conforme: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-  na: "bg-muted text-muted-foreground",
-  nao_avaliado: "bg-secondary text-secondary-foreground",
+  na: "bg-muted/60 text-muted-foreground hover:bg-muted/80 border border-border",
+  nao_avaliado: "bg-muted/60 text-muted-foreground hover:bg-muted/80 border border-border",
 };
 
 export default function AuditCTINew() {
