@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { User, Lock, Bell, Clock, Shield, LogOut } from "lucide-react";
+import { User, Lock, Bell, Clock, Shield, LogOut, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function UserProfile() {
   const [name, setName] = useState("Dr. Carlos Mendes");
@@ -18,6 +19,94 @@ export default function UserProfile() {
   const [phone, setPhone] = useState("(11) 99876-5432");
   const [specialty, setSpecialty] = useState("Infectologia");
   const [council, setCouncil] = useState("CRM-SP 123456");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email, phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setName(profile.full_name || "");
+        setPhone(profile.phone || "");
+      }
+
+      // Check for existing avatar
+      const { data: files } = await supabase.storage
+        .from("avatars")
+        .list(user.id, { limit: 1, sortBy: { column: "created_at", order: "desc" } });
+
+      if (files && files.length > 0) {
+        const { data: urlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(`${user.id}/${files[0].name}`);
+        setAvatarUrl(urlData.publicUrl);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato inválido. Use JPG, PNG ou WebP.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Usuário não autenticado");
+      setUploadingAvatar(false);
+      return;
+    }
+
+    const ext = file.name.split(".").pop();
+    const filePath = `${user.id}/avatar.${ext}`;
+
+    const { error } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, { upsert: true });
+
+    setUploadingAvatar(false);
+
+    if (error) {
+      toast.error("Erro ao enviar foto: " + error.message);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    // Add cache buster
+    setAvatarUrl(`${urlData.publicUrl}?t=${Date.now()}`);
+    toast.success("Foto atualizada com sucesso!");
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const initials = name
+    ? name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    : "U";
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-3xl mx-auto">
@@ -29,12 +118,36 @@ export default function UserProfile() {
         </div>
       </div>
 
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleAvatarChange}
+      />
+
       {/* Profile Header */}
       <Card>
         <CardContent className="p-6 flex flex-col md:flex-row items-center gap-4">
-          <Avatar className="h-20 w-20">
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">CM</AvatarFallback>
-          </Avatar>
+          <div className="relative group">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={avatarUrl || undefined} alt={name} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">{initials}</AvatarFallback>
+            </Avatar>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="absolute inset-0 rounded-full bg-foreground/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-wait"
+            >
+              {uploadingAvatar ? (
+                <Loader2 className="h-5 w-5 text-background animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-background" />
+              )}
+            </button>
+          </div>
           <div className="text-center md:text-left flex-1">
             <h2 className="text-xl font-bold">{name}</h2>
             <p className="text-sm text-muted-foreground">{email}</p>
@@ -44,7 +157,15 @@ export default function UserProfile() {
               <Badge variant="outline">{specialty}</Badge>
             </div>
           </div>
-          <Button variant="outline" size="sm">Alterar Foto</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingAvatar}
+          >
+            {uploadingAvatar ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
+            Alterar Foto
+          </Button>
         </CardContent>
       </Card>
 
