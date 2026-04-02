@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ClipboardCheck, Activity, Shield, Bell,
   FileText, Settings, Users, Microscope, Pill, HandMetal,
   MonitorCheck, Building2, ShoppingBag, Stethoscope, FlaskConical,
-  BarChart3, FolderOpen
+  BarChart3, FolderOpen, TrendingUp
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -45,6 +45,7 @@ const navSections = [
       { title: "Pacientes", url: "/patients/monitoring", icon: Stethoscope },
       { title: "Antimicrobianos", url: "/antimicrobials/monitoring", icon: Pill },
       { title: "Higiene", url: "/hygiene/monitoring", icon: Activity },
+      { title: "Indicadores", url: "/indicadores/new", icon: TrendingUp },
     ],
   },
   {
