@@ -36,6 +36,7 @@ import UserProfile from "./pages/UserProfile.tsx";
 import SuperAdmin from "./pages/SuperAdmin.tsx";
 import HospitalUsers from "./pages/HospitalUsers.tsx";
 import IndicadoresNew from "./pages/IndicadoresNew.tsx";
+import IndicadoresDashboard from "./pages/IndicadoresDashboard.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/settings/profile" element={<UserProfile />} />
             <Route path="/indicadores/new" element={<IndicadoresNew />} />
+            <Route path="/indicadores/dashboard" element={<IndicadoresDashboard />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
