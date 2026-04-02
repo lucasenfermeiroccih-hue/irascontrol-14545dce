@@ -88,6 +88,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/settings/profile" element={<UserProfile />} />
             <Route path="/indicadores/new" element={<IndicadoresNew />} />
+            <Route path="/indicadores/dashboard" element={<IndicadoresDashboard />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
