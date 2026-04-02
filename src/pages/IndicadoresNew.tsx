@@ -184,7 +184,7 @@ export default function IndicadoresNew() {
                 <div className="flex items-center gap-2">
                   <Input
                     readOnly
-                    value={formatValue((calculados as Record<string, number | null>)[cf.id])}
+                    value={formatValue((calculados as unknown as Record<string, number | null>)[cf.id])}
                     className="bg-muted font-semibold text-foreground"
                     tabIndex={-1}
                   />
