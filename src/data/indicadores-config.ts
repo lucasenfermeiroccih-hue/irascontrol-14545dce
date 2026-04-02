@@ -26,6 +26,7 @@ export const mesesOptions = [
 export const setorOptions = [
   "UTI 1 Adulto", "UTI 2 Adulto", "UTI 3 Adulto",
   "UTI Neonatal", "UTI Pediátrica", "UPO", "Trauma Clínico",
+  "Compilado as UTIs",
 ];
 
 export const inputFields: IndicadorField[] = [
