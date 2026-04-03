@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { CheckCircle, AlertTriangle, TrendingUp, Activity } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import DashboardAIInsights from "@/components/DashboardAIInsights";
 
 const kpis = [
   { label: "Taxa Adesão CVC", value: "87.3%", icon: CheckCircle, color: "text-success", bg: "bg-success/10" },
