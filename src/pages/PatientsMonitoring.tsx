@@ -285,6 +285,21 @@ export default function PatientsMonitoring() {
         </Card>
       </div>
 
+      {/* AI Insights */}
+      {aiInsights && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Insights Inteligentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm space-y-2 whitespace-pre-line">{aiInsights}</div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
