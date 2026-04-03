@@ -47,6 +47,7 @@ const navSections = [
       { title: "Higiene", url: "/hygiene/monitoring", icon: Activity },
       { title: "Indicadores", url: "/indicadores/new", icon: TrendingUp },
       { title: "Indicadores ISC", url: "/indicadores-isc", icon: ClipboardCheck },
+      { title: "Indicadores DDD", url: "/indicadores-ddd", icon: Pill },
     ],
   },
   {
@@ -61,6 +62,7 @@ const navSections = [
       { title: "Antimicrobianos", url: "/antimicrobials/monitoring", icon: Pill },
       { title: "Indicadores", url: "/indicadores/dashboard", icon: TrendingUp },
       { title: "Dashboard ISC", url: "/dashboard-isc", icon: BarChart3 },
+      { title: "Dashboard DDD", url: "/dashboard-ddd", icon: Pill },
     ],
   },
   {
