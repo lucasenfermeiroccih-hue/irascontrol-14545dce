@@ -5,9 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Calculator } from "lucide-react";
+import { Save, Calculator, Trash2, History } from "lucide-react";
 import { antimicrobianosBase } from "@/data/antimicrobianos-ddd";
+import { salvarRegistroDDD, listarRegistrosDDD, excluirRegistroDDD, DDDRegistroSalvo } from "@/lib/ddd-storage";
 
 const meses = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -31,6 +33,8 @@ export default function IndicadoresDDD() {
   const [dataVigilancia, setDataVigilancia] = useState("");
   const [mesVigilancia, setMesVigilancia] = useState("");
   const [anoVigilancia, setAnoVigilancia] = useState(new Date().getFullYear());
+  const [showHistory, setShowHistory] = useState(false);
+  const [registrosSalvos, setRegistrosSalvos] = useState<DDDRegistroSalvo[]>(() => listarRegistrosDDD());
 
   const [pacienteDia, setPacienteDia] = useState<Record<string, number>>(
     Object.fromEntries(unidadesPacienteDia.map(u => [u, 0]))
@@ -86,7 +90,54 @@ export default function IndicadoresDDD() {
       toast.error("Preencha todos os campos obrigatórios da identificação.");
       return;
     }
-    toast.success("Dados salvos com sucesso! (mock)");
+
+    const linhas = tableData.map(row => ({
+      antimicrobianoId: row.id,
+      nome: row.nome,
+      apresentacao: row.apresentacao,
+      mgPorUnidade: row.mgPorUnidade,
+      quantidade: row.qty,
+      totalMg: row.totalMg,
+      totalG: row.totalG,
+      dddPadrao: row.dddPadrao,
+      valorAB: row.valorAB,
+      indicador: row.indicador,
+    }));
+
+    salvarRegistroDDD({
+      profissional,
+      dataVigilancia,
+      mesVigilancia,
+      anoVigilancia,
+      pacienteDia,
+      compiladoUTIs,
+      linhas,
+    });
+
+    setRegistrosSalvos(listarRegistrosDDD());
+    toast.success("Registro salvo com sucesso no armazenamento local!");
+  };
+
+  const handleDelete = (id: string) => {
+    excluirRegistroDDD(id);
+    setRegistrosSalvos(listarRegistrosDDD());
+    toast.success("Registro excluído.");
+  };
+
+  const handleLoadRecord = (reg: DDDRegistroSalvo) => {
+    setProfissional(reg.profissional);
+    setDataVigilancia(reg.dataVigilancia);
+    setMesVigilancia(reg.mesVigilancia);
+    setAnoVigilancia(reg.anoVigilancia);
+    setPacienteDia(reg.pacienteDia);
+
+    const newQtd: Record<number, number> = {};
+    for (const linha of reg.linhas) {
+      newQtd[linha.antimicrobianoId] = linha.quantidade;
+    }
+    setQuantidades(prev => ({ ...prev, ...newQtd }));
+    setShowHistory(false);
+    toast.info("Registro carregado no formulário.");
   };
 
   return (
@@ -96,10 +147,60 @@ export default function IndicadoresDDD() {
           <h1 className="text-2xl font-bold text-foreground">Indicadores DDD</h1>
           <p className="text-sm text-muted-foreground">Cálculo de consumo de antimicrobianos — DDD (OMS 2020)</p>
         </div>
-        <Button onClick={handleSave} className="gap-2">
-          <Save className="h-4 w-4" /> Salvar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-2">
+            <History className="h-4 w-4" />
+            Histórico ({registrosSalvos.length})
+          </Button>
+          <Button onClick={handleSave} className="gap-2">
+            <Save className="h-4 w-4" /> Salvar
+          </Button>
+        </div>
       </div>
+
+      {/* Histórico */}
+      {showHistory && (
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Registros Salvos</CardTitle></CardHeader>
+          <CardContent>
+            {registrosSalvos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum registro salvo ainda.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Profissional</TableHead>
+                    <TableHead>Mês/Ano</TableHead>
+                    <TableHead>Data Vigilância</TableHead>
+                    <TableHead>Compilado UTIs</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {registrosSalvos.map(reg => (
+                    <TableRow key={reg.id}>
+                      <TableCell className="font-medium">{reg.profissional}</TableCell>
+                      <TableCell><Badge variant="secondary">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge></TableCell>
+                      <TableCell>{reg.dataVigilancia}</TableCell>
+                      <TableCell className="font-mono">{reg.compiladoUTIs}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{new Date(reg.criadoEm).toLocaleString("pt-BR")}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => handleLoadRecord(reg)}>Carregar</Button>
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(reg.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Identificação */}
       <Card>

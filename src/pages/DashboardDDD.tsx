@@ -7,24 +7,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
-import { Sparkles, FileText, TrendingUp, Pill, Building2, BarChart3, Loader2 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Sparkles, FileText, TrendingUp, Pill, Building2, BarChart3, Loader2, Database } from "lucide-react";
 import { generateMockDDDData, DDDRegistroMensal } from "@/data/antimicrobianos-ddd";
+import { listarRegistrosDDD, registrosSalvosParaDashboard } from "@/lib/ddd-storage";
 
 const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const COLORS = ["hsl(var(--primary))","hsl(var(--destructive))","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#10b981","#f97316"];
 
-export default function DashboardDDD() {
-  const allData = useMemo(() => generateMockDDDData(), []);
+type DataSource = "all" | "mock" | "local";
 
+export default function DashboardDDD() {
+  const mockData = useMemo(() => generateMockDDDData(), []);
+  const localData = useMemo(() => registrosSalvosParaDashboard(listarRegistrosDDD()), []);
+  const localCount = useMemo(() => listarRegistrosDDD().length, []);
+
+  const [dataSource, setDataSource] = useState<DataSource>("all");
   const [filtroMes, setFiltroMes] = useState("all");
   const [filtroAno, setFiltroAno] = useState("all");
   const [filtroUnidade, setFiltroUnidade] = useState("all");
   const [filtroAtm, setFiltroAtm] = useState("all");
 
-  // AI
   const [aiOutput, setAiOutput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+
+  const allData: DDDRegistroMensal[] = useMemo(() => {
+    if (dataSource === "mock") return mockData;
+    if (dataSource === "local") return localData;
+    return [...mockData, ...localData];
+  }, [dataSource, mockData, localData]);
 
   const anos = useMemo(() => [...new Set(allData.map(d => d.ano))].sort(), [allData]);
   const unidades = useMemo(() => [...new Set(allData.map(d => d.unidade))].sort(), [allData]);
@@ -39,7 +50,6 @@ export default function DashboardDDD() {
     );
   }, [allData, filtroMes, filtroAno, filtroUnidade, filtroAtm]);
 
-  // KPIs
   const totalConsumo = useMemo(() => Math.round(filtered.reduce((s, d) => s + d.indicadorConsumo, 0) * 100) / 100, [filtered]);
   const avgConsumo = useMemo(() => filtered.length ? Math.round((totalConsumo / filtered.length) * 100) / 100 : 0, [totalConsumo, filtered]);
 
@@ -55,7 +65,6 @@ export default function DashboardDDD() {
     return Object.entries(map).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
   }, [filtered]);
 
-  // Chart data: line (consumo por mês)
   const lineData = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(d => {
@@ -65,21 +74,18 @@ export default function DashboardDDD() {
     return Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }));
   }, [filtered]);
 
-  // Chart data: bar (consumo por unidade)
   const barData = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(d => { map[d.unidade] = (map[d.unidade] || 0) + d.indicadorConsumo; });
     return Object.entries(map).map(([name, value]) => ({ name: name.replace("UTI ", ""), value: Math.round(value) }));
   }, [filtered]);
 
-  // Chart data: pie (distribuição por antimicrobiano)
   const pieData = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(d => { map[d.antimicrobiano] = (map[d.antimicrobiano] || 0) + d.totalG; });
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value: Math.round(value) }));
   }, [filtered]);
 
-  // Heatmap data
   const heatmapData = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
     filtered.forEach(d => {
@@ -91,7 +97,6 @@ export default function DashboardDDD() {
   }, [filtered]);
   const heatmapMonths = useMemo(() => [...new Set(filtered.map(d => d.mes.slice(0, 3)))], [filtered]);
 
-  // Ranking
   const ranking = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(d => { map[d.antimicrobiano] = (map[d.antimicrobiano] || 0) + d.indicadorConsumo; });
@@ -105,6 +110,7 @@ export default function DashboardDDD() {
     setTimeout(() => {
       const lines = [
         `📊 RELATÓRIO DE CONSUMO DDD — ${filtroMes !== "all" ? filtroMes : "Todos os meses"} / ${filtroAno !== "all" ? filtroAno : "Todos os anos"}`,
+        `Fonte de dados: ${dataSource === "local" ? "Registros salvos" : dataSource === "mock" ? "Dados simulados" : "Todos"}`,
         "",
         `Total de registros analisados: ${filtered.length}`,
         `Consumo total (indicador): ${totalConsumo}`,
@@ -165,6 +171,17 @@ export default function DashboardDDD() {
       {/* Filtros */}
       <Card>
         <CardContent className="flex flex-wrap gap-3 pt-4">
+          <Select value={dataSource} onValueChange={(v) => setDataSource(v as DataSource)}>
+            <SelectTrigger className="w-[180px]">
+              <Database className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Fonte" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os dados</SelectItem>
+              <SelectItem value="mock">Dados simulados</SelectItem>
+              <SelectItem value="local">Registros salvos ({localCount})</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={filtroMes} onValueChange={setFiltroMes}>
             <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
             <SelectContent>
@@ -253,7 +270,6 @@ export default function DashboardDDD() {
 
       {/* Charts */}
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Line */}
         <Card>
           <CardHeader><CardTitle className="text-base">Evolução do Consumo</CardTitle></CardHeader>
           <CardContent>
@@ -269,7 +285,6 @@ export default function DashboardDDD() {
           </CardContent>
         </Card>
 
-        {/* Bar */}
         <Card>
           <CardHeader><CardTitle className="text-base">Consumo por Unidade</CardTitle></CardHeader>
           <CardContent>
@@ -285,7 +300,6 @@ export default function DashboardDDD() {
           </CardContent>
         </Card>
 
-        {/* Pie */}
         <Card>
           <CardHeader><CardTitle className="text-base">Distribuição por Antimicrobiano</CardTitle></CardHeader>
           <CardContent>
@@ -300,7 +314,6 @@ export default function DashboardDDD() {
           </CardContent>
         </Card>
 
-        {/* Heatmap */}
         <Card>
           <CardHeader><CardTitle className="text-base">Heatmap: Unidade × Mês</CardTitle></CardHeader>
           <CardContent className="overflow-x-auto">
@@ -312,11 +325,11 @@ export default function DashboardDDD() {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(heatmapData).map(([unidade, meses]) => (
+                {Object.entries(heatmapData).map(([unidade, mesesData]) => (
                   <tr key={unidade}>
                     <td className="p-1 font-medium">{unidade.replace("UTI ", "")}</td>
                     {heatmapMonths.map(m => {
-                      const v = Math.round(meses[m] || 0);
+                      const v = Math.round(mesesData[m] || 0);
                       return <td key={m} className={`p-1 text-center rounded ${getHeatColor(v)}`}>{v}</td>;
                     })}
                   </tr>
@@ -350,10 +363,10 @@ export default function DashboardDDD() {
                   <TableCell>{d.unidade}</TableCell>
                   <TableCell>{d.antimicrobiano}</TableCell>
                   <TableCell className="text-right font-mono">{d.quantidadeUnidades}</TableCell>
-                  <TableCell className="text-right font-mono">{d.totalG}</TableCell>
-                  <TableCell className="text-right font-mono">{d.valorAB}</TableCell>
+                  <TableCell className="text-right font-mono">{d.totalG.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-mono">{d.valorAB.toFixed(2)}</TableCell>
                   <TableCell className={`text-right font-mono font-bold ${d.indicadorConsumo > 50 ? "text-destructive" : d.indicadorConsumo > 20 ? "text-yellow-600" : "text-emerald-600"}`}>
-                    {d.indicadorConsumo}
+                    {d.indicadorConsumo.toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}
