@@ -325,6 +325,9 @@ export default function PatientsMonitoring() {
                     <span className={`text-sm font-medium ${p.daysHospitalized > 14 ? "text-destructive" : ""}`}>{p.daysHospitalized}d</span>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8" title="Editar Paciente" onClick={(e) => { e.stopPropagation(); openEditForm(p); }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     {(p.status === "internado" || p.status === "isolamento") && (
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success hover:bg-success/10" title="Dar Alta" onClick={(e) => { e.stopPropagation(); dischargePatient(p); }}>
                         <LogOut className="h-4 w-4" />
