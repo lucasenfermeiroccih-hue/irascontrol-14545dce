@@ -150,34 +150,37 @@ export default function DashboardISC() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
+  const clinicaStats = useMemo(() => {
+    const map: Record<string, { cirurgias: number; isc: number; reinternacoes: number; contatos: number }> = {};
+    filtered.forEach((r) => {
+      if (!map[r.clinica]) map[r.clinica] = { cirurgias: 0, isc: 0, reinternacoes: 0, contatos: 0 };
+      map[r.clinica].cirurgias += r.totalCirurgias;
+      map[r.clinica].isc += r.iscConfirmada;
+      map[r.clinica].reinternacoes += r.reinternacoes;
+      map[r.clinica].contatos += r.contatosAtendidos;
+    });
+    return Object.entries(map).map(([name, v]) => ({
+      name,
+      ...v,
+      taxaISC: v.cirurgias > 0 ? (v.isc / v.cirurgias) * 100 : 0,
+      taxaResposta: v.cirurgias > 0 ? (v.contatos / v.cirurgias) * 100 : 0,
+    }));
+  }, [filtered]);
+
+  const reportInput = useMemo(() => ({
+    ...kpis,
+    clinicas: clinicaStats,
+    tendencia: lineData.map((d) => ({ periodo: d.name, taxa: d.taxa })),
+  }), [kpis, clinicaStats, lineData]);
+
   const insights = useMemo(() => {
-    if (!hasData || filtered.length === 0) return [];
-    const msgs: { icon: React.ReactNode; text: string; type: "success" | "warning" | "danger" }[] = [];
-    if (kpis.taxaISC <= 2) msgs.push({ icon: <Award className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Excelente desempenho! Meta atingida.`, type: "success" });
-    else if (kpis.taxaISC > 5) msgs.push({ icon: <AlertTriangle className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Acima do limite aceitável. Investigar causas.`, type: "danger" });
-    else msgs.push({ icon: <Activity className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Dentro da faixa de atenção. Monitorar tendência.`, type: "warning" });
-
-    if (kpis.taxaResposta < 60) msgs.push({ icon: <Phone className="h-5 w-5" />, text: `Taxa de resposta de contatos em ${kpis.taxaResposta.toFixed(1)}% — Abaixo do ideal. Considerar estratégias de busca ativa.`, type: "warning" });
-    else msgs.push({ icon: <Phone className="h-5 w-5" />, text: `Taxa de resposta de contatos em ${kpis.taxaResposta.toFixed(1)}% — Boa adesão ao follow-up pós-operatório.`, type: "success" });
-
-    const highest = barClinicaData.reduce((a, b) => a.value > b.value ? a : b, { name: "", value: 0 });
-    if (highest.name) msgs.push({ icon: <Stethoscope className="h-5 w-5" />, text: `${highest.name} concentra o maior volume cirúrgico (${highest.value} procedimentos no período).`, type: "success" });
-
-    return msgs;
-  }, [hasData, filtered, kpis, barClinicaData]);
+    if (!hasData || filtered.length === 0) return [] as SmartInsight[];
+    return generateSmartInsights(reportInput);
+  }, [hasData, filtered, reportInput]);
 
   const generateReport = () => {
     if (!hasData) return;
-    setAiReport(`📊 Relatório ISC — Período Selecionado
-
-Total de procedimentos: ${kpis.totalCirurgias}
-ISC confirmadas: ${kpis.totalISC} (taxa: ${kpis.taxaISC.toFixed(1)}%)
-Reinternações: ${kpis.totalReinternacoes}
-Taxa de resposta follow-up: ${kpis.taxaResposta.toFixed(1)}%
-
-Análise: ${kpis.taxaISC <= 2 ? "Os indicadores estão dentro das metas estabelecidas. Manter protocolos atuais." : kpis.taxaISC <= 5 ? "Indicadores em faixa de atenção. Recomenda-se revisão dos protocolos de antissepsia e profilaxia antibiótica." : "Taxa de ISC acima do aceitável. Ação imediata recomendada: auditoria de processos, revisão de técnica asséptica e discussão em comitê."}
-
-${aiPrompt ? `\nConsideração adicional sobre "${aiPrompt}": Esta análise deve ser aprofundada com dados clínicos específicos em próxima reunião do CCIH.` : ""}`);
+    setAiReport(generateStructuredReport({ ...reportInput, promptExtra: aiPrompt || undefined }));
   };
 
   const insightBg = (type: string) =>
