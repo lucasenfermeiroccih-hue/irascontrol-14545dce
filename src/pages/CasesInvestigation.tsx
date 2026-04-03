@@ -71,6 +71,7 @@ const CasesInvestigation = () => {
   const [detailCase, setDetailCase] = useState<InvestigationCase | null>(null);
   const [filterStatus, setFilterStatus] = useState("todos");
   const [search, setSearch] = useState("");
+  const [editingCase, setEditingCase] = useState<InvestigationCase | null>(null);
 
   const [form, setForm] = useState({
     paciente: "", prontuario: "", setor: "", evento: "", classificacao: "", dispositivos: [] as string[], observacoes: "",
