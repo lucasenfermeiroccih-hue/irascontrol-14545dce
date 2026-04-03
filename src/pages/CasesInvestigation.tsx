@@ -266,7 +266,7 @@ const CasesInvestigation = () => {
             </div>
             <div><Label>Observações</Label><Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button><Button onClick={handleSave}>Registrar Caso</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => { setDialogOpen(false); setEditingCase(null); }}>Cancelar</Button><Button onClick={handleSave}>{editingCase ? "Salvar Alterações" : "Registrar Caso"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
