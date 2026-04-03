@@ -60,6 +60,7 @@ const navSections = [
       { title: "Precaução", url: "/precautions/monitoring", icon: Shield },
       { title: "Antimicrobianos", url: "/antimicrobials/monitoring", icon: Pill },
       { title: "Indicadores", url: "/indicadores/dashboard", icon: TrendingUp },
+      { title: "Dashboard ISC", url: "/dashboard-isc", icon: BarChart3 },
     ],
   },
   {

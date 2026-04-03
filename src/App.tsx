@@ -38,6 +38,7 @@ import HospitalUsers from "./pages/HospitalUsers.tsx";
 import IndicadoresNew from "./pages/IndicadoresNew.tsx";
 import IndicadoresDashboard from "./pages/IndicadoresDashboard.tsx";
 import IndicadoresISC from "./pages/IndicadoresISC.tsx";
+import DashboardISC from "./pages/DashboardISC.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/indicadores/new" element={<IndicadoresNew />} />
             <Route path="/indicadores/dashboard" element={<IndicadoresDashboard />} />
             <Route path="/indicadores-isc" element={<IndicadoresISC />} />
+            <Route path="/dashboard-isc" element={<DashboardISC />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
