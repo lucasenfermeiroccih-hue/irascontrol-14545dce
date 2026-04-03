@@ -400,7 +400,31 @@ export default function PatientsMonitoring() {
 
                 <TabsContent value="dispositivos" className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Dispositivos Invasivos</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">Dispositivos Invasivos</p>
+                      {!addDeviceOpen ? (
+                        <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={() => setAddDeviceOpen(true)}>
+                          <Plus className="h-3 w-3" /> Adicionar
+                        </Button>
+                      ) : null}
+                    </div>
+                    {addDeviceOpen && (
+                      <div className="flex gap-2 items-end rounded-lg border p-3">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Dispositivo</Label>
+                          <Input placeholder="Ex: CVC subclávia, SVD, PICC..." value={newDevice} onChange={(e) => setNewDevice(e.target.value)} className="h-8 text-sm" />
+                        </div>
+                        <Button size="sm" className="h-8" onClick={() => {
+                          if (!newDevice.trim() || !selectedPatient) return;
+                          setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, devices: [...p.devices, newDevice.trim()] } : p));
+                          setSelectedPatient(prev => prev ? { ...prev, devices: [...prev.devices, newDevice.trim()] } : prev);
+                          setNewDevice("");
+                          setAddDeviceOpen(false);
+                          toast.success("Dispositivo adicionado!");
+                        }}>Salvar</Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => { setAddDeviceOpen(false); setNewDevice(""); }}>Cancelar</Button>
+                      </div>
+                    )}
                     {selectedPatient.devices.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {selectedPatient.devices.map((d) => <Badge key={d} variant="outline" className="border-primary/30 text-primary">{d}</Badge>)}
@@ -411,7 +435,31 @@ export default function PatientsMonitoring() {
                   </div>
 
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Pill className="h-3 w-3" /> Antimicrobianos em Uso</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Pill className="h-3 w-3" /> Antimicrobianos em Uso</p>
+                      {!addAntibioticOpen ? (
+                        <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={() => setAddAntibioticOpen(true)}>
+                          <Plus className="h-3 w-3" /> Adicionar
+                        </Button>
+                      ) : null}
+                    </div>
+                    {addAntibioticOpen && (
+                      <div className="flex gap-2 items-end rounded-lg border p-3">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Antimicrobiano</Label>
+                          <Input placeholder="Ex: Meropenem, Vancomicina..." value={newAntibiotic} onChange={(e) => setNewAntibiotic(e.target.value)} className="h-8 text-sm" />
+                        </div>
+                        <Button size="sm" className="h-8" onClick={() => {
+                          if (!newAntibiotic.trim() || !selectedPatient) return;
+                          setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, antibiotics: [...p.antibiotics, newAntibiotic.trim()] } : p));
+                          setSelectedPatient(prev => prev ? { ...prev, antibiotics: [...prev.antibiotics, newAntibiotic.trim()] } : prev);
+                          setNewAntibiotic("");
+                          setAddAntibioticOpen(false);
+                          toast.success("Antimicrobiano adicionado!");
+                        }}>Salvar</Button>
+                        <Button size="sm" variant="ghost" className="h-8" onClick={() => { setAddAntibioticOpen(false); setNewAntibiotic(""); }}>Cancelar</Button>
+                      </div>
+                    )}
                     {selectedPatient.antibiotics.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {selectedPatient.antibiotics.map((a) => <Badge key={a} variant="secondary">{a}</Badge>)}
