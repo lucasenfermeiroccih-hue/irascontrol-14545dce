@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Stethoscope, Search, Users, AlertTriangle, ShieldCheck, Clock, Activity, Thermometer, Pill, FileText, Plus, Pencil, LogOut } from "lucide-react";
+import { Stethoscope, Search, Users, AlertTriangle, ShieldCheck, Clock, Activity, Thermometer, Pill, FileText, Plus, Pencil, LogOut, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type PatientStatus = "internado" | "isolamento" | "alta" | "óbito" | "transferido";
@@ -95,6 +95,8 @@ export default function PatientsMonitoring() {
   const [newDevice, setNewDevice] = useState("");
   const [addAntibioticOpen, setAddAntibioticOpen] = useState(false);
   const [newAntibiotic, setNewAntibiotic] = useState("");
+  const [aiInsights, setAiInsights] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   const filtered = patients.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.record.toLowerCase().includes(search.toLowerCase());
@@ -187,6 +189,40 @@ export default function PatientsMonitoring() {
     setFormOpen(false);
   };
 
+  const generateAiInsights = () => {
+    setAiLoading(true);
+    setAiInsights("");
+    setTimeout(() => {
+      const active = patients.filter((p) => p.status === "internado" || p.status === "isolamento");
+      const critical = active.filter((p) => p.risk === "crítico");
+      const withInf = active.filter((p) => !!p.infection);
+      const longStay = active.filter((p) => p.daysHospitalized > 14);
+      const withCVC = active.filter((p) => p.devices.some((d) => d.toLowerCase().includes("cvc")));
+      const withVM = active.filter((p) => p.devices.some((d) => d.toLowerCase().includes("vm") || d.toLowerCase().includes("tot")));
+      const multiAtb = active.filter((p) => p.antibiotics.length >= 2);
+      const febrile = active.filter((p) => p.temperature >= 38);
+
+      const lines: string[] = [];
+      lines.push(`📊 **Resumo Geral**: ${active.length} pacientes ativos, ${critical.length} em risco crítico, ${withInf.length} com infecção ativa.`);
+      
+      if (critical.length > 0) lines.push(`⚠️ **Atenção Crítica**: ${critical.map((p) => p.name).join(", ")} requerem vigilância intensificada.`);
+      if (febrile.length > 0) lines.push(`🌡️ **Pacientes Febris**: ${febrile.length} paciente(s) com temperatura ≥38°C — ${febrile.map((p) => `${p.name} (${p.temperature}°C)`).join(", ")}.`);
+      if (longStay.length > 0) lines.push(`🏥 **Internação Prolongada**: ${longStay.length} paciente(s) com >14 dias — risco aumentado de IRAS.`);
+      if (withCVC.length > 0) lines.push(`🩸 **CVC Ativo**: ${withCVC.length} paciente(s) com cateter venoso central — monitorar bundle de prevenção de IPCS.`);
+      if (withVM.length > 0) lines.push(`💨 **Ventilação Mecânica**: ${withVM.length} paciente(s) em VM — atenção ao bundle de PAV.`);
+      if (multiAtb.length > 0) lines.push(`💊 **Polifarmácia Antimicrobiana**: ${multiAtb.length} paciente(s) usando ≥2 antimicrobianos — avaliar descalonamento.`);
+      
+      const isolados = active.filter((p) => p.status === "isolamento");
+      if (isolados.length > 0) lines.push(`🔒 **Isolamento**: ${isolados.length} paciente(s) em precaução — garantir adesão aos EPIs.`);
+
+      lines.push(`✅ **Recomendação**: Priorizar ronda nos pacientes críticos e revisar necessidade de dispositivos invasivos em pacientes com >7 dias.`);
+      
+      setAiInsights(lines.join("\n\n"));
+      setAiLoading(false);
+      toast.success("Insights gerados com sucesso!");
+    }, 1500);
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
@@ -197,10 +233,16 @@ export default function PatientsMonitoring() {
             <p className="text-sm text-muted-foreground">Vigilância epidemiológica e acompanhamento de pacientes</p>
           </div>
         </div>
-        <Button onClick={openNewForm} className="gap-2">
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Cadastrar Paciente</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => generateAiInsights()} disabled={aiLoading} className="gap-2">
+            {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            <span className="hidden sm:inline">Insights IA</span>
+          </Button>
+          <Button onClick={openNewForm} className="gap-2">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Cadastrar Paciente</span>
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -242,6 +284,21 @@ export default function PatientsMonitoring() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Insights */}
+      {aiInsights && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Insights Inteligentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm space-y-2 whitespace-pre-line">{aiInsights}</div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -317,6 +374,9 @@ export default function PatientsMonitoring() {
                     <span className={`text-sm font-medium ${p.daysHospitalized > 14 ? "text-destructive" : ""}`}>{p.daysHospitalized}d</span>
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8" title="Editar Paciente" onClick={(e) => { e.stopPropagation(); openEditForm(p); }}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     {(p.status === "internado" || p.status === "isolamento") && (
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success hover:bg-success/10" title="Dar Alta" onClick={(e) => { e.stopPropagation(); dischargePatient(p); }}>
                         <LogOut className="h-4 w-4" />
