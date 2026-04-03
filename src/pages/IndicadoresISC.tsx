@@ -39,7 +39,7 @@ const meses = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-const clinicas = ["Cirurgia Geral", "Cirurgia Vascular", "Neurocirurgia", "Ortopedia"] as const;
+const clinicas = ["Cirurgia Geral", "Cirurgia Vascular", "Neurocirurgia", "Ortopedia", "Cesariana"] as const;
 type Clinica = typeof clinicas[number];
 
 const sitioOptions = ["ISC superficial", "ISC profunda", "ISC de cavidade/órgão"];
