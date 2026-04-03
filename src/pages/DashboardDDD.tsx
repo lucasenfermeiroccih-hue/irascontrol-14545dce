@@ -2,15 +2,14 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Sparkles, FileText, TrendingUp, Pill, Building2, BarChart3, Loader2, AlertCircle } from "lucide-react";
+import { TrendingUp, Pill, Building2, BarChart3, AlertCircle } from "lucide-react";
 import { DDDRegistroMensal } from "@/data/antimicrobianos-ddd";
 import { listarRegistrosDDD, registrosSalvosParaDashboard } from "@/lib/ddd-storage";
+import AIAssistenteDDD from "@/components/AIAssistenteDDD";
 
 const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const COLORS = ["hsl(var(--primary))","hsl(var(--destructive))","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#10b981","#f97316"];
@@ -25,8 +24,6 @@ export default function DashboardDDD() {
   const [filtroUnidade, setFiltroUnidade] = useState("all");
   const [filtroAtm, setFiltroAtm] = useState("all");
 
-  const [aiOutput, setAiOutput] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
 
   const anos = useMemo(() => [...new Set(allData.map(d => d.ano))].sort(), [allData]);
   const unidades = useMemo(() => [...new Set(allData.map(d => d.unidade))].sort(), [allData]);
@@ -95,51 +92,6 @@ export default function DashboardDDD() {
     const max = sorted[0]?.[1] || 1;
     return sorted.slice(0, 5).map(([name, value]) => ({ name, value: Math.round(value * 100) / 100, pct: Math.round((value / max) * 100) }));
   }, [filtered]);
-
-  const generateReport = () => {
-    setAiLoading(true);
-    setTimeout(() => {
-      const lines = [
-        `📊 RELATÓRIO DE CONSUMO DDD — ${filtroMes !== "all" ? filtroMes : "Todos os meses"} / ${filtroAno !== "all" ? filtroAno : "Todos os anos"}`,
-        `Registros salvos: ${registros.length} | Linhas de dados: ${allData.length}`,
-        "",
-        `Total de registros filtrados: ${filtered.length}`,
-        `Consumo total (indicador): ${totalConsumo}`,
-        `Antimicrobiano mais utilizado: ${atmMaisUsado}`,
-        `Unidade com maior consumo: ${unidadeMaiorConsumo}`,
-        `Média de consumo: ${avgConsumo}`,
-        "",
-        "📈 TENDÊNCIAS:",
-        `• O consumo de ${atmMaisUsado} representa a maior parcela, sugerindo revisão de protocolos de uso.`,
-        `• A unidade ${unidadeMaiorConsumo} apresenta consumo acima da média — avaliar necessidade de stewardship.`,
-        filtered.some(d => d.indicadorConsumo > 50) ? "⚠️ ALERTA: Há indicadores acima de 50, sugerindo consumo elevado." : "✅ Nenhum indicador crítico acima de 50 identificado.",
-        "",
-        "💡 RECOMENDAÇÕES:",
-        "• Implementar programa de stewardship nas unidades com maior consumo.",
-        "• Revisar protocolos de profilaxia cirúrgica.",
-        "• Monitorar tendência mensal para identificar sazonalidade.",
-      ];
-      setAiOutput(lines.join("\n"));
-      setAiLoading(false);
-    }, 1500);
-  };
-
-  const generateInsights = () => {
-    setAiLoading(true);
-    setTimeout(() => {
-      const insights = [
-        "🔍 INSIGHTS GERADOS PELA IA:",
-        "",
-        `1. O ${atmMaisUsado} é responsável pela maior parcela do consumo total.`,
-        `2. A ${unidadeMaiorConsumo} concentra o maior consumo.`,
-        `3. ${filtered.filter(d => d.indicadorConsumo > 40).length} registros apresentam indicador acima de 40.`,
-        `4. A média geral de consumo (${avgConsumo}) está ${avgConsumo > 30 ? "ACIMA" : "dentro"} dos parâmetros esperados.`,
-        "5. Recomenda-se comparar os dados atuais com benchmarks nacionais da ANVISA.",
-      ];
-      setAiOutput(insights.join("\n"));
-      setAiLoading(false);
-    }, 1200);
-  };
 
   const chartConfig = {
     value: { label: "Consumo", color: "hsl(var(--primary))" },
@@ -375,28 +327,12 @@ export default function DashboardDDD() {
           </Card>
 
           {/* Agente IA */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="h-5 w-5 text-primary" /> Agente de IA
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Button onClick={generateReport} disabled={aiLoading} className="gap-2">
-                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  Gerar Relatório
-                </Button>
-                <Button variant="outline" onClick={generateInsights} disabled={aiLoading} className="gap-2">
-                  {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  Gerar Insights
-                </Button>
-              </div>
-              {aiOutput && (
-                <Textarea value={aiOutput} readOnly rows={16} className="font-mono text-xs" />
-              )}
-            </CardContent>
-          </Card>
+          <AIAssistenteDDD
+            filtered={filtered}
+            all={allData}
+            filtroMes={filtroMes}
+            filtroAno={filtroAno}
+          />
         </>
       )}
     </div>
