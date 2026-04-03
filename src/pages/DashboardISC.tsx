@@ -16,6 +16,7 @@ import {
   TrendingDown, TrendingUp, Sparkles, FileText, Inbox,
 } from "lucide-react";
 import { getISCRegistros, type ISCRegistro } from "@/lib/isc-storage";
+import { generateSmartInsights, generateStructuredReport, type SmartInsight } from "@/lib/isc-report-engine";
 
 const mesesNomes = [
   "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -72,6 +73,16 @@ const statusColor = (rate: number) =>
   rate <= 2 ? "text-green-600 bg-green-50 border-green-200"
     : rate <= 5 ? "text-yellow-600 bg-yellow-50 border-yellow-200"
     : "text-red-600 bg-red-50 border-red-200";
+
+const insightIconMap: Record<string, React.ReactNode> = {
+  award: <Award className="h-5 w-5" />,
+  alert: <AlertTriangle className="h-5 w-5" />,
+  activity: <Activity className="h-5 w-5" />,
+  phone: <Phone className="h-5 w-5" />,
+  stethoscope: <Stethoscope className="h-5 w-5" />,
+  "trending-down": <TrendingDown className="h-5 w-5" />,
+  "trending-up": <TrendingUp className="h-5 w-5" />,
+};
 
 const statusIcon = (rate: number) =>
   rate <= 2 ? <TrendingDown className="h-4 w-4" /> : rate <= 5 ? <AlertTriangle className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />;
@@ -149,34 +160,37 @@ export default function DashboardISC() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
+  const clinicaStats = useMemo(() => {
+    const map: Record<string, { cirurgias: number; isc: number; reinternacoes: number; contatos: number }> = {};
+    filtered.forEach((r) => {
+      if (!map[r.clinica]) map[r.clinica] = { cirurgias: 0, isc: 0, reinternacoes: 0, contatos: 0 };
+      map[r.clinica].cirurgias += r.totalCirurgias;
+      map[r.clinica].isc += r.iscConfirmada;
+      map[r.clinica].reinternacoes += r.reinternacoes;
+      map[r.clinica].contatos += r.contatosAtendidos;
+    });
+    return Object.entries(map).map(([name, v]) => ({
+      name,
+      ...v,
+      taxaISC: v.cirurgias > 0 ? (v.isc / v.cirurgias) * 100 : 0,
+      taxaResposta: v.cirurgias > 0 ? (v.contatos / v.cirurgias) * 100 : 0,
+    }));
+  }, [filtered]);
+
+  const reportInput = useMemo(() => ({
+    ...kpis,
+    clinicas: clinicaStats,
+    tendencia: lineData.map((d) => ({ periodo: d.name, taxa: d.taxa })),
+  }), [kpis, clinicaStats, lineData]);
+
   const insights = useMemo(() => {
-    if (!hasData || filtered.length === 0) return [];
-    const msgs: { icon: React.ReactNode; text: string; type: "success" | "warning" | "danger" }[] = [];
-    if (kpis.taxaISC <= 2) msgs.push({ icon: <Award className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Excelente desempenho! Meta atingida.`, type: "success" });
-    else if (kpis.taxaISC > 5) msgs.push({ icon: <AlertTriangle className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Acima do limite aceitável. Investigar causas.`, type: "danger" });
-    else msgs.push({ icon: <Activity className="h-5 w-5" />, text: `Taxa de ISC em ${kpis.taxaISC.toFixed(1)}% — Dentro da faixa de atenção. Monitorar tendência.`, type: "warning" });
-
-    if (kpis.taxaResposta < 60) msgs.push({ icon: <Phone className="h-5 w-5" />, text: `Taxa de resposta de contatos em ${kpis.taxaResposta.toFixed(1)}% — Abaixo do ideal. Considerar estratégias de busca ativa.`, type: "warning" });
-    else msgs.push({ icon: <Phone className="h-5 w-5" />, text: `Taxa de resposta de contatos em ${kpis.taxaResposta.toFixed(1)}% — Boa adesão ao follow-up pós-operatório.`, type: "success" });
-
-    const highest = barClinicaData.reduce((a, b) => a.value > b.value ? a : b, { name: "", value: 0 });
-    if (highest.name) msgs.push({ icon: <Stethoscope className="h-5 w-5" />, text: `${highest.name} concentra o maior volume cirúrgico (${highest.value} procedimentos no período).`, type: "success" });
-
-    return msgs;
-  }, [hasData, filtered, kpis, barClinicaData]);
+    if (!hasData || filtered.length === 0) return [] as SmartInsight[];
+    return generateSmartInsights(reportInput);
+  }, [hasData, filtered, reportInput]);
 
   const generateReport = () => {
     if (!hasData) return;
-    setAiReport(`📊 Relatório ISC — Período Selecionado
-
-Total de procedimentos: ${kpis.totalCirurgias}
-ISC confirmadas: ${kpis.totalISC} (taxa: ${kpis.taxaISC.toFixed(1)}%)
-Reinternações: ${kpis.totalReinternacoes}
-Taxa de resposta follow-up: ${kpis.taxaResposta.toFixed(1)}%
-
-Análise: ${kpis.taxaISC <= 2 ? "Os indicadores estão dentro das metas estabelecidas. Manter protocolos atuais." : kpis.taxaISC <= 5 ? "Indicadores em faixa de atenção. Recomenda-se revisão dos protocolos de antissepsia e profilaxia antibiótica." : "Taxa de ISC acima do aceitável. Ação imediata recomendada: auditoria de processos, revisão de técnica asséptica e discussão em comitê."}
-
-${aiPrompt ? `\nConsideração adicional sobre "${aiPrompt}": Esta análise deve ser aprofundada com dados clínicos específicos em próxima reunião do CCIH.` : ""}`);
+    setAiReport(generateStructuredReport({ ...reportInput, promptExtra: aiPrompt || undefined }));
   };
 
   const insightBg = (type: string) =>
@@ -348,7 +362,7 @@ ${aiPrompt ? `\nConsideração adicional sobre "${aiPrompt}": Esta análise deve
             <CardContent className="space-y-3">
               {insights.map((ins, i) => (
                 <div key={i} className={`flex items-start gap-3 rounded-lg border p-3 ${insightBg(ins.type)}`}>
-                  {ins.icon}
+                  {insightIconMap[ins.icon] || <Activity className="h-5 w-5" />}
                   <p className="text-sm">{ins.text}</p>
                 </div>
               ))}
