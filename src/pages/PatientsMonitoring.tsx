@@ -87,6 +87,11 @@ export default function PatientsMonitoring() {
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [form, setForm] = useState(emptyForm);
 
+  // Evolution state
+  const [showEvolucaoForm, setShowEvolucaoForm] = useState(false);
+  const [evolucaoText, setEvolucaoText] = useState("");
+  const [evolucoes, setEvolucoes] = useState<Record<string, { date: string; text: string }[]>>({});
+
   const filtered = patients.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.record.toLowerCase().includes(search.toLowerCase());
     const matchSector = sectorFilter === "Todos" || p.sector === sectorFilter;
@@ -418,7 +423,51 @@ export default function PatientsMonitoring() {
                 </TabsContent>
 
                 <TabsContent value="evolucao" className="space-y-4 mt-4">
+                  {!showEvolucaoForm ? (
+                    <Button size="sm" className="gap-2" onClick={() => setShowEvolucaoForm(true)}>
+                      <Plus className="h-4 w-4" /> Nova Evolução
+                    </Button>
+                  ) : (
+                    <div className="space-y-3 rounded-lg border p-3">
+                      <Label>Registrar Evolução</Label>
+                      <Textarea
+                        value={evolucaoText}
+                        onChange={(e) => setEvolucaoText(e.target.value)}
+                        placeholder="Descreva a evolução do paciente..."
+                        rows={4}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" variant="outline" onClick={() => { setShowEvolucaoForm(false); setEvolucaoText(""); }}>Cancelar</Button>
+                        <Button size="sm" onClick={() => {
+                          if (!evolucaoText.trim() || !selectedPatient) return;
+                          const now = new Date();
+                          const dateStr = `${now.toLocaleDateString("pt-BR")} — ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+                          setEvolucoes((prev) => ({
+                            ...prev,
+                            [selectedPatient.id]: [
+                              { date: dateStr, text: evolucaoText.trim() },
+                              ...(prev[selectedPatient.id] || []),
+                            ],
+                          }));
+                          setEvolucaoText("");
+                          setShowEvolucaoForm(false);
+                          toast.success("Evolução registrada com sucesso!");
+                        }}>Salvar Evolução</Button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
+                    {(evolucoes[selectedPatient.id] || []).map((ev, i) => (
+                      <div key={i} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                        <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">{ev.date}</p>
+                          <p className="text-sm">{ev.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Mock entries */}
                     <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                       <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
                       <div>
