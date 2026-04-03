@@ -95,6 +95,8 @@ export default function PatientsMonitoring() {
   const [newDevice, setNewDevice] = useState("");
   const [addAntibioticOpen, setAddAntibioticOpen] = useState(false);
   const [newAntibiotic, setNewAntibiotic] = useState("");
+  const [aiInsights, setAiInsights] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   const filtered = patients.filter((p) => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.record.toLowerCase().includes(search.toLowerCase());
