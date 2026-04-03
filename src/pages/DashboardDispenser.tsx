@@ -6,6 +6,7 @@ import {
   PieChart, Pie, Cell, Legend
 } from "recharts";
 import { FlaskConical, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
+import DashboardAIInsights from "@/components/DashboardAIInsights";
 
 const kpis = [
   { label: "Conformidade Geral", value: "82.1%", icon: CheckCircle, color: "text-success", bg: "bg-success/10" },
