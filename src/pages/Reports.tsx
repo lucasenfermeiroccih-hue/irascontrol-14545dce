@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   FileText, Plus, Download, Sparkles, TrendingUp, Filter,
-  CalendarIcon, Loader2, AlertTriangle, Bug, X
+  CalendarIcon, Loader2, AlertTriangle, Bug, X, ChevronDown, Check
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -107,9 +108,27 @@ const Reports = () => {
   });
 
   // Filters
-  const [filterMicro, setFilterMicro] = useState<string>("all");
+  const [filterMicros, setFilterMicros] = useState<string[]>([]);
   const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>();
   const [filterDateTo, setFilterDateTo] = useState<Date | undefined>();
+  const [filterMes, setFilterMes] = useState<string>("all");
+  const [filterAno, setFilterAno] = useState<string>("all");
+  const [filterSetor, setFilterSetor] = useState<string>("all");
+  const [microPopoverOpen, setMicroPopoverOpen] = useState(false);
+
+  const MESES = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
+  const currentYear = new Date().getFullYear();
+  const ANOS = [String(currentYear), String(currentYear - 1), String(currentYear - 2)];
+
+  const toggleMicro = (m: string) => {
+    setFilterMicros((prev) => prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]);
+  };
+  const toggleAllMicros = () => {
+    setFilterMicros((prev) => prev.length === MICROORGANISMOS.length ? [] : [...MICROORGANISMOS]);
+  };
 
   // AI
   const [aiLoading, setAiLoading] = useState(false);
@@ -119,12 +138,21 @@ const Reports = () => {
   // ── Filtered records ──
   const filtered = useMemo(() => {
     return records.filter((r) => {
-      if (filterMicro !== "all" && !r.microorganismo.toLowerCase().includes(filterMicro.toLowerCase())) return false;
+      if (filterMicros.length > 0 && !filterMicros.includes(r.microorganismo)) return false;
       if (filterDateFrom && r.dataExame < format(filterDateFrom, "yyyy-MM-dd")) return false;
       if (filterDateTo && r.dataExame > format(filterDateTo, "yyyy-MM-dd")) return false;
+      if (filterSetor !== "all" && r.setor !== filterSetor) return false;
+      if (filterMes !== "all") {
+        const month = new Date(r.dataExame).getMonth();
+        if (MESES[month] !== filterMes) return false;
+      }
+      if (filterAno !== "all") {
+        const year = String(new Date(r.dataExame).getFullYear());
+        if (year !== filterAno) return false;
+      }
       return true;
     });
-  }, [records, filterMicro, filterDateFrom, filterDateTo]);
+  }, [records, filterMicros, filterDateFrom, filterDateTo, filterSetor, filterMes, filterAno]);
 
   // ── Distribution for bar chart ──
   const distribution = useMemo(() => {
@@ -282,51 +310,136 @@ const Reports = () => {
       {/* Filters */}
       <Card>
         <CardContent className="pt-4 pb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="h-4 w-4" /> Filtros
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Microorganismo</Label>
-              <Select value={filterMicro} onValueChange={setFilterMicro}>
-                <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {MICROORGANISMOS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+              {/* Multi-select Microorganismo */}
+              <div className="space-y-1 col-span-2 sm:col-span-1">
+                <Label className="text-xs">Microorganismo</Label>
+                <Popover open={microPopoverOpen} onOpenChange={setMicroPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between text-left font-normal h-9 text-xs">
+                      <span className="truncate">
+                        {filterMicros.length === 0 ? "Todos" : filterMicros.length === MICROORGANISMOS.length ? "Todos selecionados" : `${filterMicros.length} selecionado(s)`}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[260px] p-0" align="start">
+                    <div className="max-h-[300px] overflow-auto p-2 space-y-1">
+                      <div
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer"
+                        onClick={toggleAllMicros}
+                      >
+                        <Checkbox
+                          checked={filterMicros.length === MICROORGANISMOS.length}
+                          onCheckedChange={toggleAllMicros}
+                          className="h-3.5 w-3.5"
+                        />
+                        <span className="text-xs font-medium">Selecionar todos</span>
+                      </div>
+                      <Separator className="my-1" />
+                      {MICROORGANISMOS.map((m) => (
+                        <div
+                          key={m}
+                          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-accent cursor-pointer"
+                          onClick={() => toggleMicro(m)}
+                        >
+                          <Checkbox
+                            checked={filterMicros.includes(m)}
+                            onCheckedChange={() => toggleMicro(m)}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className="text-xs">{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Mês */}
+              <div className="space-y-1">
+                <Label className="text-xs">Mês</Label>
+                <Select value={filterMes} onValueChange={setFilterMes}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {MESES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Ano */}
+              <div className="space-y-1">
+                <Label className="text-xs">Ano</Label>
+                <Select value={filterAno} onValueChange={setFilterAno}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {ANOS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Setor */}
+              <div className="space-y-1">
+                <Label className="text-xs">Setor</Label>
+                <Select value={filterSetor} onValueChange={setFilterSetor}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {SETORES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Data Início */}
+              <div className="space-y-1">
+                <Label className="text-xs">Data Início</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9 text-xs", !filterDateFrom && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                      {filterDateFrom ? format(filterDateFrom, "dd/MM/yy") : "Início"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterDateFrom} onSelect={setFilterDateFrom} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Data Fim */}
+              <div className="space-y-1">
+                <Label className="text-xs">Data Fim</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9 text-xs", !filterDateTo && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                      {filterDateTo ? format(filterDateTo, "dd/MM/yy") : "Fim"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={filterDateTo} onSelect={setFilterDateTo} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Data Início</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !filterDateFrom && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filterDateFrom ? format(filterDateFrom, "dd/MM/yyyy") : "Início"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={filterDateFrom} onSelect={setFilterDateFrom} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Data Fim</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !filterDateTo && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {filterDateTo ? format(filterDateTo, "dd/MM/yyyy") : "Fim"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={filterDateTo} onSelect={setFilterDateTo} className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-            {(filterMicro !== "all" || filterDateFrom || filterDateTo) && (
-              <Button variant="ghost" size="sm" onClick={() => { setFilterMicro("all"); setFilterDateFrom(undefined); setFilterDateTo(undefined); }}>
-                <X className="h-4 w-4 mr-1" /> Limpar
+
+            {/* Clear filters */}
+            {(filterMicros.length > 0 || filterDateFrom || filterDateTo || filterMes !== "all" || filterAno !== "all" || filterSetor !== "all") && (
+              <Button variant="ghost" size="sm" className="self-start" onClick={() => {
+                setFilterMicros([]);
+                setFilterDateFrom(undefined);
+                setFilterDateTo(undefined);
+                setFilterMes("all");
+                setFilterAno("all");
+                setFilterSetor("all");
+              }}>
+                <X className="h-4 w-4 mr-1" /> Limpar filtros
               </Button>
             )}
           </div>
