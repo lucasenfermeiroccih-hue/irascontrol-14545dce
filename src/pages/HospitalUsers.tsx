@@ -219,6 +219,8 @@ export default function HospitalUsers() {
         hospital_id: hospitalId,
         full_name: editForm.full_name,
         phone: editForm.phone || null,
+        email: editForm.email || undefined,
+        password: editForm.password || undefined,
         role: editForm.role || undefined,
       },
     });
