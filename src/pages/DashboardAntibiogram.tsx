@@ -43,11 +43,11 @@ export default function DashboardAntibiogram() {
     (filtroSetor === "all" || d.sector === filtroSetor) &&
     (filtroSite === "all" || d.site === filtroSite) &&
     (filtroOrg === "all" || d.organism === filtroOrg) &&
-    (filtroMes === "all" || d.date?.substring(5, 7) === filtroMes) &&
-    (filtroAno === "all" || d.date?.substring(0, 4) === filtroAno)
+    (filtroMes === "all" || d.collectionDate?.substring(5, 7) === filtroMes) &&
+    (filtroAno === "all" || d.collectionDate?.substring(0, 4) === filtroAno)
   ), [allData, filtroSetor, filtroSite, filtroOrg, filtroMes, filtroAno]);
 
-  const anosDisp = useMemo(() => [...new Set(allData.map(d => d.date?.substring(0, 4)).filter(Boolean))].sort(), [allData]);
+  const anosDisp = useMemo(() => [...new Set(allData.map(d => d.collectionDate?.substring(0, 4)).filter(Boolean))].sort(), [allData]);
 
   const totalExams = filtered.length;
   const allResults = filtered.flatMap(d => d.results);
