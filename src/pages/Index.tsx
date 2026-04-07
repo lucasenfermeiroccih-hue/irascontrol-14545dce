@@ -63,6 +63,7 @@ export default function Index() {
           <div className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Funcionalidades</a>
             <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Preços</a>
+            <Link to="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Planos</Link>
             <a href="#proof" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Resultados</a>
           </div>
           <div className="flex items-center gap-3">
@@ -214,16 +215,21 @@ export default function Index() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* Free Trial CTA */}
       <section className="border-t bg-primary py-20 text-primary-foreground">
         <div className="container text-center">
-          <h2 className="text-3xl font-bold">Pronto para transformar o controle de infecção?</h2>
+          <h2 className="text-3xl font-bold">Experimente grátis por 30 dias</h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Comece gratuitamente e veja como o IRASControl pode reduzir IRAS na sua instituição.
+            Cadastre seu hospital e usuário no plano gratuito. Acesso completo a todas as funcionalidades por 30 dias, sem cartão de crédito.
           </p>
-          <Button size="lg" variant="secondary" className="mt-8 gap-2 px-8 text-base" asChild>
-            <Link to="/register">Criar Conta Gratuita <ArrowRight className="h-4 w-4" /></Link>
-          </Button>
+          <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Button size="lg" variant="secondary" className="gap-2 px-8 text-base" asChild>
+              <Link to="/register">Começar Teste Grátis <ArrowRight className="h-4 w-4" /></Link>
+            </Button>
+            <Button size="lg" variant="outline" className="gap-2 px-8 text-base border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" asChild>
+              <Link to="/pricing">Ver Todos os Planos <ArrowRight className="h-4 w-4" /></Link>
+            </Button>
+          </div>
         </div>
       </section>
 
