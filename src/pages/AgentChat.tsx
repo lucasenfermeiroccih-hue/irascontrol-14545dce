@@ -92,7 +92,7 @@ export default function AgentChat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)]">
+    <div className="flex flex-col h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 pb-4 border-b mb-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/agentes")}>
