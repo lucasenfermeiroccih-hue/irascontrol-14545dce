@@ -180,10 +180,7 @@ export default function AuditCTINew() {
           </div>
           <div className="space-y-2">
             <Label>Responsável *</Label>
-            <Select value={responsible} onValueChange={setResponsible}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{responsibles.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-            </Select>
+            <Input placeholder="Digite o nome do responsável" value={responsible} onChange={(e) => setResponsible(e.target.value)} />
           </div>
         </CardContent>
       </Card>
