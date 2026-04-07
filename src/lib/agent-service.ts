@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAgentContext } from "@/lib/agent-context-fetcher";
 
 // === Types ===
 
