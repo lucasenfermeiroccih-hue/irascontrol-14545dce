@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   FileText, Plus, Download, Sparkles, TrendingUp, Filter,
-  CalendarIcon, Loader2, AlertTriangle, Bug, X
+  CalendarIcon, Loader2, AlertTriangle, Bug, X, ChevronDown, Check
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -137,12 +138,21 @@ const Reports = () => {
   // ── Filtered records ──
   const filtered = useMemo(() => {
     return records.filter((r) => {
-      if (filterMicro !== "all" && !r.microorganismo.toLowerCase().includes(filterMicro.toLowerCase())) return false;
+      if (filterMicros.length > 0 && !filterMicros.includes(r.microorganismo)) return false;
       if (filterDateFrom && r.dataExame < format(filterDateFrom, "yyyy-MM-dd")) return false;
       if (filterDateTo && r.dataExame > format(filterDateTo, "yyyy-MM-dd")) return false;
+      if (filterSetor !== "all" && r.setor !== filterSetor) return false;
+      if (filterMes !== "all") {
+        const month = new Date(r.dataExame).getMonth();
+        if (MESES[month] !== filterMes) return false;
+      }
+      if (filterAno !== "all") {
+        const year = String(new Date(r.dataExame).getFullYear());
+        if (year !== filterAno) return false;
+      }
       return true;
     });
-  }, [records, filterMicro, filterDateFrom, filterDateTo]);
+  }, [records, filterMicros, filterDateFrom, filterDateTo, filterSetor, filterMes, filterAno]);
 
   // ── Distribution for bar chart ──
   const distribution = useMemo(() => {
