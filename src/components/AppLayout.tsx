@@ -25,6 +25,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const { user: authUser, isReady } = useAuthReady();
   const [profile, setProfile] = useState<{
     full_name: string;
     email: string;
