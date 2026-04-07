@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Calculator, Trash2, History } from "lucide-react";
+import { Save, Calculator, Trash2, History, RotateCcw } from "lucide-react";
 import { antimicrobianosBase } from "@/data/antimicrobianos-ddd";
 import { salvarRegistroDDD, listarRegistrosDDD, excluirRegistroDDD, DDDRegistroSalvo } from "@/lib/ddd-storage";
 
@@ -67,13 +67,10 @@ export default function IndicadoresDDD() {
       const qty = quantidades[atm.id] || 0;
       const totalMg = qty * atm.mgPorUnidade;
       const totalG = totalMg / 1000;
-
       const canCalcAB = qty > 0 && atm.dddPadrao > 0;
       const valorAB = canCalcAB ? totalG / atm.dddPadrao : null;
-
       const canCalcIndicador = valorAB !== null && valorAB > 0 && compiladoUTIs > 0;
       const indicador = canCalcIndicador ? (valorAB / compiladoUTIs) * 1000 : null;
-
       return {
         ...atm,
         qty,
@@ -90,7 +87,6 @@ export default function IndicadoresDDD() {
       toast.error("Preencha todos os campos obrigatórios da identificação.");
       return;
     }
-
     const linhas = tableData.map(row => ({
       antimicrobianoId: row.id,
       nome: row.nome,
@@ -103,17 +99,7 @@ export default function IndicadoresDDD() {
       valorAB: row.valorAB,
       indicador: row.indicador,
     }));
-
-    salvarRegistroDDD({
-      profissional,
-      dataVigilancia,
-      mesVigilancia,
-      anoVigilancia,
-      pacienteDia,
-      compiladoUTIs,
-      linhas,
-    });
-
+    salvarRegistroDDD({ profissional, dataVigilancia, mesVigilancia, anoVigilancia, pacienteDia, compiladoUTIs, linhas });
     setRegistrosSalvos(listarRegistrosDDD());
     toast.success("Registro salvo com sucesso!");
   };
@@ -130,7 +116,6 @@ export default function IndicadoresDDD() {
     setMesVigilancia(reg.mesVigilancia);
     setAnoVigilancia(reg.anoVigilancia);
     setPacienteDia(reg.pacienteDia);
-
     const newQtd: Record<number, number> = {};
     for (const linha of reg.linhas) {
       newQtd[linha.antimicrobianoId] = linha.quantidade;
@@ -140,63 +125,153 @@ export default function IndicadoresDDD() {
     toast.info("Registro carregado no formulário.");
   };
 
+  const handleClear = () => {
+    setProfissional("");
+    setDataVigilancia("");
+    setMesVigilancia("");
+    setAnoVigilancia(new Date().getFullYear());
+    setPacienteDia(Object.fromEntries(unidadesPacienteDia.map(u => [u, 0])));
+    setQuantidades(Object.fromEntries(antimicrobianosBase.map(a => [a.id, 0])));
+    toast.info("Formulário limpo.");
+  };
+
+  const indicadorColor = (val: number | null) => {
+    if (val === null) return "text-muted-foreground";
+    if (val > 50) return "text-destructive";
+    if (val > 20) return "text-warning";
+    return "text-success";
+  };
+
+  /* ---- Mobile card per antimicrobiano ---- */
+  const renderMobileCard = (row: typeof tableData[number]) => (
+    <Card key={row.id} className="overflow-hidden">
+      <CardHeader className="py-3 px-4 bg-muted/30">
+        <CardTitle className="text-sm font-semibold leading-tight">{row.nome}</CardTitle>
+        <p className="text-xs text-muted-foreground">{row.apresentacao}</p>
+      </CardHeader>
+      <CardContent className="px-4 py-3 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">mg/unidade</Label>
+          <span className="text-xs font-mono">{row.mgPorUnidade}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-xs text-muted-foreground">Qtd Unidades</Label>
+          <Input
+            type="number"
+            min={0}
+            className="h-8 w-24 text-center text-sm"
+            value={row.qty || ""}
+            onChange={e => handleQtyChange(row.id, e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border">
+          <div>
+            <p className="text-[10px] text-muted-foreground">Total (mg)</p>
+            <p className="text-xs font-mono">{row.qty > 0 ? row.totalMg : DASH}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">Total (g)</p>
+            <p className="text-xs font-mono">{row.qty > 0 ? row.totalG.toFixed(2) : DASH}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">DDD (g)</p>
+            <p className="text-xs font-mono">{row.dddPadrao}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground">A/B</p>
+            <p className="text-xs font-mono font-semibold text-primary">
+              {row.valorAB !== null ? row.valorAB.toFixed(2) : DASH}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-border">
+          <span className="text-xs font-semibold">Indicador</span>
+          <span className={`text-sm font-bold font-mono ${indicadorColor(row.indicador)}`}>
+            {row.indicador !== null ? row.indicador.toFixed(2) : DASH}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="space-y-5 p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Indicadores DDD</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">Indicadores DDD</h1>
           <p className="text-sm text-muted-foreground">Cálculo de consumo de antimicrobianos — DDD (OMS 2020)</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-2">
-            <History className="h-4 w-4" />
-            <span className="hidden sm:inline">Histórico</span> ({registrosSalvos.length})
-          </Button>
-        </div>
+        <Button variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-2 self-start sm:self-auto">
+          <History className="h-4 w-4" />
+          <span className="hidden sm:inline">Histórico</span> ({registrosSalvos.length})
+        </Button>
       </div>
 
       {/* Histórico */}
       {showHistory && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Registros Salvos</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base md:text-lg">Registros Salvos</CardTitle></CardHeader>
           <CardContent>
             {registrosSalvos.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhum registro salvo ainda.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Profissional</TableHead>
-                      <TableHead>Mês/Ano</TableHead>
-                      <TableHead>Data Vigilância</TableHead>
-                      <TableHead>Compilado UTIs</TableHead>
-                      <TableHead>Criado em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {registrosSalvos.map(reg => (
-                      <TableRow key={reg.id}>
-                        <TableCell className="font-medium">{reg.profissional}</TableCell>
-                        <TableCell><Badge variant="secondary">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge></TableCell>
-                        <TableCell>{reg.dataVigilancia}</TableCell>
-                        <TableCell className="font-mono">{reg.compiladoUTIs}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{new Date(reg.criadoEm).toLocaleString("pt-BR")}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => handleLoadRecord(reg)}>Carregar</Button>
-                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(reg.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+              <>
+                {/* Desktop history table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Profissional</TableHead>
+                        <TableHead>Mês/Ano</TableHead>
+                        <TableHead>Data Vigilância</TableHead>
+                        <TableHead>Compilado UTIs</TableHead>
+                        <TableHead>Criado em</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {registrosSalvos.map(reg => (
+                        <TableRow key={reg.id}>
+                          <TableCell className="font-medium">{reg.profissional}</TableCell>
+                          <TableCell><Badge variant="secondary">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge></TableCell>
+                          <TableCell>{reg.dataVigilancia}</TableCell>
+                          <TableCell className="font-mono">{reg.compiladoUTIs}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(reg.criadoEm).toLocaleString("pt-BR")}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button size="sm" variant="ghost" onClick={() => handleLoadRecord(reg)}>Carregar</Button>
+                              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(reg.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Mobile history cards */}
+                <div className="md:hidden space-y-3">
+                  {registrosSalvos.map(reg => (
+                    <div key={reg.id} className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{reg.profissional}</p>
+                          <Badge variant="secondary" className="mt-1">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{new Date(reg.criadoEm).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleLoadRecord(reg)}>Carregar</Button>
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(reg.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -204,8 +279,8 @@ export default function IndicadoresDDD() {
 
       {/* Identificação */}
       <Card>
-        <CardHeader><CardTitle className="text-lg">Identificação</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardHeader className="pb-4"><CardTitle className="text-base md:text-lg">Identificação</CardTitle></CardHeader>
+        <CardContent className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label>Nome do Profissional *</Label>
             <Input value={profissional} onChange={e => setProfissional(e.target.value)} placeholder="Nome completo" />
@@ -232,19 +307,19 @@ export default function IndicadoresDDD() {
 
       {/* Paciente-dia */}
       <Card>
-        <CardHeader><CardTitle className="text-lg">Paciente-dia por Unidade</CardTitle></CardHeader>
+        <CardHeader className="pb-4"><CardTitle className="text-base md:text-lg">Paciente-dia por Unidade</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
             {unidadesPacienteDia.map(u => (
               <div key={u} className="space-y-1.5">
-                <Label className="text-xs">{u}</Label>
+                <Label className="text-xs leading-tight">{u}</Label>
                 <Input type="number" min={0} value={pacienteDia[u] || ""} onChange={e => handlePacienteDiaChange(u, e.target.value)} placeholder="0" />
               </div>
             ))}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-primary">Compilado UTIs</Label>
+              <Label className="text-xs font-semibold text-primary leading-tight">Compilado UTIs</Label>
               <div className="flex h-10 items-center rounded-md border bg-muted px-3 font-mono text-sm font-bold text-primary">
-                <Calculator className="mr-2 h-4 w-4" />
+                <Calculator className="mr-2 h-4 w-4 shrink-0" />
                 {compiladoUTIs}
               </div>
             </div>
@@ -252,67 +327,72 @@ export default function IndicadoresDDD() {
         </CardContent>
       </Card>
 
-      {/* Tabela Antimicrobianos */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Antimicrobianos</CardTitle></CardHeader>
-        <CardContent className="overflow-x-auto -mx-2 px-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[180px]">Antimicrobiano</TableHead>
-                <TableHead className="min-w-[140px]">Apresentação</TableHead>
-                <TableHead className="min-w-[80px] text-center">mg/unid</TableHead>
-                <TableHead className="min-w-[90px] text-center">Qtd Unidades</TableHead>
-                <TableHead className="text-right">Total (mg)</TableHead>
-                <TableHead className="text-right">Total (g)</TableHead>
-                <TableHead className="text-right">DDD (g)</TableHead>
-                <TableHead className="text-right font-semibold text-primary">A/B</TableHead>
-                <TableHead className="text-right font-semibold text-primary">Indicador</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tableData.map(row => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium text-sm">{row.nome}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{row.apresentacao}</TableCell>
-                  <TableCell className="text-center font-mono text-xs">{row.mgPorUnidade}</TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      className="h-8 w-20 text-center mx-auto"
-                      value={row.qty || ""}
-                      onChange={e => handleQtyChange(row.id, e.target.value)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs">{row.qty > 0 ? row.totalMg : DASH}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{row.qty > 0 ? row.totalG.toFixed(2) : DASH}</TableCell>
-                  <TableCell className="text-right font-mono text-xs">{row.dddPadrao}</TableCell>
-                  <TableCell className="text-right font-mono text-xs font-semibold text-primary">
-                    {row.valorAB !== null ? row.valorAB.toFixed(2) : DASH}
-                  </TableCell>
-                  <TableCell className={`text-right font-mono text-xs font-bold ${
-                    row.indicador === null
-                      ? "text-muted-foreground"
-                      : row.indicador > 50
-                        ? "text-destructive"
-                        : row.indicador > 20
-                          ? "text-yellow-600"
-                          : "text-emerald-600"
-                  }`}>
-                    {row.indicador !== null ? row.indicador.toFixed(2) : DASH}
-                  </TableCell>
+      {/* Desktop: Table */}
+      <div className="hidden lg:block">
+        <Card>
+          <CardHeader className="pb-4"><CardTitle className="text-base md:text-lg">Antimicrobianos</CardTitle></CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[180px]">Antimicrobiano</TableHead>
+                  <TableHead className="min-w-[140px]">Apresentação</TableHead>
+                  <TableHead className="min-w-[80px] text-center">mg/unid</TableHead>
+                  <TableHead className="min-w-[90px] text-center">Qtd Unidades</TableHead>
+                  <TableHead className="text-right">Total (mg)</TableHead>
+                  <TableHead className="text-right">Total (g)</TableHead>
+                  <TableHead className="text-right">DDD (g)</TableHead>
+                  <TableHead className="text-right font-semibold text-primary">A/B</TableHead>
+                  <TableHead className="text-right font-semibold text-primary">Indicador</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {tableData.map(row => (
+                  <TableRow key={row.id}>
+                    <TableCell className="font-medium text-sm">{row.nome}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{row.apresentacao}</TableCell>
+                    <TableCell className="text-center font-mono text-xs">{row.mgPorUnidade}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-8 w-20 text-center mx-auto"
+                        value={row.qty || ""}
+                        onChange={e => handleQtyChange(row.id, e.target.value)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">{row.qty > 0 ? row.totalMg : DASH}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{row.qty > 0 ? row.totalG.toFixed(2) : DASH}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{row.dddPadrao}</TableCell>
+                    <TableCell className="text-right font-mono text-xs font-semibold text-primary">
+                      {row.valorAB !== null ? row.valorAB.toFixed(2) : DASH}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono text-xs font-bold ${indicadorColor(row.indicador)}`}>
+                      {row.indicador !== null ? row.indicador.toFixed(2) : DASH}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Botão Salvar fixo no final */}
-      <div className="sticky bottom-4 z-10 flex justify-end">
-        <Button onClick={handleSave} size="lg" className="gap-2 shadow-lg">
-          <Save className="h-5 w-5" /> Salvar Registro
+      {/* Mobile/Tablet: Cards */}
+      <div className="lg:hidden space-y-3">
+        <h2 className="text-base font-semibold text-foreground">Antimicrobianos</h2>
+        {tableData.map(renderMobileCard)}
+      </div>
+
+      {/* Actions — sticky on mobile */}
+      <div className="sticky bottom-0 z-10 flex gap-3 justify-end bg-background/95 backdrop-blur-sm py-3 border-t border-border -mx-4 px-4 md:-mx-6 md:px-6 lg:static lg:border-0 lg:bg-transparent lg:backdrop-blur-none lg:py-0 lg:mx-0 lg:px-0">
+        <Button variant="outline" onClick={handleClear} className="gap-2">
+          <RotateCcw className="h-4 w-4" />
+          <span className="hidden sm:inline">Limpar</span>
+        </Button>
+        <Button onClick={handleSave} className="gap-2">
+          <Save className="h-4 w-4" />
+          Salvar Registro
         </Button>
       </div>
     </div>
