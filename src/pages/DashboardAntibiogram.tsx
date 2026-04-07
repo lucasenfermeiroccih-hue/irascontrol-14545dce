@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -14,8 +15,10 @@ import {
 import {
   ArrowLeft, FileText, FileSpreadsheet, Activity, Bug, ShieldAlert,
   TrendingUp, TrendingDown, Award, AlertTriangle, Beaker, Microscope, Clock,
+  Sparkles, Bot, Loader2, Download,
 } from "lucide-react";
 import { getAntibiogramasParaDashboard, type AntibiogramRecord } from "@/lib/antibiogram-storage";
+import { sendToAgent } from "@/lib/agent-service";
 
 const CHART_COLORS = [
   "hsl(168,66%,34%)", "hsl(199,89%,48%)", "hsl(38,92%,50%)",
@@ -134,8 +137,91 @@ export default function DashboardAntibiogram() {
     return ins;
   }, [orgCounts, resistanceRate, phenotypeCount, phenotypeRate, sirByAntibiotic, sectorData]);
 
+  // AI state
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState("ultimo-mes");
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportResult, setReportResult] = useState<string | null>(null);
+
   const handleExportPDF = () => toast({ title: "Exportar PDF", description: "Funcionalidade será implementada com integração backend." });
   const handleExportExcel = () => toast({ title: "Exportar Excel", description: "Funcionalidade será implementada com integração backend." });
+
+  const handleAIInsights = async () => {
+    setAiInsightsLoading(true);
+    try {
+      const summaryData = {
+        totalExames: totalExams,
+        totalTestes: totalTests,
+        taxaResistencia: resistanceRate,
+        taxaSensibilidade: sensitivityRate,
+        fenotipos: phenotypeCount,
+        topOrganismos: orgCounts.slice(0, 5).map(o => `${o.name}: ${o.value}`),
+        antibioticosComMaiorResistencia: sirByAntibiotic.filter(a => a.resistRate > 30).map(a => `${a.name}: ${a.resistRate}%`),
+        setores: sectorData.map(s => `${s.name}: ${s.value}`),
+      };
+      const prompt = `Analise os dados de antibiograma e perfil de sensibilidade microbiana do hospital e gere insights clínicos detalhados com recomendações:\n\n${JSON.stringify(summaryData, null, 2)}`;
+      const result = await sendToAgent("micro-report", "dashboard-insights", prompt);
+      setAiInsights(result);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Falha ao gerar insights de IA.", variant: "destructive" });
+    } finally {
+      setAiInsightsLoading(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    setReportLoading(true);
+    setReportResult(null);
+    try {
+      const periodLabels: Record<string, string> = {
+        "ultimo-mes": "último mês",
+        "ultimos-3-meses": "últimos 3 meses",
+        "ultimos-6-meses": "últimos 6 meses",
+        "ultimo-ano": "último ano",
+      };
+      const summaryData = {
+        periodo: periodLabels[reportPeriod] || reportPeriod,
+        totalExames: totalExams,
+        totalTestes: totalTests,
+        taxaResistencia: resistanceRate,
+        taxaSensibilidade: sensitivityRate,
+        fenotipos: phenotypeCount,
+        taxaFenotipo: phenotypeRate,
+        topOrganismos: orgCounts.map(o => `${o.name}: ${o.value} isolados`),
+        perfilSIR: sirByAntibiotic.map(a => `${a.name}: S=${a.S} I=${a.I} R=${a.R} (${a.resistRate}% resistência)`),
+        setores: sectorData.map(s => `${s.name}: ${s.value} exames`),
+        tendenciaMensal: monthlyTrend.map(t => `${t.month}: ${t.taxaResistencia}% resistência (${t.exames} testes)`),
+        fenotiposDetectados: phenotypeDist.map(p => `${p.name}: ${p.value}`),
+        filtros: { setor: filtroSetor, site: filtroSite, organismo: filtroOrg, mes: filtroMes, ano: filtroAno },
+      };
+      const prompt = `Gere um relatório completo de antibiograma e perfil de sensibilidade microbiológica para o período: ${periodLabels[reportPeriod]}. Inclua: resumo executivo, análise de resistência por antibiótico, distribuição de microrganismos, fenótipos de resistência detectados, tendências temporais, alertas de surto, e recomendações clínicas. Dados:\n\n${JSON.stringify(summaryData, null, 2)}`;
+      const result = await sendToAgent("micro-report", "dashboard-report", prompt);
+      setReportResult(result);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Falha ao gerar relatório.", variant: "destructive" });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleExportReportPDF = () => {
+    if (!reportResult) return;
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(`
+        <html><head><title>Relatório Microbiológico</title>
+        <style>body{font-family:Arial,sans-serif;padding:40px;line-height:1.6;max-width:800px;margin:0 auto}
+        h1,h2,h3{color:#1a5c4c}table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background:#f0fdf4}
+        @media print{body{padding:20px}}</style></head>
+        <body>${reportResult.replace(/\n/g, "<br/>").replace(/#{3}\s(.+)/g, "<h3>$1</h3>").replace(/#{2}\s(.+)/g, "<h2>$1</h2>").replace(/#{1}\s(.+)/g, "<h1>$1</h1>").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>")}</body></html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 p-4 md:p-6">
@@ -150,7 +236,25 @@ export default function DashboardAntibiogram() {
             <p className="text-xs md:text-sm text-muted-foreground">Perfil de sensibilidade microbiana</p>
           </div>
         </div>
-        <div className="flex gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAIInsights}
+            disabled={aiInsightsLoading}
+            className="gap-1.5 text-xs border-primary/30 hover:bg-primary/10"
+          >
+            {aiInsightsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+            Insights IA
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setReportDialogOpen(true)}
+            className="gap-1.5 text-xs border-primary/30 hover:bg-primary/10"
+          >
+            <Bot className="h-3.5 w-3.5 text-primary" /> Relatório IA
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" /> PDF
           </Button>
@@ -383,11 +487,75 @@ export default function DashboardAntibiogram() {
         </CardContent>
       </Card>
 
+      {/* AI Generated Insights */}
+      {aiInsights && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="p-3 md:p-6 pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm md:text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" /> Insights de IA
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setAiInsights(null)}>✕</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 md:p-6 pt-0">
+            <div className="text-xs md:text-sm whitespace-pre-wrap leading-relaxed">{aiInsights}</div>
+          </CardContent>
+        </Card>
+      )}
+
       <TemporalAnalysis filtered={filtered} />
 
       <Separator />
 
       <DetailedTable data={filtered} />
+
+      {/* Report Dialog */}
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              Agente de Relatórios Microbiológicos
+            </DialogTitle>
+            <DialogDescription>
+              Gere relatórios completos de antibiograma e perfil de sensibilidade com IA
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Período do Relatório</label>
+              <Select value={reportPeriod} onValueChange={setReportPeriod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ultimo-mes">Último mês</SelectItem>
+                  <SelectItem value="ultimos-3-meses">Últimos 3 meses</SelectItem>
+                  <SelectItem value="ultimos-6-meses">Últimos 6 meses</SelectItem>
+                  <SelectItem value="ultimo-ano">Último ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={handleGenerateReport} disabled={reportLoading} className="w-full gap-2">
+              {reportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {reportLoading ? "Gerando relatório..." : "Gerar Relatório"}
+            </Button>
+
+            {reportResult && (
+              <div className="space-y-3">
+                <Separator />
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="text-xs md:text-sm whitespace-pre-wrap leading-relaxed">{reportResult}</div>
+                </div>
+                <Button variant="outline" onClick={handleExportReportPDF} className="w-full gap-2">
+                  <Download className="h-4 w-4" /> Exportar Relatório em PDF
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
