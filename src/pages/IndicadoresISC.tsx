@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Save, RotateCcw } from "lucide-react";
 import {
   getLastISCRegistro,
   saveISCRegistro,
@@ -109,7 +110,6 @@ export default function IndicadoresISC() {
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [pendingRegistro, setPendingRegistro] = useState<ISCRegistro | null>(null);
 
-  // Check for last saved record on mount
   useEffect(() => {
     const last = getLastISCRegistro();
     if (last) {
@@ -166,7 +166,6 @@ export default function IndicadoresISC() {
       toast.error("Informe o nome do profissional.");
       return;
     }
-
     const registro: ISCRegistro = {
       id: registroId,
       nomeProfissional: nome.trim(),
@@ -177,7 +176,6 @@ export default function IndicadoresISC() {
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     };
-
     saveISCRegistro(registro);
     toast.success("Dados salvos com sucesso!");
   };
@@ -192,7 +190,7 @@ export default function IndicadoresISC() {
     toast.info("Formulário limpo.");
   };
 
-  const renderCell = (
+  const renderValue = (
     row: typeof indicadorRows[number],
     clinica: Clinica | null,
     d: ClinicaData,
@@ -203,17 +201,12 @@ export default function IndicadoresISC() {
         row.key === "taxaResposta"
           ? calcTaxa(d.contatosAtendidos, d.totalCirurgias)
           : calcTaxa(d.iscConfirmada, d.totalCirurgias);
-      return (
-        <span className="font-semibold text-primary">{val}%</span>
-      );
+      return <span className="font-semibold text-primary">{val}%</span>;
     }
     if (row.type === "select") {
       if (isTotal) return <span className="text-muted-foreground">—</span>;
       return (
-        <Select
-          value={d.sitio}
-          onValueChange={(v) => updateField(clinica!, "sitio", v)}
-        >
+        <Select value={d.sitio} onValueChange={(v) => updateField(clinica!, "sitio", v)}>
           <SelectTrigger className="h-9 w-full text-xs">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
@@ -241,8 +234,42 @@ export default function IndicadoresISC() {
     );
   };
 
+  /* ---- Mobile card for each clínica ---- */
+  const renderMobileCard = (clinica: Clinica) => (
+    <Card key={clinica}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold">{clinica}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {indicadorRows.map((row) => (
+          <div key={row.key} className="flex items-center justify-between gap-3">
+            <Label className="text-xs text-muted-foreground shrink-0 w-[45%]">{row.label}</Label>
+            <div className="w-[55%]">{renderValue(row, clinica, data[clinica], false)}</div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
+  /* ---- Mobile totals card ---- */
+  const renderMobileTotals = () => (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold text-primary">Total Geral</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {indicadorRows.map((row) => (
+          <div key={row.key} className="flex items-center justify-between gap-3">
+            <Label className="text-xs text-muted-foreground shrink-0 w-[45%]">{row.label}</Label>
+            <div className="w-[55%] text-right">{renderValue(row, null, totals, true)}</div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-5 p-4 md:p-6 max-w-7xl mx-auto">
       {/* Resume dialog */}
       <Dialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
         <DialogContent>
@@ -261,15 +288,16 @@ export default function IndicadoresISC() {
         </DialogContent>
       </Dialog>
 
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Indicadores ISC</h1>
-        <p className="text-muted-foreground">Infecção de Sítio Cirúrgico — Entrada de dados</p>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Indicadores ISC</h1>
+        <p className="text-sm text-muted-foreground">Infecção de Sítio Cirúrgico — Entrada de dados</p>
       </div>
 
-      {/* Header fields */}
+      {/* General info */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Informações Gerais</CardTitle>
+          <CardTitle className="text-base md:text-lg">Informações Gerais</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -300,45 +328,60 @@ export default function IndicadoresISC() {
         </CardContent>
       </Card>
 
-      {/* Data table */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Dados por Sítio Cirúrgico</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[200px] bg-muted/50 font-semibold">Indicador</TableHead>
-                {clinicas.map((c) => (
-                  <TableHead key={c} className="min-w-[150px] text-center bg-muted/50 font-semibold">{c}</TableHead>
-                ))}
-                <TableHead className="min-w-[130px] text-center bg-primary/10 font-semibold text-primary">Total Geral</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {indicadorRows.map((row) => (
-                <TableRow key={row.key}>
-                  <TableCell className="font-medium text-sm bg-muted/20">{row.label}</TableCell>
+      {/* Desktop: Table view */}
+      <div className="hidden lg:block">
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base md:text-lg">Dados por Sítio Cirúrgico</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[200px] bg-muted/50 font-semibold">Indicador</TableHead>
                   {clinicas.map((c) => (
-                    <TableCell key={c} className="text-center">
-                      {renderCell(row, c, data[c], false)}
-                    </TableCell>
+                    <TableHead key={c} className="min-w-[140px] text-center bg-muted/50 font-semibold text-xs">{c}</TableHead>
                   ))}
-                  <TableCell className="text-center bg-primary/5">
-                    {renderCell(row, null, totals, true)}
-                  </TableCell>
+                  <TableHead className="min-w-[120px] text-center bg-primary/10 font-semibold text-primary text-xs">Total Geral</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {indicadorRows.map((row) => (
+                  <TableRow key={row.key}>
+                    <TableCell className="font-medium text-sm bg-muted/20">{row.label}</TableCell>
+                    {clinicas.map((c) => (
+                      <TableCell key={c} className="text-center">
+                        {renderValue(row, c, data[c], false)}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-center bg-primary/5">
+                      {renderValue(row, null, totals, true)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Actions */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={handleLimpar}>Cancelar</Button>
-        <Button onClick={handleSalvar}>Salvar</Button>
+      {/* Mobile/Tablet: Card view */}
+      <div className="lg:hidden space-y-4">
+        <h2 className="text-base font-semibold text-foreground">Dados por Sítio Cirúrgico</h2>
+        {clinicas.map(renderMobileCard)}
+        {renderMobileTotals()}
+      </div>
+
+      {/* Actions - sticky on mobile */}
+      <div className="sticky bottom-0 z-10 flex gap-3 justify-end bg-background/95 backdrop-blur-sm py-3 border-t border-border -mx-4 px-4 md:-mx-6 md:px-6 lg:static lg:border-0 lg:bg-transparent lg:backdrop-blur-none lg:py-0 lg:mx-0 lg:px-0">
+        <Button variant="outline" onClick={handleLimpar} className="gap-2">
+          <RotateCcw className="h-4 w-4" />
+          <span className="hidden sm:inline">Limpar</span>
+        </Button>
+        <Button onClick={handleSalvar} className="gap-2">
+          <Save className="h-4 w-4" />
+          Salvar
+        </Button>
       </div>
     </div>
   );
