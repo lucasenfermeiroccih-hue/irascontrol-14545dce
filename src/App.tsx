@@ -46,6 +46,7 @@ import AgentLibrary from "./pages/AgentLibrary.tsx";
 import AgentChat from "./pages/AgentChat.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
+import { RequireAdmin } from "./components/RequireAdmin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -87,13 +88,16 @@ const App = () => (
             <Route path="/reports/analytics" element={<ReportsAnalytics />} />
             <Route path="/forms" element={<Forms />} />
             <Route path="/patients/monitoring" element={<PatientsMonitoring />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/users" element={<HospitalUsers />} />
+            <Route element={<RequireAdmin />}>
+              <Route path="/admin/settings" element={<AdminSettings />} />
+              <Route path="/admin/users" element={<HospitalUsers />} />
+              <Route path="/crm" element={<CRM />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/planos" element={<Pricing />} />
+            </Route>
             <Route element={<RequireSuperAdmin />}>
               <Route path="/super-admin" element={<SuperAdmin />} />
             </Route>
-            <Route path="/crm" element={<CRM />} />
-            <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/settings/profile" element={<UserProfile />} />
             <Route path="/indicadores/new" element={<IndicadoresNew />} />
             <Route path="/indicadores/dashboard" element={<IndicadoresDashboard />} />

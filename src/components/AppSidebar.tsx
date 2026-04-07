@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ClipboardCheck, Activity, Shield, Bell,
   FileText, Settings, Users, Microscope, Pill, HandMetal,
   MonitorCheck, Building2, ShoppingBag, Stethoscope, FlaskConical,
-  BarChart3, FolderOpen, TrendingUp, Sparkles
+  BarChart3, FolderOpen, TrendingUp, Sparkles, Tag
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -95,6 +95,7 @@ const navSections = [
       { title: "Configurações", url: "/admin/settings", icon: Settings },
       { title: "CRM", url: "/crm", icon: Users },
       { title: "Marketplace", url: "/marketplace", icon: ShoppingBag },
+      { title: "Planos", url: "/planos", icon: Tag },
       { title: "Perfil", url: "/settings/profile", icon: Users },
     ],
   },
