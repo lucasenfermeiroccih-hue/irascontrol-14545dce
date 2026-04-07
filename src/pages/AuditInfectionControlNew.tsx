@@ -208,10 +208,7 @@ export default function AuditInfectionControlNew() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Auditor *</Label>
-            <Select value={auditor} onValueChange={setAuditor}>
-              <SelectTrigger><SelectValue placeholder="Selecione o auditor" /></SelectTrigger>
-              <SelectContent>{auditors.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-            </Select>
+            <Input placeholder="Digite o nome do auditor" value={auditor} onChange={(e) => setAuditor(e.target.value)} />
           </div>
         </CardContent>
       </Card>
