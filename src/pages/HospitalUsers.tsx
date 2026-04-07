@@ -72,7 +72,7 @@ export default function HospitalUsers() {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editTarget, setEditTarget] = useState<HospitalUser | null>(null);
-  const [editForm, setEditForm] = useState({ full_name: "", phone: "", role: "" });
+  const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "", role: "", password: "" });
 
   // Deactivate/activate confirmation
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -197,8 +197,10 @@ export default function HospitalUsers() {
     setEditTarget(user);
     setEditForm({
       full_name: user.profiles?.full_name || "",
+      email: user.profiles?.email || "",
       phone: user.profiles?.phone || "",
       role: mainRole?.role || "",
+      password: "",
     });
     setEditOpen(true);
   };
@@ -217,6 +219,8 @@ export default function HospitalUsers() {
         hospital_id: hospitalId,
         full_name: editForm.full_name,
         phone: editForm.phone || null,
+        email: editForm.email || undefined,
+        password: editForm.password || undefined,
         role: editForm.role || undefined,
       },
     });
@@ -502,12 +506,31 @@ export default function HospitalUsers() {
               />
             </div>
             <div className="space-y-2">
+              <Label>E-mail</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="usuario@hospital.com"
+              />
+            </div>
+            <div className="space-y-2">
               <Label>Telefone</Label>
               <Input
                 value={editForm.phone}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                 placeholder="(11) 99999-0000"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <Input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Deixe vazio para manter a senha atual"
+              />
+              <p className="text-xs text-muted-foreground">Mínimo 6 caracteres. Deixe vazio para não alterar.</p>
             </div>
             <div className="space-y-2">
               <Label>Perfil de Acesso</Label>
