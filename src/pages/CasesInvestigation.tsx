@@ -36,7 +36,7 @@ const statusConfig: Record<CaseStatus, { label: string; variant: "default" | "se
   pendente: { label: "Pendente", variant: "outline" },
 };
 
-const setores = ["UTI Adulto", "UTI Neonatal", "UTI Pediátrica", "CC", "CME", "Enfermaria A", "Enfermaria B", "Pronto Socorro"];
+const setores = ["UTI 1 Adulto", "UTI 2 Adulto", "UTI 3 Adulto", "UTI Neonatal", "UTI Pediátrica", "UPO", "Trauma Clínico", "Clínica Médica", "Clínica Cirúrgica", "Contêiner", "Pediatria", "Pediatria (Enfermaria)", "Alojamento Conjunto"];
 const eventos = ["IPCS-CVC", "ITU-SVD", "PAV", "ISC", "Surto", "Óbito relacionado a IRAS", "Colonização MR"];
 const classificacoes = ["IRAS confirmada", "IRAS provável", "Colonização", "Contaminação", "Em investigação"];
 const dispositivosList = ["CVC", "SVD", "VM", "DVE", "PICC", "PAI", "TOT", "Dreno"];
