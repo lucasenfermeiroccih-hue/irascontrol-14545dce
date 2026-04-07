@@ -160,7 +160,15 @@ export default function AuditAntibiogramNew() {
       return;
     }
     toast({ title: "Antibiograma registrado!", description: `${results.length} antimicrobianos processados. ${detectedPhenotypes.length > 0 ? "⚠️ Fenótipos de resistência detectados!" : ""}` });
-    navigate("/dashboard");
+    setCollectionDate("");
+    setSector("");
+    setPatientId("");
+    setOrganism("");
+    setSite("");
+    setResults([]);
+    setPathogenCategory("");
+    setSelectedPathogen("");
+    window.scrollTo(0, 0);
   };
 
   return (
