@@ -88,13 +88,12 @@ Deno.serve(async (req) => {
       userId = newUser.user.id;
     }
 
-    // 3. Assign hospital_admin role
+    // 3. Assign hospital_admin role (skip if already has it)
     const { error: roleError } = await adminClient
       .from("user_roles")
-      .insert({ user_id: userId, role: "hospital_admin" });
+      .upsert({ user_id: userId, role: "hospital_admin" }, { onConflict: "user_id,role" });
 
     if (roleError) {
-      await adminClient.auth.admin.deleteUser(userId);
       await adminClient.from("hospitals").delete().eq("id", hospital.id);
       return json({ error: `Erro ao atribuir role: ${roleError.message}` }, 500);
     }
