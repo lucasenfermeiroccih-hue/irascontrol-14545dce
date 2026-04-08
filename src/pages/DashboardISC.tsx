@@ -13,11 +13,10 @@ import {
 } from "recharts";
 import {
   Stethoscope, Phone, AlertTriangle, Activity, Award, Brain,
-  TrendingDown, TrendingUp, Sparkles, FileText, Inbox,
+  TrendingDown, TrendingUp, Sparkles, FileText, Inbox, Loader2,
 } from "lucide-react";
 import { useISCDashboard } from "@/hooks/useISCDashboard";
 import { generateSmartInsights, generateStructuredReport, type SmartInsight } from "@/lib/isc-report-engine";
-import { Loader2 } from "lucide-react";
 
 const mesesNomes = [
   "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -29,37 +28,6 @@ const mesesFiltro = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-interface FlatRecord {
-  profissional: string;
-  mes: number;
-  ano: number;
-  clinica: string;
-  totalCirurgias: number;
-  contatosAtendidos: number;
-  reinternacoes: number;
-  iscConfirmada: number;
-  sitio: string;
-}
-
-function flattenRegistros(registros: ISCRegistro[]): FlatRecord[] {
-  const records: FlatRecord[] = [];
-  for (const reg of registros) {
-    for (const [clinica, dados] of Object.entries(reg.indicadores)) {
-      records.push({
-        profissional: reg.nomeProfissional,
-        mes: Number(reg.mes) || 0,
-        ano: Number(reg.ano) || 0,
-        clinica,
-        totalCirurgias: dados.totalCirurgias || 0,
-        contatosAtendidos: dados.contatosAtendidos || 0,
-        reinternacoes: dados.reinternacoes || 0,
-        iscConfirmada: dados.iscConfirmada || 0,
-        sitio: dados.sitio || "",
-      });
-    }
-  }
-  return records;
-}
 
 const COLORS = [
   "hsl(var(--primary))",
