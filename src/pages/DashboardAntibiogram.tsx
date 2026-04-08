@@ -50,7 +50,7 @@ export default function DashboardAntibiogram() {
     (filtroAno === "all" || d.collectionDate?.substring(0, 4) === filtroAno)
   ), [allData, filtroSetor, filtroSite, filtroOrg, filtroMes, filtroAno]);
 
-  const anosDisp = useMemo(() => [...new Set(allData.map(d => d.collectionDate?.substring(0, 4)).filter(Boolean))].sort(), [allData]);
+  const anosDisp = useMemo(() => [...new Set(allData.map(d => d.collectionDate?.substring(0, 4)).filter((v): v is string => !!v))].sort(), [allData]);
 
   const totalExams = filtered.length;
   const allResults = filtered.flatMap(d => d.results);
