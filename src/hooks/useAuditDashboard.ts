@@ -21,7 +21,7 @@ export interface AuditItemRow {
   observation: string | null;
 }
 
-export function useAuditDashboard(auditType: string) {
+export function useAuditDashboard(auditType: AuditType) {
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [items, setItems] = useState<AuditItemRow[]>([]);
