@@ -64,6 +64,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/select-hospital" element={<SelectHospital />} />
           
           {/* Internal routes with sidebar layout */}
           <Route element={<AppLayout />}>
