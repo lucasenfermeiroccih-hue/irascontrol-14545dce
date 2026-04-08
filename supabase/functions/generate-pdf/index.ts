@@ -33,13 +33,14 @@ function sanitize(s: string): string {
     .replace(/\)/g, "\\)")
     .replace(/[^\x20-\x7E]/g, (c) => {
       // Map common Portuguese chars
-      const map: Record<string, string> = {
-        á: "a", à: "a", â: "a", ã: "a", é: "e", ê: "e", í: "i",
-        ó: "o", ô: "o", õ: "o", ú: "u", ü: "u", ç: "c",
-        Á: "A", À: "A", Â: "A", Ã: "A", É: "E", Ê: "E", Í: "I",
-        Ó: "O", Ô: "O", Õ: "O", Ú: "U", Ü: "U", Ç: "C",
-        "–": "-", "—": "-", "'": "'", "'": "'", """: '"', """: '"',
-      };
+      const map: Record<string, string> = {};
+      // Portuguese accented chars
+      const pairs = "á:a,à:a,â:a,ã:a,é:e,ê:e,í:i,ó:o,ô:o,õ:o,ú:u,ü:u,ç:c,Á:A,À:A,Â:A,Ã:A,É:E,Ê:E,Í:I,Ó:O,Ô:O,Õ:O,Ú:U,Ü:U,Ç:C";
+      pairs.split(",").forEach(p => { const [k, v] = p.split(":"); map[k] = v; });
+      // Special punctuation
+      ["\u2013", "\u2014"].forEach(c => map[c] = "-");
+      ["\u2018", "\u2019"].forEach(c => map[c] = "'");
+      ["\u201C", "\u201D"].forEach(c => map[c] = '"');
       return map[c] || "?";
     });
 }
