@@ -104,10 +104,16 @@ export default function DashboardDDD() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+    {dataLoading ? (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ) : (
+    <>
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard DDD</h1>
         <p className="text-sm text-muted-foreground">
-          Visualização do consumo de antimicrobianos — {registros.length} registro(s) salvo(s)
+          Visualização do consumo de antimicrobianos — {allData.length} registro(s)
         </p>
       </div>
 
