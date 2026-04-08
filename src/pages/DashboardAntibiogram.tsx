@@ -563,7 +563,7 @@ export default function DashboardAntibiogram() {
 // ═══════════════════════════════════════════════════
 // Temporal Analysis
 // ═══════════════════════════════════════════════════
-function TemporalAnalysis({ filtered }: { filtered: AntibiogramRecord[] }) {
+function TemporalAnalysis({ filtered }: { filtered: AntibiogramDashRecord[] }) {
   const topOrganisms = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(d => { map[d.organism] = (map[d.organism] || 0) + 1; });
@@ -724,7 +724,7 @@ function TemporalAnalysis({ filtered }: { filtered: AntibiogramRecord[] }) {
 // ═══════════════════════════════════════════════════
 // Detailed Table
 // ═══════════════════════════════════════════════════
-function DetailedTable({ data }: { data: AntibiogramRecord[] }) {
+function DetailedTable({ data }: { data: AntibiogramDashRecord[] }) {
   const [tSetor, setTSetor] = useState("all");
   const [tSite, setTSite] = useState("all");
   const [tOrg, setTOrg] = useState("all");
