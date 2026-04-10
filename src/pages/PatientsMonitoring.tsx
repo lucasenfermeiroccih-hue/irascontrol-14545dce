@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Stethoscope, Search, Users, AlertTriangle, Activity, Thermometer,
   Plus, Pencil, LogOut, Clock, Save, Eye, FileText, ShieldAlert, Syringe,
-  ClipboardList, ChevronLeft, ChevronRight, CheckCircle2
+  ClipboardList, ChevronLeft, ChevronRight, CheckCircle2, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -421,6 +421,7 @@ export default function PatientsMonitoring() {
                         <th className="text-left p-3 font-medium text-muted-foreground">Microrganismo</th>
                         <th className="text-left p-3 font-medium text-muted-foreground">Sensibilidade</th>
                         <th className="text-left p-3 font-medium text-muted-foreground">MDR</th>
+                        <th className="p-3"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -434,6 +435,21 @@ export default function PatientsMonitoring() {
                             {lab.mdr
                               ? <Badge variant="destructive" className="text-xs">MDR</Badge>
                               : <Badge variant="outline" className="text-xs">Sensível</Badge>}
+                          </td>
+                          <td className="p-3">
+                            {!readOnly && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setLabPanel(prev => prev.filter((_, idx) => idx !== i));
+                                  toast.success("Exame removido do painel");
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
