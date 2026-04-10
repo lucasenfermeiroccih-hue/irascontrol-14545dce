@@ -471,7 +471,13 @@ const CasesInvestigation = () => {
       {/* New/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto mx-4">
-          <DialogHeader><DialogTitle className="text-base">{editingCase ? "Editar Caso" : "Novo Caso"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base">{editingCase ? "Editar Caso" : prefilledBanner ? "Nova Investigação — Dados Pré-preenchidos" : "Novo Caso"}</DialogTitle></DialogHeader>
+          {prefilledBanner && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/10 border border-primary/20">
+              <Info className="h-4 w-4 text-primary shrink-0" />
+              <p className="text-xs text-primary font-medium">Dados importados do Monitoramento de Pacientes. Revise e complemente.</p>
+            </div>
+          )}
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1"><Label className="text-xs">Paciente *</Label><Input value={form.paciente} onChange={(e) => setForm({ ...form, paciente: e.target.value })} /></div>
@@ -497,7 +503,7 @@ const CasesInvestigation = () => {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Observações</Label>
-              <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} />
+              <Textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={prefilledBanner ? 8 : 3} />
             </div>
           </div>
           <DialogFooter>
