@@ -172,7 +172,19 @@ export default function PatientsMonitoring() {
     toast.success(`Paciente ${selected.nome} — ${dischargeType} registrada`);
   };
 
-  const handleSave = () => {
+  const openEditId = () => {
+    const { id, status, ...rest } = selected;
+    setEditIdForm(rest);
+    setEditIdOpen(true);
+  };
+
+  const saveEditId = () => {
+    if (!editIdForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
+    setPatients(prev => prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p));
+    setEditIdOpen(false);
+    toast.success("Dados de identificação atualizados!");
+  };
+
     if (!conclusao.classificacao || !conclusao.conclusaoEpidemiologica || !conclusao.condutas || !conclusao.desfecho || !conclusao.vinculoSurto) {
       toast.error("Preencha todos os campos obrigatórios na seção Conclusão");
       setCurrentStep(6);
