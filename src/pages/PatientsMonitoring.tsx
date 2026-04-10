@@ -1085,6 +1085,34 @@ export default function PatientsMonitoring() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ─── DISCHARGE CONFIRM DIALOG (list view) ──────────── */}
+      <Dialog open={dischargeConfirmOpen} onOpenChange={setDischargeConfirmOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Confirmar Alta</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja dar alta ao paciente <strong className="text-foreground">{patients.find(p => p.id === dischargePatientId)?.nome}</strong>?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDischargeConfirmOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { setDischargeConfirmOpen(false); setDischargeOpen(true); }}>Sim, continuar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={dischargeOpen} onOpenChange={setDischargeOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Tipo de Alta</DialogTitle></DialogHeader>
+          <Select value={dischargeType} onValueChange={setDischargeType}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>{tiposAlta.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDischargeOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDischarge}>Confirmar Alta</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
