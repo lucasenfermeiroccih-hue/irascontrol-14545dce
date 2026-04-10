@@ -72,12 +72,16 @@ const criteriosDiagnosticos = [
   "PCR ou Procalcitonina elevada",
 ];
 
-const mockLabPanel = [
+const initialLabPanel = [
   { exame: "Hemocultura", data: "05/04/2026", microrganismo: "Staphylococcus aureus", sensibilidade: "MRSA", mdr: true },
   { exame: "Urocultura", data: "03/04/2026", microrganismo: "Klebsiella pneumoniae", sensibilidade: "KPC+", mdr: true },
   { exame: "Cultura sec. traqueal", data: "06/04/2026", microrganismo: "Pseudomonas aeruginosa", sensibilidade: "Sensível a Meropenem", mdr: false },
   { exame: "Cultura ferida op.", data: "04/04/2026", microrganismo: "Escherichia coli", sensibilidade: "ESBL", mdr: true },
 ];
+
+type LabEntry = typeof initialLabPanel[0];
+
+const exameOptions = ["Hemocultura", "Urocultura", "Cultura de secreção traqueal", "Cultura de ferida operatória", "Cultura de ponta de cateter", "Líquor", "Outro"];
 
 const mockFatoresRisco = [
   "Idade > 65 anos", "Diabetes mellitus", "Imunossupressão",
