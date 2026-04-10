@@ -683,7 +683,7 @@ export default function PatientsMonitoring() {
           <DialogContent className="max-w-sm">
             <DialogHeader><DialogTitle>Confirmar Alta</DialogTitle></DialogHeader>
             <p className="text-sm text-muted-foreground">
-              Tem certeza que deseja dar alta ao paciente <strong className="text-foreground">{selected?.nome || patients.find(p => p.id === selectedId)?.nome}</strong>?
+              Tem certeza que deseja dar alta ao paciente <strong className="text-foreground">{patients.find(p => p.id === dischargePatientId)?.nome}</strong>?
             </p>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDischargeConfirmOpen(false)}>Cancelar</Button>
