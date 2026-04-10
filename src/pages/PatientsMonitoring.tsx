@@ -853,6 +853,11 @@ export default function PatientsMonitoring() {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => enterPatient(p.id)} title="Entrar no paciente">
                             <LogIn className="h-3.5 w-3.5 text-primary" />
                           </Button>
+                          {p.status === "active" && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => { setSelectedId(p.id); setDischargeOpen(true); }} title="Dar alta">
+                              <LogOut className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -893,6 +898,11 @@ export default function PatientsMonitoring() {
                     <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => enterPatient(p.id)}>
                       <LogIn className="h-3 w-3" /> Entrar
                     </Button>
+                    {p.status === "active" && (
+                      <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => { setSelectedId(p.id); setDischargeOpen(true); }}>
+                        <LogOut className="h-3 w-3" /> Alta
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
