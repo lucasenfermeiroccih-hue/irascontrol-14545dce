@@ -185,6 +185,7 @@ export default function PatientsMonitoring() {
     toast.success("Dados de identificação atualizados!");
   };
 
+  const handleSave = () => {
     if (!conclusao.classificacao || !conclusao.conclusaoEpidemiologica || !conclusao.condutas || !conclusao.desfecho || !conclusao.vinculoSurto) {
       toast.error("Preencha todos os campos obrigatórios na seção Conclusão");
       setCurrentStep(6);
