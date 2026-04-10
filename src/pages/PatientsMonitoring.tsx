@@ -182,10 +182,18 @@ export default function PatientsMonitoring() {
 
   const handleDischarge = () => {
     if (!dischargeType) { toast.error("Selecione o tipo de alta"); return; }
-    if (!selected) return;
-    setPatients(prev => prev.map(p => p.id === selectedId ? { ...p, status: "discharged" as const, dataAlta: new Date().toISOString().slice(0, 10) } : p));
+    const dpId = dischargePatientId;
+    if (!dpId) return;
+    const pat = patients.find(p => p.id === dpId);
+    setPatients(prev => prev.map(p => p.id === dpId ? { ...p, status: "discharged" as const, dataAlta: new Date().toISOString().slice(0, 10) } : p));
     setDischargeOpen(false);
-    toast.success(`Paciente ${selected.nome} — ${dischargeType} registrada`);
+    setDischargePatientId(null);
+    toast.success(`Paciente ${pat?.nome || ""} — ${dischargeType} registrada`);
+  };
+
+  const openDischargeConfirm = (patientId: string) => {
+    setDischargePatientId(patientId);
+    setDischargeConfirmOpen(true);
   };
 
   const openEditId = (patientId: string) => {
