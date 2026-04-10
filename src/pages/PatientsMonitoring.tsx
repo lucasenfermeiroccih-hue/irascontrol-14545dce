@@ -56,6 +56,11 @@ interface MockPatient {
   status: PatientStatus;
 }
 
+const especialidades = [
+  "Clínica médica", "Cirurgia Geral", "Cirurgia Vascular", "Cirurgia Cardíaca",
+  "Cirurgia Oftalmológica", "Neurocirurgia", "Cirurgia Ortopédica",
+];
+
 const tiposAlta = ["Óbito", "Alta", "Transferência"];
 
 const criteriosDiagnosticos = [
