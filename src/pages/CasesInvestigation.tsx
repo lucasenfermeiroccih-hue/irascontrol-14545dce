@@ -517,8 +517,7 @@ const CasesInvestigation = () => {
           </div>
         </div>
 
-        {/* ── Step Content ── */}
-            {/* ── Step 0: Identificação ── */}
+        <div className="mt-6 space-y-4 max-w-5xl">
             {detailStep === 0 && (
               <Card>
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />Identificação do Paciente</CardTitle></CardHeader>
