@@ -82,6 +82,13 @@ const initialLabPanel = [
 
 type LabEntry = typeof initialLabPanel[0];
 
+interface AntibioticEntry {
+  id: string;
+  nome: string;
+  dataInicio: string;
+  dataFim: string;
+}
+
 const exameOptions = ["Hemocultura", "Urocultura", "Cultura de secreção traqueal", "Cultura de ferida operatória", "Cultura de ponta de cateter", "Líquor", "Outro"];
 
 const mockFatoresRisco = [
