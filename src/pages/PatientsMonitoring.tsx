@@ -78,7 +78,27 @@ const mockPatients = [
   },
 ];
 
-type MockPatient = typeof mockPatients[0];
+type PatientStatus = "active" | "discharged" | "transferred" | "deceased";
+
+interface MockPatient {
+  id: string;
+  nome: string;
+  unidade: string;
+  leito: string;
+  prontuario: string;
+  dataInternacaoHospitalar: string;
+  origem: string;
+  dataInternacaoCTI: string;
+  dataAlta: string;
+  doencasBase: string;
+  motivoInternacao: string;
+  dataNascimento: string;
+  sexo: string;
+  dataAdmissao: string;
+  especialidade: string;
+  diagnostico: string;
+  status: PatientStatus;
+}
 
 const especialidades = [
   "Clínica médica", "Cirurgia Geral", "Cirurgia Vascular", "Cirurgia Cardíaca",
