@@ -246,7 +246,7 @@ export default function PatientsMonitoring() {
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent"><Activity className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-xs text-muted-foreground">MDR</p><p className="text-2xl font-bold text-destructive">{mockLabPanel.filter(l => l.mdr).length}</p></div>
+          <div><p className="text-xs text-muted-foreground">MDR</p><p className="text-2xl font-bold text-destructive">{labPanel.filter(l => l.mdr).length}</p></div>
         </CardContent></Card>
       </div>
 
@@ -417,7 +417,7 @@ export default function PatientsMonitoring() {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockLabPanel.map((lab, i) => (
+                      {labPanel.map((lab, i) => (
                         <tr key={i} className={`border-t ${lab.mdr ? "bg-destructive/5" : ""}`}>
                           <td className="p-3">{lab.exame}</td>
                           <td className="p-3">{lab.data}</td>
