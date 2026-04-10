@@ -119,6 +119,7 @@ export default function PatientsMonitoring() {
   const [newPatientOpen, setNewPatientOpen] = useState(false);
   const [dischargeOpen, setDischargeOpen] = useState(false);
   const [dischargeConfirmOpen, setDischargeConfirmOpen] = useState(false);
+  const [dischargePatientId, setDischargePatientId] = useState<string | null>(null);
   const [dischargeType, setDischargeType] = useState("");
   const [viewMode, setViewMode] = useState<"edit" | "view">("edit");
   const [currentStep, setCurrentStep] = useState(0);
