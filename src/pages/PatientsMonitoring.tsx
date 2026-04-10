@@ -161,6 +161,9 @@ export default function PatientsMonitoring() {
   const [newLabOpen, setNewLabOpen] = useState(false);
   const [newLab, setNewLab] = useState({ exame: "", data: "", microrganismo: "", sensibilidade: "", mdr: false });
   const [responsavel, setResponsavel] = useState("");
+  const [antibioticos, setAntibioticos] = useState<AntibioticEntry[]>([]);
+  const [newAtbOpen, setNewAtbOpen] = useState(false);
+  const [newAtb, setNewAtb] = useState({ nome: "", dataInicio: "", dataFim: "" });
 
   const tempFloat = parseFloat(sinaisVitais.temperatura);
   const tempAlta = !isNaN(tempFloat) && tempFloat > 38;
