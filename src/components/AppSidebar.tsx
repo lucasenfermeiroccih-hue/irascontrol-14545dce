@@ -68,6 +68,7 @@ const publicSections = [
       { title: "Dashboard ISC", url: "/dashboard-isc", icon: BarChart3 },
       { title: "Dashboard DDD", url: "/dashboard-ddd", icon: Pill },
       { title: "Antibiograma", url: "/dashboard/antimicrobial-sensitivity", icon: Microscope },
+      { title: "Consumo Higiene", url: "/hygiene/consumption-dashboard", icon: Droplets },
     ],
   },
   {
