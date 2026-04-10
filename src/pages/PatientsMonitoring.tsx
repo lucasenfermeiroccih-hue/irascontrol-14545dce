@@ -402,9 +402,14 @@ export default function PatientsMonitoring() {
               {/* Lab Panel inline */}
               <Separator />
               <div>
-                <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Syringe className="h-4 w-4 text-primary" />Painel Laboratorial
-                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Syringe className="h-4 w-4 text-primary" />Painel Laboratorial
+                  </h4>
+                  <Button variant="outline" size="sm" onClick={() => { setNewLab({ exame: "", data: new Date().toISOString().slice(0, 10).split("-").reverse().join("/"), microrganismo: "", sensibilidade: "", mdr: false }); setNewLabOpen(true); }} className="gap-1.5">
+                    <Plus className="h-4 w-4" />Cadastrar Exame
+                  </Button>
+                </div>
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50">
