@@ -34,9 +34,9 @@ export default function DashboardDDD() {
 
   const filtered = useMemo(() => {
     return allData.filter(d =>
-      (filtroMes === "all" || d.mes === filtroMes) &&
-      (filtroAno === "all" || d.ano === parseInt(filtroAno)) &&
-      (filtroUnidade === "all" || d.unidade === filtroUnidade) &&
+      (filtroMes.length === 0 || filtroMes.includes(d.mes)) &&
+      (filtroAno.length === 0 || filtroAno.includes(String(d.ano))) &&
+      (filtroUnidade.length === 0 || filtroUnidade.includes(d.unidade)) &&
       (filtroAtm === "all" || d.antimicrobiano === filtroAtm)
     );
   }, [allData, filtroMes, filtroAno, filtroUnidade, filtroAtm]);
@@ -152,45 +152,27 @@ export default function DashboardDDD() {
       {!isEmpty && (
         <>
           {/* Filtros */}
-          <Card>
-            <CardContent className="flex flex-wrap gap-3 pt-4">
-              <Select value={filtroDia} onValueChange={setFiltroDia}>
-                <SelectTrigger className="w-[100px]"><SelectValue placeholder="Dia" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Array.from({ length: 31 }, (_, i) => String(i + 1)).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filtroMes} onValueChange={setFiltroMes}>
-                <SelectTrigger className="w-[150px]"><SelectValue placeholder="Mês" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os meses</SelectItem>
-                  {meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filtroAno} onValueChange={setFiltroAno}>
-                <SelectTrigger className="w-[120px]"><SelectValue placeholder="Ano" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {anos.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filtroUnidade} onValueChange={setFiltroUnidade}>
-                <SelectTrigger className="w-[180px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {unidades.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filtroAtm} onValueChange={setFiltroAtm}>
-                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Antimicrobiano" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {antimicrobianos.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap items-end gap-3">
+            <DashboardFilters
+              dia={filtroDia} setDia={setFiltroDia}
+              mes={filtroMes} setMes={setFiltroMes}
+              ano={filtroAno} setAno={setFiltroAno}
+              setor={filtroUnidade} setSetor={setFiltroUnidade}
+              sectors={unidades.map(String)}
+              years={anos.map(String)}
+            />
+            <div className="space-y-1">
+              <label className="text-[10px] text-muted-foreground">Antimicrobiano</label>
+              <select
+                className="h-8 w-[200px] rounded-md border border-input bg-background px-2 text-xs"
+                value={filtroAtm}
+                onChange={(e) => setFiltroAtm(e.target.value)}
+              >
+                <option value="all">Todos</option>
+                {antimicrobianos.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
 
           {/* KPIs */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -359,8 +341,8 @@ export default function DashboardDDD() {
           <AIAssistenteDDD
             filtered={filtered}
             all={allData}
-            filtroMes={filtroMes}
-            filtroAno={filtroAno}
+            filtroMes={filtroMes.length > 0 ? filtroMes.join(", ") : "Todos"}
+            filtroAno={filtroAno.length > 0 ? filtroAno.join(", ") : "Todos"}
           />
         </>
       )}
