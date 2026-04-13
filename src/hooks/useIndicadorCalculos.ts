@@ -35,7 +35,6 @@ export interface IndicadorCalculados {
   taxaInfeccao: number | null;
   pacienteExposto: number | null;
   pacienteEmRisco: number | null;
-  taxaInfeccaoHospitalar: number | null;
   taxaLetalidade: number | null;
   taxaUtilizacaoCVC: number | null;
   taxaInfeccaoCVC: number | null;
@@ -69,7 +68,6 @@ export function useIndicadorCalculos(v: IndicadorInputs): IndicadorCalculados {
       taxaInfeccao: safeDiv(v.numInfeccoes, v.numPacienteDiaTotal, 1000),
       pacienteExposto: pacienteExposto || null,
       pacienteEmRisco: safeDiv(v.numInfeccoes, pacienteExposto, 100),
-      taxaInfeccaoHospitalar: safeDiv(v.numInfeccoes, v.numPacienteDiaTotal, 1000),
       taxaLetalidade: safeDiv(v.numObitosInfeccao, v.numPacientesInfeccaoHospitalar, 100),
       taxaUtilizacaoCVC: safeDiv(v.utilizacaoCVC, v.numPacienteDiaTotal, 1000),
       taxaInfeccaoCVC: safeDiv(v.infeccaoCVC, v.utilizacaoCVC, 1000),
