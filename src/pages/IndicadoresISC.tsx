@@ -184,6 +184,7 @@ export default function IndicadoresISC() {
 
   const handleLimpar = () => {
     setRegistroId(generateISCId());
+    setHospitalTipo("");
     setNome("");
     setDataVigilancia("");
     setMesVigilancia("");
