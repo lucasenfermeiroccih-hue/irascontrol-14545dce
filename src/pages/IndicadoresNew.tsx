@@ -35,6 +35,7 @@ neonatalWeightCategories.forEach((c) => { defaultNeonatalWeights[c.id] = 0; });
 
 export default function IndicadoresNew() {
   const { hospitalId, userId } = useHospitalContext();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [dataVigilancia, setDataVigilancia] = useState<Date>();
   const [mesVigilancia, setMesVigilancia] = useState("");
