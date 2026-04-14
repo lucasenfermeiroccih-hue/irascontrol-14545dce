@@ -60,8 +60,19 @@ interface LabRecord {
   organism: string | null;
   status: string;
   result_date: string | null;
+  notes: string | null;
   patient?: { full_name: string; medical_record: string | null; sector: string | null } | null;
 }
+
+const parseNotes = (notes: string | null): { mdr: boolean; criticidade: string; statusRegistro: string } => {
+  try {
+    if (notes) {
+      const parsed = JSON.parse(notes);
+      return { mdr: !!parsed.mdr, criticidade: parsed.criticidade || "baixo", statusRegistro: parsed.statusRegistro || "pendente" };
+    }
+  } catch {}
+  return { mdr: false, criticidade: "baixo", statusRegistro: "pendente" };
+};
 
 const Reports = () => {
   const { hospitalId, userId, loading: ctxLoading } = useHospitalContext();
