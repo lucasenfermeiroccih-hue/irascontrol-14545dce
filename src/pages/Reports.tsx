@@ -60,8 +60,19 @@ interface LabRecord {
   organism: string | null;
   status: string;
   result_date: string | null;
+  notes: string | null;
   patient?: { full_name: string; medical_record: string | null; sector: string | null } | null;
 }
+
+const parseNotes = (notes: string | null): { mdr: boolean; criticidade: string; statusRegistro: string } => {
+  try {
+    if (notes) {
+      const parsed = JSON.parse(notes);
+      return { mdr: !!parsed.mdr, criticidade: parsed.criticidade || "baixo", statusRegistro: parsed.statusRegistro || "pendente" };
+    }
+  } catch {}
+  return { mdr: false, criticidade: "baixo", statusRegistro: "pendente" };
+};
 
 const Reports = () => {
   const { hospitalId, userId, loading: ctxLoading } = useHospitalContext();
@@ -73,6 +84,7 @@ const Reports = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     dataExame: "", prontuario: "", setor: "", tipoExame: "", microorganismo: "",
+    mdr: false, criticidade: "baixo" as string, statusRegistro: "pendente" as string,
   });
 
   // Filters
@@ -167,13 +179,15 @@ const Reports = () => {
   }, [filtered]);
 
   const handleSaveRecord = async () => {
-    const { dataExame, prontuario, setor, tipoExame, microorganismo } = formData;
+    const { dataExame, prontuario, setor, tipoExame, microorganismo, mdr, criticidade, statusRegistro } = formData;
     if (!dataExame || !setor || !tipoExame || !microorganismo) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
     if (!hospitalId || !userId) return;
     setSaving(true);
+
+    const notesJson = JSON.stringify({ mdr, criticidade, statusRegistro });
 
     let patientId: string | null = null;
     if (prontuario) {
@@ -202,12 +216,30 @@ const Reports = () => {
       }
     }
 
+    const createMdrAlert = async () => {
+      if (!mdr) return;
+      const severityMap: Record<string, "low" | "medium" | "high" | "critical"> = {
+        baixo: "low", medio: "medium", alto: "high",
+      };
+      await supabase.from("alerts").insert({
+        hospital_id: hospitalId,
+        title: `🚨 MDR Detectado: ${microorganismo}`,
+        description: `Microorganismo multirresistente (MDR) identificado no setor ${setor}. Tipo de exame: ${tipoExame}. Criticidade: ${criticidade.toUpperCase()}.`,
+        severity: severityMap[criticidade] || "medium",
+        status: "active" as const,
+        triggered_by: userId,
+        related_patient_id: patientId,
+      });
+    };
+
     if (editingId) {
       const { error } = await supabase.from("lab_results").update({
         collection_date: dataExame,
         sample_type: tipoExame,
         organism: microorganismo,
+        notes: notesJson,
       }).eq("id", editingId);
+      if (!error) await createMdrAlert();
       setSaving(false);
       if (error) {
         toast.error("Erro ao atualizar: " + error.message);
@@ -226,12 +258,14 @@ const Reports = () => {
         status: "completed" as const,
         result_date: new Date().toISOString().split("T")[0],
         created_by: userId,
+        notes: notesJson,
       });
+      if (!error) await createMdrAlert();
       setSaving(false);
       if (error) {
         toast.error("Erro ao salvar: " + error.message);
       } else {
-        toast.success("Registro salvo com sucesso!");
+        toast.success(mdr ? "Registro salvo e alerta MDR gerado!" : "Registro salvo com sucesso!");
         resetForm();
         fetchRecords();
       }
@@ -239,12 +273,13 @@ const Reports = () => {
   };
 
   const resetForm = () => {
-    setFormData({ dataExame: "", prontuario: "", setor: "", tipoExame: "", microorganismo: "" });
+    setFormData({ dataExame: "", prontuario: "", setor: "", tipoExame: "", microorganismo: "", mdr: false, criticidade: "baixo", statusRegistro: "pendente" });
     setEditingId(null);
     setFormOpen(false);
   };
 
   const handleEditRecord = (r: LabRecord) => {
+    const extra = parseNotes(r.notes);
     setEditingId(r.id);
     setFormData({
       dataExame: r.collection_date,
@@ -252,6 +287,9 @@ const Reports = () => {
       setor: r.patient?.sector || "",
       tipoExame: r.sample_type || "",
       microorganismo: r.organism || "",
+      mdr: extra.mdr,
+      criticidade: extra.criticidade,
+      statusRegistro: extra.statusRegistro,
     });
     setFormOpen(true);
   };
@@ -434,6 +472,44 @@ const Reports = () => {
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>{MICROORGANISMOS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                   </Select>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Multirresistente (MDR)?</Label>
+                    <Select value={formData.mdr ? "sim" : "nao"} onValueChange={(v) => setFormData(p => ({ ...p, mdr: v === "sim" }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="nao">Não</SelectItem>
+                        <SelectItem value="sim">Sim</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {formData.mdr && (
+                      <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Alerta será gerado automaticamente</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Criticidade</Label>
+                    <Select value={formData.criticidade} onValueChange={(v) => setFormData(p => ({ ...p, criticidade: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baixo">Baixo</SelectItem>
+                        <SelectItem value="medio">Médio</SelectItem>
+                        <SelectItem value="alto">Alto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={formData.statusRegistro} onValueChange={(v) => setFormData(p => ({ ...p, statusRegistro: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="em_analise">Em Análise</SelectItem>
+                        <SelectItem value="confirmado">Confirmado</SelectItem>
+                        <SelectItem value="descartado">Descartado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -703,33 +779,52 @@ const Reports = () => {
                   <TableHead>Setor</TableHead>
                   <TableHead>Tipo Exame</TableHead>
                   <TableHead>Microorganismo</TableHead>
+                  <TableHead>MDR</TableHead>
+                  <TableHead>Criticidade</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum registro encontrado. Clique em "Novo Registro" para começar.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Nenhum registro encontrado. Clique em "Novo Registro" para começar.</TableCell></TableRow>
                 )}
-                {filtered.slice(0, 50).map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell className="text-xs">{r.collection_date}</TableCell>
-                    <TableCell className="text-xs">{r.patient?.medical_record || "—"}</TableCell>
-                    <TableCell className="text-xs">{r.patient?.sector || "—"}</TableCell>
-                    <TableCell className="text-xs">{r.sample_type || "—"}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{r.organism || "—"}</Badge></TableCell>
-                    <TableCell>
-                      <Badge variant={r.status === "completed" ? "secondary" : "outline"} className="text-xs">
-                        {r.status === "completed" ? "Liberado" : r.status === "pending" ? "Pendente" : r.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRecord(r)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filtered.slice(0, 50).map(r => {
+                  const extra = parseNotes(r.notes);
+                  const critColors: Record<string, string> = { alto: "destructive", medio: "outline", baixo: "secondary" };
+                  const statusLabels: Record<string, string> = { pendente: "Pendente", em_analise: "Em Análise", confirmado: "Confirmado", descartado: "Descartado" };
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs">{r.collection_date}</TableCell>
+                      <TableCell className="text-xs">{r.patient?.medical_record || "—"}</TableCell>
+                      <TableCell className="text-xs">{r.patient?.sector || "—"}</TableCell>
+                      <TableCell className="text-xs">{r.sample_type || "—"}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{r.organism || "—"}</Badge></TableCell>
+                      <TableCell>
+                        {extra.mdr ? (
+                          <Badge variant="destructive" className="text-xs">MDR</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={critColors[extra.criticidade] as any || "secondary"} className="text-xs capitalize">
+                          {extra.criticidade === "medio" ? "Médio" : extra.criticidade}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {statusLabels[extra.statusRegistro] || extra.statusRegistro}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEditRecord(r)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
