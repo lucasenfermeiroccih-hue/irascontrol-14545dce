@@ -473,6 +473,44 @@ const Reports = () => {
                     <SelectContent>{MICROORGANISMOS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Multirresistente (MDR)?</Label>
+                    <Select value={formData.mdr ? "sim" : "nao"} onValueChange={(v) => setFormData(p => ({ ...p, mdr: v === "sim" }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="nao">Não</SelectItem>
+                        <SelectItem value="sim">Sim</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {formData.mdr && (
+                      <p className="text-xs text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Alerta será gerado automaticamente</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Criticidade</Label>
+                    <Select value={formData.criticidade} onValueChange={(v) => setFormData(p => ({ ...p, criticidade: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="baixo">Baixo</SelectItem>
+                        <SelectItem value="medio">Médio</SelectItem>
+                        <SelectItem value="alto">Alto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={formData.statusRegistro} onValueChange={(v) => setFormData(p => ({ ...p, statusRegistro: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="em_analise">Em Análise</SelectItem>
+                        <SelectItem value="confirmado">Confirmado</SelectItem>
+                        <SelectItem value="descartado">Descartado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
               <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
