@@ -15,6 +15,7 @@ import { inputFields, calculatedFields, mesesOptions, setorOptions } from "@/dat
 import { useIndicadorCalculos, type IndicadorInputs } from "@/hooks/useIndicadorCalculos";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
+import IndicadoresHistory from "@/components/IndicadoresHistory";
 
 const defaultInputs: Record<string, number> = {};
 inputFields
@@ -34,6 +35,7 @@ neonatalWeightCategories.forEach((c) => { defaultNeonatalWeights[c.id] = 0; });
 
 export default function IndicadoresNew() {
   const { hospitalId, userId } = useHospitalContext();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [dataVigilancia, setDataVigilancia] = useState<Date>();
   const [mesVigilancia, setMesVigilancia] = useState("");
@@ -65,11 +67,27 @@ export default function IndicadoresNew() {
   const calculados = useIndicadorCalculos(numericValues as unknown as IndicadorInputs);
 
   const handleClear = () => {
+    setEditingId(null);
     setNome(""); setDataVigilancia(undefined); setMesVigilancia("");
     setAnoVigilancia(new Date().getFullYear()); setSetor("");
     setNumericValues({ ...defaultInputs });
     setNeonatalWeights({ ...defaultNeonatalWeights });
     toast.info("Formulário limpo");
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingId(record.id);
+    setNome(record.profissional || "");
+    setDataVigilancia(record.data_vigilancia ? new Date(record.data_vigilancia) : undefined);
+    setMesVigilancia(record.mes_vigilancia || "");
+    setAnoVigilancia(record.ano_vigilancia || new Date().getFullYear());
+    setSetor(record.setor || "");
+    const inputs = record.inputs || {};
+    const { neonatalPacienteDiaPorPeso, ...numInputs } = inputs;
+    setNumericValues({ ...defaultInputs, ...numInputs });
+    setNeonatalWeights({ ...defaultNeonatalWeights, ...(neonatalPacienteDiaPorPeso || {}) });
+    window.scrollTo(0, 0);
+    toast.info("Registro carregado para edição");
   };
 
   const handleSave = async () => {
@@ -81,7 +99,7 @@ export default function IndicadoresNew() {
       ? { ...numericValues, neonatalPacienteDiaPorPeso: neonatalWeights }
       : numericValues;
 
-    const { error } = await (supabase.from("indicadores_records" as any).insert as any)({
+    const payload = {
       hospital_id: hospitalId,
       user_id: userId,
       profissional: nome,
@@ -91,14 +109,23 @@ export default function IndicadoresNew() {
       setor,
       inputs: inputsToSave,
       calculated: calculados,
-    });
+    };
+
+    let error: any;
+    if (editingId) {
+      const res = await (supabase.from("indicadores_records" as any).update as any)(payload).eq("id", editingId);
+      error = res.error;
+    } else {
+      const res = await (supabase.from("indicadores_records" as any).insert as any)(payload);
+      error = res.error;
+    }
     setSaving(false);
 
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
       return;
     }
-    toast.success("Indicadores salvos com sucesso!");
+    toast.success(editingId ? "Registro atualizado com sucesso!" : "Indicadores salvos com sucesso!");
     handleClear();
     window.scrollTo(0, 0);
   };
@@ -120,13 +147,16 @@ export default function IndicadoresNew() {
             <Activity className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground font-heading">Novo Registro de Indicadores</h1>
+            <h1 className="text-2xl font-bold text-foreground font-heading">
+              {editingId ? "Editar Registro de Indicadores" : "Novo Registro de Indicadores"}
+            </h1>
             <p className="text-sm text-muted-foreground">Preencha os dados e os cálculos serão atualizados automaticamente</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleClear}><RotateCcw className="h-4 w-4 mr-2" /> Limpar</Button>
-          <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}</Button>
+          <IndicadoresHistory onEdit={handleEdit} />
+          <Button variant="outline" onClick={handleClear}><RotateCcw className="h-4 w-4 mr-2" /> {editingId ? "Cancelar" : "Limpar"}</Button>
+          <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : editingId ? "Atualizar" : "Salvar"}</Button>
         </div>
       </div>
 
