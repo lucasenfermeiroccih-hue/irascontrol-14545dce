@@ -65,6 +65,7 @@ const emptyForm = {
   piccPatients: "", piccBundlesOpen: "", piccIncompleteBundles: "", piccCompleteBundles: "",
   cvuPatients: "", cvuBundlesOpen: "", cvuIncompleteBundles: "", cvuCompleteBundles: "",
   cvaPatients: "", cvaBundlesOpen: "", cvaIncompleteBundles: "", cvaCompleteBundles: "",
+  pavPacientesDia: "", pavDiasPreenchidos: "", pavNaoConforme: "",
   observations: "",
 };
 
