@@ -330,7 +330,7 @@ export default function IndicadoresISC() {
         {indicadorRows.map((row) => (
           <div key={row.key} className="flex items-center justify-between gap-3">
             <Label className="text-xs text-muted-foreground shrink-0 w-[45%]">{row.label}</Label>
-            <div className="w-[55%]">{renderValue(row, clinica, data[clinica], false)}</div>
+            <div className="w-[55%]">{renderValue(row, clinica, data[clinica] || emptyClinicaData(), false)}</div>
           </div>
         ))}
       </CardContent>
