@@ -54,12 +54,22 @@ interface ClinicaData {
   sitio: string;
 }
 
+interface PartoCirurgicoData {
+  numISCCesariana: number;
+  numTotalCesarianas: number;
+}
+
 const emptyClinicaData = (): ClinicaData => ({
   totalCirurgias: 0,
   contatosAtendidos: 0,
   reinternacoes: 0,
   iscConfirmada: 0,
   sitio: "",
+});
+
+const emptyPartoCirurgico = (): PartoCirurgicoData => ({
+  numISCCesariana: 0,
+  numTotalCesarianas: 0,
 });
 
 type FormData = Record<Clinica, ClinicaData>;
@@ -109,6 +119,10 @@ export default function IndicadoresISC() {
   const [mesVigilancia, setMesVigilancia] = useState("");
   const [anoVigilancia, setAnoVigilancia] = useState(new Date().getFullYear().toString());
   const [data, setData] = useState<FormData>(createInitialData);
+  const [partoCirurgico, setPartoCirurgico] = useState<PartoCirurgicoData>(emptyPartoCirurgico);
+
+  const isMaternidade = hospitalTipo === "Maternidade";
+  const clinicasVisiveis = isMaternidade ? (["Cesariana"] as Clinica[]) : ([...clinicas] as Clinica[]);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [pendingRegistro, setPendingRegistro] = useState<ISCRegistro | null>(null);
 
@@ -154,14 +168,18 @@ export default function IndicadoresISC() {
 
   const totals = useMemo(() => {
     const t: ClinicaData = emptyClinicaData();
-    for (const c of clinicas) {
+    for (const c of clinicasVisiveis) {
       t.totalCirurgias += data[c].totalCirurgias;
       t.contatosAtendidos += data[c].contatosAtendidos;
       t.reinternacoes += data[c].reinternacoes;
       t.iscConfirmada += data[c].iscConfirmada;
     }
     return t;
-  }, [data]);
+  }, [data, clinicasVisiveis]);
+
+  const taxaISCCesariana = partoCirurgico.numTotalCesarianas > 0
+    ? ((partoCirurgico.numISCCesariana / partoCirurgico.numTotalCesarianas) * 100).toFixed(1)
+    : "0.0";
 
   const handleSalvar = () => {
     if (!nome.trim()) {
@@ -190,6 +208,7 @@ export default function IndicadoresISC() {
     setMesVigilancia("");
     setAnoVigilancia(new Date().getFullYear().toString());
     setData(createInitialData());
+    setPartoCirurgico(emptyPartoCirurgico());
     toast.info("Formulário limpo.");
   };
 
@@ -356,24 +375,28 @@ export default function IndicadoresISC() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[200px] bg-muted/50 font-semibold">Indicador</TableHead>
-                  {clinicas.map((c) => (
+                  {clinicasVisiveis.map((c) => (
                     <TableHead key={c} className="min-w-[140px] text-center bg-muted/50 font-semibold text-xs">{c}</TableHead>
                   ))}
-                  <TableHead className="min-w-[120px] text-center bg-primary/10 font-semibold text-primary text-xs">Total Geral</TableHead>
+                  {!isMaternidade && (
+                    <TableHead className="min-w-[120px] text-center bg-primary/10 font-semibold text-primary text-xs">Total Geral</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {indicadorRows.map((row) => (
                   <TableRow key={row.key}>
                     <TableCell className="font-medium text-sm bg-muted/20">{row.label}</TableCell>
-                    {clinicas.map((c) => (
+                    {clinicasVisiveis.map((c) => (
                       <TableCell key={c} className="text-center">
                         {renderValue(row, c, data[c], false)}
                       </TableCell>
                     ))}
-                    <TableCell className="text-center bg-primary/5">
-                      {renderValue(row, null, totals, true)}
-                    </TableCell>
+                    {!isMaternidade && (
+                      <TableCell className="text-center bg-primary/5">
+                        {renderValue(row, null, totals, true)}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -385,9 +408,60 @@ export default function IndicadoresISC() {
       {/* Mobile/Tablet: Card view */}
       <div className="lg:hidden space-y-4">
         <h2 className="text-base font-semibold text-foreground">Dados por Sítio Cirúrgico</h2>
-        {clinicas.map(renderMobileCard)}
-        {renderMobileTotals()}
+        {clinicasVisiveis.map(renderMobileCard)}
+        {!isMaternidade && renderMobileTotals()}
       </div>
+
+      {/* Parto Cirúrgico - Cesariana (only for Maternidade) */}
+      {isMaternidade && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base md:text-lg text-primary">Parto Cirúrgico — Cesariana</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="numISC" className="text-sm">
+                  Nº de ISC parto cirúrgico - cesariana (Numerador)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Número de infecções de sítio cirúrgico associado ao parto cirúrgico - cesarianas no mês de vigilância.
+                </p>
+                <Input
+                  id="numISC"
+                  type="number"
+                  min={0}
+                  className="h-9"
+                  value={partoCirurgico.numISCCesariana || ""}
+                  onChange={(e) => setPartoCirurgico(prev => ({ ...prev, numISCCesariana: Number(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="numTotal" className="text-sm">
+                  Nº total de partos cirúrgicos - cesarianas (Denominador)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Número total de cirurgias cesarianas realizadas no serviço de saúde, no mês de vigilância.
+                </p>
+                <Input
+                  id="numTotal"
+                  type="number"
+                  min={0}
+                  className="h-9"
+                  value={partoCirurgico.numTotalCesarianas || ""}
+                  onChange={(e) => setPartoCirurgico(prev => ({ ...prev, numTotalCesarianas: Number(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-1.5 flex flex-col justify-end">
+                <Label className="text-sm">Taxa de ISC Cesariana (%)</Label>
+                <div className="h-9 flex items-center justify-center rounded-md border bg-primary/5 font-semibold text-primary text-lg">
+                  {taxaISCCesariana}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions - sticky on mobile */}
       <div className="sticky bottom-0 z-10 flex gap-3 justify-end bg-background/95 backdrop-blur-sm py-3 border-t border-border -mx-4 px-4 md:-mx-6 md:px-6 lg:static lg:border-0 lg:bg-transparent lg:backdrop-blur-none lg:py-0 lg:mx-0 lg:px-0">
