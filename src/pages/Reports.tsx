@@ -179,13 +179,15 @@ const Reports = () => {
   }, [filtered]);
 
   const handleSaveRecord = async () => {
-    const { dataExame, prontuario, setor, tipoExame, microorganismo } = formData;
+    const { dataExame, prontuario, setor, tipoExame, microorganismo, mdr, criticidade, statusRegistro } = formData;
     if (!dataExame || !setor || !tipoExame || !microorganismo) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
     if (!hospitalId || !userId) return;
     setSaving(true);
+
+    const notesJson = JSON.stringify({ mdr, criticidade, statusRegistro });
 
     let patientId: string | null = null;
     if (prontuario) {
@@ -214,12 +216,30 @@ const Reports = () => {
       }
     }
 
+    const createMdrAlert = async () => {
+      if (!mdr) return;
+      const severityMap: Record<string, "low" | "medium" | "high" | "critical"> = {
+        baixo: "low", medio: "medium", alto: "high",
+      };
+      await supabase.from("alerts").insert({
+        hospital_id: hospitalId,
+        title: `🚨 MDR Detectado: ${microorganismo}`,
+        description: `Microorganismo multirresistente (MDR) identificado no setor ${setor}. Tipo de exame: ${tipoExame}. Criticidade: ${criticidade.toUpperCase()}.`,
+        severity: severityMap[criticidade] || "medium",
+        status: "active" as const,
+        triggered_by: userId,
+        related_patient_id: patientId,
+      });
+    };
+
     if (editingId) {
       const { error } = await supabase.from("lab_results").update({
         collection_date: dataExame,
         sample_type: tipoExame,
         organism: microorganismo,
+        notes: notesJson,
       }).eq("id", editingId);
+      if (!error) await createMdrAlert();
       setSaving(false);
       if (error) {
         toast.error("Erro ao atualizar: " + error.message);
@@ -238,12 +258,14 @@ const Reports = () => {
         status: "completed" as const,
         result_date: new Date().toISOString().split("T")[0],
         created_by: userId,
+        notes: notesJson,
       });
+      if (!error) await createMdrAlert();
       setSaving(false);
       if (error) {
         toast.error("Erro ao salvar: " + error.message);
       } else {
-        toast.success("Registro salvo com sucesso!");
+        toast.success(mdr ? "Registro salvo e alerta MDR gerado!" : "Registro salvo com sucesso!");
         resetForm();
         fetchRecords();
       }
