@@ -42,7 +42,7 @@ const meses = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-const clinicas = ["Cirurgia Geral", "Cirurgia Vascular", "Neurocirurgia", "Ortopedia", "Cesariana"] as const;
+const clinicas = ["Cirurgia Geral", "Cirurgia Vascular", "Neurocirurgia", "Ortopedia", "Ginecologia", "Cesariana"] as const;
 type Clinica = typeof clinicas[number];
 
 const sitioOptions = ["ISC superficial", "ISC profunda", "ISC de cavidade/órgão"];
@@ -135,6 +135,7 @@ const createInitialData = (): FormData => ({
   "Cirurgia Vascular": emptyClinicaData(),
   "Neurocirurgia": emptyClinicaData(),
   "Ortopedia": emptyClinicaData(),
+  "Ginecologia": emptyClinicaData(),
   "Cesariana": emptyClinicaData(),
 });
 
@@ -181,7 +182,9 @@ export default function IndicadoresISC() {
   const isMaternidade = hospitalTipo === "Maternidade";
   const isHospitalOlhos = hospitalTipo === "Hospital dos olhos";
   const showExtras = !isMaternidade && !isHospitalOlhos && hospitalTipo !== "";
-  const clinicasVisiveis = isMaternidade ? (["Cesariana"] as Clinica[]) : ([...clinicas] as Clinica[]);
+  const clinicasVisiveis = isMaternidade
+    ? (["Cesariana"] as Clinica[])
+    : (clinicas.filter((c) => c !== "Cesariana") as Clinica[]);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [pendingRegistro, setPendingRegistro] = useState<ISCRegistro | null>(null);
 
