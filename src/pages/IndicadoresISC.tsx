@@ -231,10 +231,11 @@ export default function IndicadoresISC() {
   const totals = useMemo(() => {
     const t: ClinicaData = emptyClinicaData();
     for (const c of clinicasVisiveis) {
-      t.totalCirurgias += data[c].totalCirurgias;
-      t.contatosAtendidos += data[c].contatosAtendidos;
-      t.reinternacoes += data[c].reinternacoes;
-      t.iscConfirmada += data[c].iscConfirmada;
+      const d = data[c] || emptyClinicaData();
+      t.totalCirurgias += d.totalCirurgias;
+      t.contatosAtendidos += d.contatosAtendidos;
+      t.reinternacoes += d.reinternacoes;
+      t.iscConfirmada += d.iscConfirmada;
     }
     return t;
   }, [data, clinicasVisiveis]);
