@@ -257,6 +257,7 @@ const Reports = () => {
   };
 
   const handleEditRecord = (r: LabRecord) => {
+    const extra = parseNotes(r.notes);
     setEditingId(r.id);
     setFormData({
       dataExame: r.collection_date,
@@ -264,6 +265,9 @@ const Reports = () => {
       setor: r.patient?.sector || "",
       tipoExame: r.sample_type || "",
       microorganismo: r.organism || "",
+      mdr: extra.mdr,
+      criticidade: extra.criticidade,
+      statusRegistro: extra.statusRegistro,
     });
     setFormOpen(true);
   };
