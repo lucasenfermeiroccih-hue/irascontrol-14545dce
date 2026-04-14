@@ -147,13 +147,16 @@ export default function IndicadoresNew() {
             <Activity className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground font-heading">Novo Registro de Indicadores</h1>
+            <h1 className="text-2xl font-bold text-foreground font-heading">
+              {editingId ? "Editar Registro de Indicadores" : "Novo Registro de Indicadores"}
+            </h1>
             <p className="text-sm text-muted-foreground">Preencha os dados e os cálculos serão atualizados automaticamente</p>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleClear}><RotateCcw className="h-4 w-4 mr-2" /> Limpar</Button>
-          <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}</Button>
+          <IndicadoresHistory onEdit={handleEdit} />
+          <Button variant="outline" onClick={handleClear}><RotateCcw className="h-4 w-4 mr-2" /> {editingId ? "Cancelar" : "Limpar"}</Button>
+          <Button onClick={handleSave} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : editingId ? "Atualizar" : "Salvar"}</Button>
         </div>
       </div>
 
