@@ -151,6 +151,12 @@ const Reports = () => {
     });
   }, [records, filterMicros, filterDateFrom, filterDateTo, filterSetor, filterMes, filterAno]);
 
+  // Reset page when filters change
+  useEffect(() => { setTablePage(1); }, [filterMicros, filterDateFrom, filterDateTo, filterSetor, filterMes, filterAno]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedData = useMemo(() => filtered.slice((tablePage - 1) * PAGE_SIZE, tablePage * PAGE_SIZE), [filtered, tablePage]);
+
   const distribution = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach((r) => {
