@@ -13,7 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import {
   Search, Microscope, Clock, Eye, FlaskConical, Loader2,
-  Plus, Sparkles, TrendingUp, AlertTriangle, Bug, ShieldAlert, X
+  Plus, Sparkles, TrendingUp, AlertTriangle, Bug, ShieldAlert, X,
+  Baby, Syringe
 } from "lucide-react";
 
 type SIR = "S" | "I" | "R";
@@ -23,6 +24,17 @@ const sirColor: Record<SIR, string> = {
   I: "bg-yellow-100 text-yellow-800 border-yellow-300",
   R: "bg-red-100 text-red-800 border-red-300",
 };
+
+const UNIDADES_INTERNACAO = [
+  "UTI 1", "UTI 2", "UTI 3", "UPO", "UTI Neonatal", "UTI Pediátrica",
+  "Isolamento", "Nova Emergência", "Emergência", "Trauma Clínico", "Trauma Cirúrgico",
+  "Sala Verde", "Enfermarias Cirúrgicas", "Enfermaria Clínica", "Pediatria Emergência",
+  "Enfermaria Pediátrica", "Alojamento Conjunto"
+];
+
+const IRAS_TRANSPLACENTARIA_OPTIONS = [
+  "Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"
+];
 
 const SAMPLE_TYPES = [
   "Sangue (Hemocultura)", "Urina (Urocultura)", "Secreção traqueal",
@@ -58,6 +70,7 @@ const LaboratoryResults = () => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
+    patient_name: "",
     patient_id: "",
     sample_type: "",
     collection_date: new Date().toISOString().slice(0, 10),
@@ -65,8 +78,14 @@ const LaboratoryResults = () => {
     organism: "",
     notes: "",
     status: "pending" as "pending" | "completed",
+    unidade_internacao: "",
   });
   const [antibiogramEntries, setAntibiogramEntries] = useState<AntibiogramEntry[]>([]);
+  const [irasTransplacentaria, setIrasTransplacentaria] = useState("");
+  const [vdrlMae, setVdrlMae] = useState("");
+  const [vdrlRN, setVdrlRN] = useState("");
+  const [vdrlReagente, setVdrlReagente] = useState("");
+  const [cmvReagente, setCmvReagente] = useState("");
 
   // AI Insights
   const [showInsights, setShowInsights] = useState(false);
@@ -169,10 +188,13 @@ const LaboratoryResults = () => {
 
   const resetForm = () => {
     setFormData({
-      patient_id: "", sample_type: "", collection_date: new Date().toISOString().slice(0, 10),
-      result_date: "", organism: "", notes: "", status: "pending",
+      patient_name: "", patient_id: "", sample_type: "", collection_date: new Date().toISOString().slice(0, 10),
+      result_date: "", organism: "", notes: "", status: "pending", unidade_internacao: "",
     });
     setAntibiogramEntries([]);
+    setIrasTransplacentaria("");
+    setVdrlMae(""); setVdrlRN(""); setVdrlReagente("");
+    setCmvReagente("");
   };
 
   const addAntibiogramEntry = () => {
@@ -189,7 +211,7 @@ const LaboratoryResults = () => {
 
   const handleSave = async () => {
     if (!hospitalId) return;
-    if (!formData.patient_id) { toast.error("Selecione o paciente"); return; }
+    if (!formData.patient_name.trim()) { toast.error("Informe o nome do paciente"); return; }
     if (!formData.sample_type) { toast.error("Selecione o tipo de material"); return; }
     if (!formData.collection_date) { toast.error("Informe a data de coleta"); return; }
 
@@ -202,12 +224,19 @@ const LaboratoryResults = () => {
         .from("lab_results")
         .insert({
           hospital_id: hospitalId,
-          patient_id: formData.patient_id,
+          patient_id: formData.patient_id || null,
           sample_type: formData.sample_type,
           collection_date: formData.collection_date,
           result_date: formData.result_date || null,
           organism: formData.organism || null,
-          notes: formData.notes || null,
+          notes: [
+            formData.notes,
+            formData.unidade_internacao ? `Unidade: ${formData.unidade_internacao}` : "",
+            formData.patient_name ? `Paciente: ${formData.patient_name}` : "",
+            irasTransplacentaria ? `IRAS Transplacentária: ${irasTransplacentaria}` : "",
+            irasTransplacentaria === "Sífilis" ? `VDRL Mãe: ${vdrlMae || "—"}, VDRL RN: ${vdrlRN || "—"}, Resultado: ${vdrlReagente || "—"}` : "",
+            irasTransplacentaria === "Citomegalovírus" ? `CMV Resultado: ${cmvReagente || "—"}` : "",
+          ].filter(Boolean).join(" | ") || null,
           status: formData.status,
           created_by: user.id,
         })
@@ -358,12 +387,14 @@ const LaboratoryResults = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Paciente *</Label>
-                <Select value={formData.patient_id} onValueChange={v => setFormData(p => ({ ...p, patient_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o paciente" /></SelectTrigger>
+                <Input placeholder="Nome do paciente" value={formData.patient_name} onChange={e => setFormData(p => ({ ...p, patient_name: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Unidade de Internação</Label>
+                <Select value={formData.unidade_internacao} onValueChange={v => { setFormData(p => ({ ...p, unidade_internacao: v })); if (v !== "UTI Neonatal" && v !== "Alojamento Conjunto") { setIrasTransplacentaria(""); setVdrlMae(""); setVdrlRN(""); setVdrlReagente(""); setCmvReagente(""); } }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
                   <SelectContent>
-                    {patients.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.full_name} {p.medical_record ? `(${p.medical_record})` : ""}</SelectItem>
-                    ))}
+                    {UNIDADES_INTERNACAO.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -400,6 +431,63 @@ const LaboratoryResults = () => {
                 </Select>
               </div>
             </div>
+
+            {/* IRAS Transplacentária — only for UTI Neonatal / Alojamento Conjunto */}
+            {(formData.unidade_internacao === "UTI Neonatal" || formData.unidade_internacao === "Alojamento Conjunto") && (
+              <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 space-y-4">
+                <h4 className="font-semibold flex items-center gap-2 text-sm"><Baby className="h-4 w-4 text-primary" /> IRAS Transplacentária</h4>
+                <Select value={irasTransplacentaria} onValueChange={v => { setIrasTransplacentaria(v); if (v !== "Sífilis") { setVdrlMae(""); setVdrlRN(""); setVdrlReagente(""); } if (v !== "Citomegalovírus") { setCmvReagente(""); } }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a IRAS Transplacentária" /></SelectTrigger>
+                  <SelectContent>
+                    {IRAS_TRANSPLACENTARIA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+
+                {/* Sífilis — VDRL fields */}
+                {irasTransplacentaria === "Sífilis" && (
+                  <div className="p-3 rounded-lg border bg-amber-50 border-amber-200 space-y-3">
+                    <h5 className="font-medium flex items-center gap-2 text-sm"><Syringe className="h-4 w-4 text-amber-600" /> VDRL — Sífilis</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">VDRL Quantitativo da Mãe</Label>
+                        <Input placeholder="Ex: 1:8" value={vdrlMae} onChange={e => setVdrlMae(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">VDRL Quantitativo do RN</Label>
+                        <Input placeholder="Ex: 1:4" value={vdrlRN} onChange={e => setVdrlRN(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Resultado</Label>
+                        <Select value={vdrlReagente} onValueChange={setVdrlReagente}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Reagente">Reagente</SelectItem>
+                            <SelectItem value="Não Reagente">Não Reagente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Citomegalovírus — Reagente/Não Reagente */}
+                {irasTransplacentaria === "Citomegalovírus" && (
+                  <div className="p-3 rounded-lg border bg-blue-50 border-blue-200 space-y-3">
+                    <h5 className="font-medium text-sm">Citomegalovírus — Resultado</h5>
+                    <div className="w-full max-w-xs space-y-1">
+                      <Label className="text-xs">Resultado do Exame</Label>
+                      <Select value={cmvReagente} onValueChange={setCmvReagente}>
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Reagente">Reagente</SelectItem>
+                          <SelectItem value="Não Reagente">Não Reagente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Observações</Label>
