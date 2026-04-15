@@ -288,7 +288,7 @@ export default function IndicadoresISC() {
   };
 
   const handleLimpar = () => {
-    setRegistroId(generateISCId());
+    setRegistroId(null);
     setHospitalTipo("");
     setNome("");
     setDataVigilancia("");
@@ -380,23 +380,7 @@ export default function IndicadoresISC() {
 
   return (
     <div className="space-y-5 p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Resume dialog */}
-      <Dialog open={showResumeDialog} onOpenChange={setShowResumeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Registro anterior encontrado</DialogTitle>
-            <DialogDescription>
-              Existe um registro salvo por <strong>{pendingRegistro?.nomeProfissional}</strong>
-              {pendingRegistro?.mes && ` (${meses[Number(pendingRegistro.mes) - 1] || ""}/{pendingRegistro.ano})`}.
-              Deseja continuar editando ou criar um novo?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleNewRecord}>Novo Registro</Button>
-            <Button onClick={handleResumeEdit}>Continuar Edição</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Resume dialog removed - no longer using localStorage */}
 
       {/* Header */}
       <div className="flex items-center justify-between">
