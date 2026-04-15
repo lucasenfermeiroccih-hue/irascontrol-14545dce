@@ -1223,7 +1223,33 @@ export default function PatientsMonitoring() {
               <div className="space-y-2"><Label>Leito</Label><Input value={newForm.leito} onChange={e => setNewForm(p => ({ ...p, leito: e.target.value }))} /></div>
             </div>
             <div className="space-y-2"><Label>Data Nascimento</Label><Input type="date" value={newForm.dataNascimento} onChange={e => setNewForm(p => ({ ...p, dataNascimento: e.target.value }))} /></div>
-          </div>
+            {(newForm.unidade === "UTI Neonatal" || newForm.unidade === "Alojamento Conjunto") && (
+              <>
+                <div className="space-y-2">
+                  <Label className="font-medium">Infecção Materna</Label>
+                  <Select value={newForm.infeccaoMaterna} onValueChange={v => setNewForm(p => ({ ...p, infeccaoMaterna: v, irasTransplacentaria: v === "Não" ? "" : p.irasTransplacentaria }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sim">Sim</SelectItem>
+                      <SelectItem value="Não">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {newForm.infeccaoMaterna === "Sim" && (
+                  <div className="space-y-2">
+                    <Label className="font-medium">IRAS Transplacentária</Label>
+                    <Select value={newForm.irasTransplacentaria} onValueChange={v => setNewForm(p => ({ ...p, irasTransplacentaria: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {["Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"].map(item => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
+            )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewPatientOpen(false)}>Cancelar</Button>
             <Button onClick={handleNewPatient}>Cadastrar</Button>
