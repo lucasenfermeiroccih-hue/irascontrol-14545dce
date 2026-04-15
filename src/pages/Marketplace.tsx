@@ -24,7 +24,7 @@ interface Extension {
   features: string[];
 }
 
-const mockExtensions: Extension[] = [
+const extensions: Extension[] = [
   { id: "1", name: "Módulo ANVISA Reporter", description: "Geração automática de relatórios no formato ANVISA para notificação de IRAS e surtos.", category: "Relatórios", rating: 4.8, downloads: 1250, price: "R$ 299/mês", icon: FileText, installed: true, author: "IRASControl Labs", version: "2.3.1", features: ["Relatórios mensais automáticos", "Formato SINAIS/ANVISA", "Exportação PDF e XML", "Histórico de envios"] },
   { id: "2", name: "Painel de Resistência Antimicrobiana", description: "Dashboard avançado para monitoramento de perfis de resistência com mapas de calor.", category: "Analytics", rating: 4.6, downloads: 890, price: "R$ 199/mês", icon: Microscope, installed: true, author: "BioData Analytics", version: "1.8.0", features: ["Mapa de calor por microorganismo", "Tendências temporais", "Alertas de surto", "Integração com LIS"] },
   { id: "3", name: "Preditor de Surto IA", description: "Inteligência artificial para detecção precoce de surtos hospitalares com base em dados epidemiológicos.", category: "IA", rating: 4.9, downloads: 650, price: "R$ 499/mês", icon: BarChart3, installed: false, author: "IRASControl Labs", version: "3.0.0", features: ["Detecção precoce de clusters", "Score de probabilidade", "Alertas preditivos", "Modelo treinado com dados brasileiros"] },
@@ -43,7 +43,7 @@ export default function Marketplace() {
   const [selectedExt, setSelectedExt] = useState<Extension | null>(null);
   const [tab, setTab] = useState("all");
 
-  const filtered = mockExtensions.filter((e) => {
+  const filtered = extensions.filter((e) => {
     const matchSearch = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.description.toLowerCase().includes(search.toLowerCase());
     const matchCategory = categoryFilter === "Todos" || e.category === categoryFilter;
     const matchTab = tab === "all" || (tab === "installed" && e.installed);
@@ -61,8 +61,8 @@ export default function Marketplace() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-2 rounded-lg bg-primary/10"><Puzzle className="h-5 w-5 text-primary" /></div><div><p className="text-xs text-muted-foreground">Total Disponíveis</p><p className="text-2xl font-bold">{mockExtensions.length}</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-2 rounded-lg bg-emerald-500/10"><CheckCircle className="h-5 w-5 text-emerald-500" /></div><div><p className="text-xs text-muted-foreground">Instalados</p><p className="text-2xl font-bold">{mockExtensions.filter((e) => e.installed).length}</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-2 rounded-lg bg-primary/10"><Puzzle className="h-5 w-5 text-primary" /></div><div><p className="text-xs text-muted-foreground">Total Disponíveis</p><p className="text-2xl font-bold">{extensions.length}</p></div></CardContent></Card>
+        <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-2 rounded-lg bg-emerald-500/10"><CheckCircle className="h-5 w-5 text-emerald-500" /></div><div><p className="text-xs text-muted-foreground">Instalados</p><p className="text-2xl font-bold">{extensions.filter((e) => e.installed).length}</p></div></CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-2 rounded-lg bg-yellow-500/10"><Star className="h-5 w-5 text-yellow-500" /></div><div><p className="text-xs text-muted-foreground">Melhor Avaliação</p><p className="text-2xl font-bold">4.9</p></div></CardContent></Card>
       </div>
 
