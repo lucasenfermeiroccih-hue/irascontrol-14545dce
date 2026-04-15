@@ -248,21 +248,17 @@ export default function PatientsMonitoring() {
     setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" });
   };
 
-  const handleDischarge = () => {
+  const handleDischarge = async () => {
     if (!dischargeType) { toast.error("Selecione o tipo de alta"); return; }
     const dpId = dischargePatientId;
     if (!dpId) return;
     const pat = patients.find(p => p.id === dpId);
-    const statusMap: Record<string, PatientStatus> = { "Óbito": "deceased", "Alta": "discharged", "Transferência": "transferred" };
-    const newStatus = statusMap[dischargeType] || "discharged";
-    setPatients(prev => {
-      const updated = prev.map(p => p.id === dpId ? { ...p, status: newStatus, dataAlta: new Date().toISOString().slice(0, 10), tipoAlta: dischargeType } : p);
-      persistPatients(updated);
-      return updated;
-    });
-    setDischargeOpen(false);
-    setDischargePatientId(null);
-    toast.success(`Paciente ${pat?.nome || ""} — ${dischargeType} registrada`);
+    const ok = await dischargePatientFn(dpId, dischargeType);
+    if (ok) {
+      setDischargeOpen(false);
+      setDischargePatientId(null);
+      toast.success(`Paciente ${pat?.nome || ""} — ${dischargeType} registrada`);
+    }
   };
 
   const openDischargeConfirm = (patientId: string) => {
@@ -279,21 +275,14 @@ export default function PatientsMonitoring() {
     setEditIdOpen(true);
   };
 
-  const saveEditId = () => {
+  const saveEditId = async () => {
     if (!editIdForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    setPatients(prev => {
-      const updated = prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p);
-      persistPatients(updated);
-      return updated;
-    });
-    setEditIdOpen(false);
-    toast.success("Dados de identificação atualizados!");
-  };
-
-  // Persist device and antibiotic data for current patient
-  const persistCurrentPatientExtra = () => {
     if (!selectedId) return;
-    savePatientExtra(selectedId, { dispInvasivos, antibioticos });
+    const ok = await updatePatient(selectedId, editIdForm);
+    if (ok) {
+      setEditIdOpen(false);
+      toast.success("Dados de identificação atualizados!");
+    }
   };
 
   const enterPatient = (patientId: string) => {
@@ -307,12 +296,9 @@ export default function PatientsMonitoring() {
       });
       setInfeccaoMaternaDetail(pat.infeccaoMaterna || "");
       setIrasTransplacentariaDetail(pat.irasTransplacentaria || "");
-      // Load extra data (devices, antibiotics) from localStorage
-      const extra = loadPatientExtra(patientId);
-      if (extra.dispInvasivos) setDispInvasivos(extra.dispInvasivos);
-      else setDispInvasivos({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "", tqtInsercao: "", tqtRetirada: "" });
-      if (extra.antibioticos) setAntibioticos(extra.antibioticos);
-      else setAntibioticos([]);
+      // Reset devices/antibiotics (will be loaded from Supabase in future)
+      setDispInvasivos({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "", tqtInsercao: "", tqtRetirada: "" });
+      setAntibioticos([]);
     }
     setSelectedId(patientId);
     setCurrentStep(0);
@@ -324,10 +310,9 @@ export default function PatientsMonitoring() {
     setViewPatientOpen(true);
   };
 
-  const handleSave = () => {
-    if (!selected) return;
-    persistPatients(patients);
-    persistCurrentPatientExtra();
+  const handleSave = async () => {
+    if (!selected || !selectedId) return;
+    await updatePatient(selectedId, selected);
     toast.success("Dados salvos com sucesso!");
   };
 
