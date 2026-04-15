@@ -361,9 +361,19 @@ export default function PatientsMonitoring() {
 
   const saveEditId = () => {
     if (!editIdForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    setPatients(prev => prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p));
+    setPatients(prev => {
+      const updated = prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p);
+      persistPatients(updated);
+      return updated;
+    });
     setEditIdOpen(false);
     toast.success("Dados de identificação atualizados!");
+  };
+
+  // Persist device and antibiotic data for current patient
+  const persistCurrentPatientExtra = () => {
+    if (!selectedId) return;
+    savePatientExtra(selectedId, { dispInvasivos, antibioticos });
   };
 
   const enterPatient = (patientId: string) => {
