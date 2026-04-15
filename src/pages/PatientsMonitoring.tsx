@@ -1377,6 +1377,8 @@ export default function PatientsMonitoring() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* ─── NEW PATIENT MODAL ────────────────────────────── */}
       <Dialog open={newPatientOpen} onOpenChange={setNewPatientOpen}>
