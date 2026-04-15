@@ -104,6 +104,7 @@ const Reports = () => {
   // AI
   const [aiLoading, setAiLoading] = useState(false);
   const [aiInsights, setAiInsights] = useState<string[]>([]);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
   const currentYear = new Date().getFullYear();
   const ANOS = [String(currentYear), String(currentYear - 1), String(currentYear - 2)];
