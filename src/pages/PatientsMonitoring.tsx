@@ -1249,7 +1249,7 @@ export default function PatientsMonitoring() {
                   </div>
                 )}
               </>
-            )}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewPatientOpen(false)}>Cancelar</Button>
             <Button onClick={handleNewPatient}>Cadastrar</Button>
