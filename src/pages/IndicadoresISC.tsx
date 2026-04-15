@@ -32,9 +32,6 @@ import {
 import { toast } from "sonner";
 import { Save, RotateCcw } from "lucide-react";
 import {
-  getLastISCRegistro,
-  saveISCRegistro,
-  generateISCId,
   type ISCRegistro,
 } from "@/lib/isc-storage";
 import ISCHistory from "@/components/ISCHistory";
@@ -172,7 +169,7 @@ function registroToForm(reg: ISCRegistro): { nome: string; dataVigilancia: strin
 
 export default function IndicadoresISC() {
   const { hospitalId, userId } = useHospitalContext();
-  const [registroId, setRegistroId] = useState<string>(() => generateISCId());
+  const [registroId, setRegistroId] = useState<string | null>(null);
   const [hospitalTipo, setHospitalTipo] = useState("");
   const [nome, setNome] = useState("");
   const [dataVigilancia, setDataVigilancia] = useState("");
