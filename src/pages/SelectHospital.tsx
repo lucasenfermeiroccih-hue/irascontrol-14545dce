@@ -20,17 +20,18 @@ interface HospitalOption {
 
 export default function SelectHospital() {
   const navigate = useNavigate();
+  const { user, isReady } = useAuthReady();
   const [hospitals, setHospitals] = useState<HospitalOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/login");
-        return;
-      }
+    if (!isReady) return;
+    if (!user) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
+    const load = async () => {
       const { data, error } = await supabase
         .from("hospital_users")
         .select("hospital_id, is_primary_admin, hospitals(name, city, state, type)")
@@ -64,7 +65,7 @@ export default function SelectHospital() {
       setLoading(false);
     };
     load();
-  }, [navigate]);
+  }, [user, isReady, navigate]);
 
   const selectHospital = (hospitalId: string) => {
     localStorage.setItem("selected_hospital_id", hospitalId);
