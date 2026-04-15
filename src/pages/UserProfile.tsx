@@ -81,12 +81,12 @@ export default function UserProfile() {
     // Avatar
     const { data: files } = await supabase.storage
       .from("avatars")
-      .list(user.id, { limit: 1, sortBy: { column: "created_at", order: "desc" } });
+      .list(userId, { limit: 1, sortBy: { column: "created_at", order: "desc" } });
 
     if (files && files.length > 0) {
       const { data: urlData } = supabase.storage
         .from("avatars")
-        .getPublicUrl(`${user.id}/${files[0].name}`);
+        .getPublicUrl(`${userId}/${files[0].name}`);
       setAvatarUrl(urlData.publicUrl);
     }
 
