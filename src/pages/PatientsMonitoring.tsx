@@ -117,7 +117,7 @@ function calcAge(birth: string) {
 // ─── Component ────────────────────────────────────────────────
 export default function PatientsMonitoring() {
   const navigate = useNavigate();
-  const [patients, setPatients] = useState<MockPatient[]>(() => loadPatients());
+  const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn } = usePatientMonitoring();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [newPatientOpen, setNewPatientOpen] = useState(false);
