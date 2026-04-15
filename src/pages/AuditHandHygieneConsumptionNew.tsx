@@ -16,6 +16,7 @@ const meses = [
 ];
 
 export default function AuditHandHygieneConsumptionNew() {
+  const [setor, setSetor] = useState("");
   const [responsavel, setResponsavel] = useState("");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState(new Date().getFullYear().toString());
