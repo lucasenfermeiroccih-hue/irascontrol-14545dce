@@ -63,27 +63,15 @@ const CHECKLIST_GROUPS = [
 
 type ItemStatus = "conforme" | "nao_conforme" | "na" | "";
 
-interface ChecklistRecord {
+interface AuditRecord {
   id: string;
-  date: string;
-  funcionario: string;
-  unidade: string;
-  turno: string;
-  observacoes: string;
-  items: Record<string, ItemStatus>;
-  createdAt: string;
-}
-
-const STORAGE_KEY = "irascontrol_precaucoes_audits";
-
-function loadRecords(): ChecklistRecord[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch { return []; }
-}
-
-function saveRecords(records: ChecklistRecord[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  audit_date: string;
+  sector: string | null;
+  observations: string | null;
+  compliance_rate: number | null;
+  compliant_items: number;
+  total_items: number;
+  items: { question: string; status: string; category: string | null; observation: string | null }[];
 }
 
 const ALL_ITEMS = CHECKLIST_GROUPS.flatMap(g => g.items);
@@ -100,10 +88,12 @@ const TURNOS = ["Manhã", "Tarde", "Noite"];
 // ─── Component ───────────────────────────────────────────────
 export default function DashboardPrecautions() {
   const navigate = useNavigate();
-  const { hospitalId, loading: ctxLoading } = useHospitalContext();
-  const [records, setRecords] = useState<ChecklistRecord[]>(() => loadRecords());
+  const { hospitalId, userId, loading: ctxLoading } = useHospitalContext();
+  const [records, setRecords] = useState<AuditRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
-  const [viewRecord, setViewRecord] = useState<ChecklistRecord | null>(null);
+  const [viewRecord, setViewRecord] = useState<AuditRecord | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // New form state
   const [formData, setFormData] = useState({
@@ -121,20 +111,60 @@ export default function DashboardPrecautions() {
 
   // Also load Supabase precaution data for summary
   const [dbPrecautions, setDbPrecautions] = useState<any[]>([]);
-  const [dbLoading, setDbLoading] = useState(true);
+
+  const fetchRecords = async () => {
+    if (!hospitalId) return;
+    setLoading(true);
+
+    const { data: audits } = await supabase
+      .from("audits")
+      .select("*")
+      .eq("hospital_id", hospitalId)
+      .eq("audit_type", "precaution")
+      .order("audit_date", { ascending: false });
+
+    if (audits && audits.length > 0) {
+      const auditIds = audits.map(a => a.id);
+      const { data: items } = await supabase
+        .from("audit_items")
+        .select("*")
+        .in("audit_id", auditIds);
+
+      const mapped: AuditRecord[] = audits.map(a => ({
+        id: a.id,
+        audit_date: a.audit_date,
+        sector: a.sector,
+        observations: a.observations,
+        compliance_rate: a.compliance_rate,
+        compliant_items: a.compliant_items,
+        total_items: a.total_items,
+        items: (items || []).filter(i => i.audit_id === a.id).map(i => ({
+          question: i.question,
+          status: i.status,
+          category: i.category,
+          observation: i.observation,
+        })),
+      }));
+      setRecords(mapped);
+    } else {
+      setRecords([]);
+    }
+
+    // Load precautions from DB
+    const { data: patients } = await supabase
+      .from("patients").select("id, sector").eq("hospital_id", hospitalId);
+    const ids = (patients || []).map(p => p.id);
+    if (ids.length > 0) {
+      const { data } = await supabase.from("precautions").select("*").in("patient_id", ids);
+      setDbPrecautions(data || []);
+    }
+
+    setLoading(false);
+  };
 
   useEffect(() => {
-    if (ctxLoading || !hospitalId) { setDbLoading(false); return; }
-    (async () => {
-      const { data: patients } = await supabase
-        .from("patients").select("id, sector").eq("hospital_id", hospitalId);
-      const ids = (patients || []).map(p => p.id);
-      if (ids.length > 0) {
-        const { data } = await supabase.from("precautions").select("*").in("patient_id", ids);
-        setDbPrecautions(data || []);
-      }
-      setDbLoading(false);
-    })();
+    if (hospitalId && !ctxLoading) fetchRecords();
+    else if (!ctxLoading) setLoading(false);
   }, [hospitalId, ctxLoading]);
 
   // Computed
@@ -142,10 +172,10 @@ export default function DashboardPrecautions() {
     const totalRecords = records.length;
     let totalConforme = 0, totalNaoConforme = 0, totalNA = 0, totalAvaliado = 0;
     records.forEach(r => {
-      Object.values(r.items).forEach(v => {
-        if (v === "conforme") { totalConforme++; totalAvaliado++; }
-        else if (v === "nao_conforme") { totalNaoConforme++; totalAvaliado++; }
-        else if (v === "na") totalNA++;
+      r.items.forEach(item => {
+        if (item.status === "compliant") { totalConforme++; totalAvaliado++; }
+        else if (item.status === "non_compliant") { totalNaoConforme++; totalAvaliado++; }
+        else if (item.status === "not_applicable") totalNA++;
       });
     });
     const pctConformidade = totalAvaliado > 0 ? Math.round((totalConforme / totalAvaliado) * 100) : 0;
@@ -165,55 +195,107 @@ export default function DashboardPrecautions() {
     setFormItems(init);
   };
 
-  const handleSave = () => {
+  const statusMap: Record<string, string> = {
+    conforme: "compliant",
+    nao_conforme: "non_compliant",
+    na: "not_applicable",
+  };
+
+  const handleSave = async () => {
     if (!formData.funcionario.trim()) { toast.error("Informe o nome do funcionário"); return; }
     if (!formData.unidade) { toast.error("Selecione a unidade"); return; }
     if (!formData.turno) { toast.error("Selecione o turno"); return; }
-    // Check at least 1 item answered
+    if (!hospitalId || !userId) return;
+
     const answered = Object.values(formItems).filter(v => v !== "").length;
     if (answered === 0) { toast.error("Responda ao menos um item do checklist"); return; }
 
-    const newRecord: ChecklistRecord = {
-      id: crypto.randomUUID(),
-      date: formData.date,
-      funcionario: formData.funcionario,
-      unidade: formData.unidade,
-      turno: formData.turno,
-      observacoes: formData.observacoes,
-      items: { ...formItems },
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [newRecord, ...records];
-    setRecords(updated);
-    saveRecords(updated);
+    setSaving(true);
+
+    const compliant = Object.values(formItems).filter(v => v === "conforme").length;
+    const evaluated = Object.values(formItems).filter(v => v === "conforme" || v === "nao_conforme").length;
+    const rate = evaluated > 0 ? Math.round((compliant / evaluated) * 100) : 0;
+
+    const observationText = [
+      `Funcionário: ${formData.funcionario}`,
+      `Turno: ${formData.turno}`,
+      formData.observacoes ? formData.observacoes : "",
+    ].filter(Boolean).join(" | ");
+
+    const { data: audit, error: auditErr } = await supabase.from("audits").insert({
+      hospital_id: hospitalId,
+      audit_type: "precaution" as any,
+      audit_date: formData.date,
+      sector: formData.unidade,
+      auditor_id: userId,
+      observations: observationText,
+      compliant_items: compliant,
+      total_items: answered,
+      compliance_rate: rate,
+    }).select("id").single();
+
+    if (auditErr || !audit) {
+      toast.error("Erro ao salvar: " + (auditErr?.message || ""));
+      setSaving(false);
+      return;
+    }
+
+    const itemsToInsert = ALL_ITEMS.map((q, i) => {
+      const val = formItems[q];
+      const group = CHECKLIST_GROUPS.find(g => g.items.includes(q));
+      return {
+        audit_id: audit.id,
+        question: q,
+        status: val ? (statusMap[val] || "not_evaluated") : "not_evaluated",
+        category: group?.label || null,
+        item_order: i,
+      };
+    }).filter(item => item.status !== "not_evaluated");
+
+    if (itemsToInsert.length > 0) {
+      await supabase.from("audit_items").insert(itemsToInsert as any);
+    }
+
+    setSaving(false);
     setShowNew(false);
     resetForm();
     toast.success("Auditoria de precaução registrada!");
+    fetchRecords();
   };
 
-  const handleDelete = (id: string) => {
-    const updated = records.filter(r => r.id !== id);
-    setRecords(updated);
-    saveRecords(updated);
-    toast.success("Registro removido");
+  const handleDelete = async (id: string) => {
+    await supabase.from("audit_items").delete().eq("audit_id", id);
+    const { error } = await supabase.from("audits").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+    } else {
+      toast.success("Registro removido");
+      fetchRecords();
+    }
   };
 
-  const getRecordStats = (record: ChecklistRecord) => {
+  const getRecordStats = (record: AuditRecord) => {
     let c = 0, nc = 0, na = 0;
-    Object.values(record.items).forEach(v => {
-      if (v === "conforme") c++;
-      else if (v === "nao_conforme") nc++;
-      else if (v === "na") na++;
+    record.items.forEach(item => {
+      if (item.status === "compliant") c++;
+      else if (item.status === "non_compliant") nc++;
+      else if (item.status === "not_applicable") na++;
     });
     const total = c + nc;
     return { c, nc, na, pct: total > 0 ? Math.round((c / total) * 100) : 0 };
+  };
+
+  const reverseStatusMap: Record<string, ItemStatus> = {
+    compliant: "conforme",
+    non_compliant: "nao_conforme",
+    not_applicable: "na",
   };
 
   const exportPDF = () => {
     toast.info("Exportação PDF em desenvolvimento");
   };
 
-  if (dbLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading || ctxLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-6">
@@ -249,7 +331,6 @@ export default function DashboardPrecautions() {
 
       {/* KPI + Pie */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Compliance donut */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -273,7 +354,6 @@ export default function DashboardPrecautions() {
           </CardContent>
         </Card>
 
-        {/* Volume cards */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Resumo de Avaliações</CardTitle>
@@ -286,7 +366,6 @@ export default function DashboardPrecautions() {
               <StatCard icon={MinusCircle} label="N/A" value={stats.totalNA} color="text-muted-foreground" />
             </div>
 
-            {/* Active DB precautions summary */}
             {dbPrecautions.length > 0 && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground mb-2">Precauções ativas no sistema (banco de dados)</p>
@@ -318,9 +397,7 @@ export default function DashboardPrecautions() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Funcionário</TableHead>
                     <TableHead>Unidade</TableHead>
-                    <TableHead>Turno</TableHead>
                     <TableHead>Conformidade</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
@@ -330,10 +407,8 @@ export default function DashboardPrecautions() {
                     const rs = getRecordStats(r);
                     return (
                       <TableRow key={r.id}>
-                        <TableCell className="text-sm">{r.date}</TableCell>
-                        <TableCell className="font-medium text-sm">{r.funcionario}</TableCell>
-                        <TableCell className="text-sm">{r.unidade}</TableCell>
-                        <TableCell><Badge variant="outline">{r.turno}</Badge></TableCell>
+                        <TableCell className="text-sm">{r.audit_date}</TableCell>
+                        <TableCell className="text-sm">{r.sector || "—"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
@@ -377,7 +452,6 @@ export default function DashboardPrecautions() {
             </DialogTitle>
           </DialogHeader>
 
-          {/* Metadata */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Nome do Funcionário *</Label>
@@ -409,7 +483,6 @@ export default function DashboardPrecautions() {
 
           <Separator />
 
-          {/* Checklist groups */}
           {CHECKLIST_GROUPS.map(group => (
             <div key={group.label} className="space-y-3">
               <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -443,7 +516,6 @@ export default function DashboardPrecautions() {
 
           <Separator />
 
-          {/* Observations */}
           <div className="space-y-2">
             <Label>Observações</Label>
             <Textarea
@@ -456,8 +528,9 @@ export default function DashboardPrecautions() {
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowNew(false)}>Cancelar</Button>
-            <Button onClick={handleSave} className="gap-1">
-              <CheckCircle2 className="h-4 w-4" /> Salvar Auditoria
+            <Button onClick={handleSave} disabled={saving} className="gap-1">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Salvar Auditoria
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -476,7 +549,6 @@ export default function DashboardPrecautions() {
                   </DialogTitle>
                 </DialogHeader>
 
-                {/* Compliance summary */}
                 <div className="flex items-center gap-4 p-4 rounded-lg border bg-muted/30">
                   <div className="text-center">
                     <p className="text-3xl font-bold" style={{ color: rs.pct >= 80 ? "hsl(142,71%,45%)" : rs.pct >= 50 ? "hsl(38,92%,50%)" : "hsl(0,84%,60%)" }}>
@@ -492,58 +564,50 @@ export default function DashboardPrecautions() {
                   </div>
                 </div>
 
-                {/* Metadata panel */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-lg border bg-muted/20">
-                  <div className="text-center">
-                    <Users className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
-                    <p className="text-xs text-muted-foreground">Funcionário</p>
-                    <p className="text-sm font-medium">{viewRecord.funcionario}</p>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 rounded-lg border bg-muted/20">
                   <div className="text-center">
                     <Building2 className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
                     <p className="text-xs text-muted-foreground">Unidade</p>
-                    <p className="text-sm font-medium">{viewRecord.unidade}</p>
+                    <p className="text-sm font-medium">{viewRecord.sector || "—"}</p>
                   </div>
                   <div className="text-center">
                     <Calendar className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
                     <p className="text-xs text-muted-foreground">Data</p>
-                    <p className="text-sm font-medium">{viewRecord.date}</p>
+                    <p className="text-sm font-medium">{viewRecord.audit_date}</p>
                   </div>
                   <div className="text-center">
-                    <Clock className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
-                    <p className="text-xs text-muted-foreground">Turno</p>
-                    <p className="text-sm font-medium">{viewRecord.turno}</p>
+                    <FileText className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
+                    <p className="text-xs text-muted-foreground">Itens</p>
+                    <p className="text-sm font-medium">{viewRecord.items.length}</p>
                   </div>
                 </div>
 
-                {/* Checklist results */}
-                {CHECKLIST_GROUPS.map(group => (
-                  <div key={group.label} className="space-y-2">
-                    <h3 className="font-semibold text-sm flex items-center gap-2">
-                      <group.icon className="h-4 w-4 text-primary" /> {group.label}
-                    </h3>
-                    {group.items.map(q => {
-                      const val = viewRecord.items[q];
-                      return (
-                        <div key={q} className="flex items-center justify-between p-2.5 rounded border bg-muted/10">
-                          <span className="text-sm flex-1">{q}</span>
-                          {val === "conforme" && <Badge className="bg-green-100 text-green-800 border-green-300 gap-1"><CheckCircle2 className="h-3 w-3" /> Conforme</Badge>}
-                          {val === "nao_conforme" && <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Não Conforme</Badge>}
-                          {val === "na" && <Badge variant="secondary" className="gap-1"><MinusCircle className="h-3 w-3" /> N/A</Badge>}
-                          {!val && <Badge variant="outline" className="text-muted-foreground">Não avaliado</Badge>}
+                {CHECKLIST_GROUPS.map(group => {
+                  const groupItems = viewRecord.items.filter(i => i.category === group.label);
+                  if (groupItems.length === 0) return null;
+                  return (
+                    <div key={group.label} className="space-y-2">
+                      <h3 className="font-semibold text-sm flex items-center gap-2">
+                        <group.icon className="h-4 w-4 text-primary" /> {group.label}
+                      </h3>
+                      {groupItems.map(item => (
+                        <div key={item.question} className="flex items-center justify-between p-2.5 rounded border bg-muted/10">
+                          <span className="text-sm flex-1">{item.question}</span>
+                          {item.status === "compliant" && <Badge className="bg-green-100 text-green-800 border-green-300 gap-1"><CheckCircle2 className="h-3 w-3" /> Conforme</Badge>}
+                          {item.status === "non_compliant" && <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> Não Conforme</Badge>}
+                          {item.status === "not_applicable" && <Badge variant="secondary" className="gap-1"><MinusCircle className="h-3 w-3" /> N/A</Badge>}
                         </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                      ))}
+                    </div>
+                  );
+                })}
 
-                {/* Observations */}
                 <div className="space-y-2">
                   <h3 className="font-semibold text-sm flex items-center gap-2">
                     <FileText className="h-4 w-4 text-primary" /> Observações
                   </h3>
-                  {viewRecord.observacoes ? (
-                    <div className="p-3 rounded-lg border bg-muted/20 text-sm whitespace-pre-wrap">{viewRecord.observacoes}</div>
+                  {viewRecord.observations ? (
+                    <div className="p-3 rounded-lg border bg-muted/20 text-sm whitespace-pre-wrap">{viewRecord.observations}</div>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">Nenhuma observação registrada.</p>
                   )}
