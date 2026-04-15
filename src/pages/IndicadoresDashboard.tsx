@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Activity, Download, Filter, X, Loader2, Heart, Skull, Bug, Timer,
-  Syringe, TrendingUp, ShieldAlert, Thermometer,
+  Syringe, TrendingUp, ShieldAlert, Thermometer, FileDown,
 } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
