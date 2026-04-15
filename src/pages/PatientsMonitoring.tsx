@@ -55,6 +55,8 @@ interface MockPatient {
   dataAlta: string; doencasBase: string; motivoInternacao: string; dataNascimento: string;
   sexo: string; dataAdmissao: string; especialidade: string; diagnostico: string;
   status: PatientStatus;
+  infeccaoMaterna?: string;
+  irasTransplacentaria?: string;
 }
 
 const especialidades = [
