@@ -188,107 +188,106 @@ export default function IndicadoresDDD() {
       indicador: row.indicador,
     }));
 
-    // Also save to localStorage for history
-    if (editingId) {
-      const all = listarRegistrosDDD();
-      const idx = all.findIndex(r => r.id === editingId);
-      if (idx >= 0) {
-        all[idx] = { ...all[idx], profissional, dataVigilancia, mesVigilancia, anoVigilancia, pacienteDia, compiladoUTIs, linhas };
-        localStorage.setItem("ddd-registros", JSON.stringify(all));
-      }
-      setEditingId(null);
-    } else {
-      salvarRegistroDDD({ profissional, dataVigilancia, mesVigilancia, anoVigilancia, pacienteDia, compiladoUTIs, linhas });
-    }
-
-    // Persist to Supabase
     try {
       if (editingId) {
-        // Delete old lines and update record
-        const localRecs = listarRegistrosDDD();
-        const localRec = localRecs.find(r => r.id === editingId);
-        // Find supabase record by matching mes/ano/profissional or use supabase id
-        // For simplicity, delete old and re-insert
-      }
-
-      const { data: rec, error: recErr } = await supabase
-        .from("ddd_records")
-        .insert({
-          hospital_id: hospitalId,
-          user_id: user.id,
+        // Update existing record
+        await supabase.from("ddd_record_lines").delete().eq("ddd_record_id", editingId);
+        const { error: upErr } = await supabase.from("ddd_records").update({
           profissional: profissional.trim(),
           data_vigilancia: dataVigilancia,
           mes_vigilancia: mesVigilancia,
           ano_vigilancia: anoVigilancia,
           paciente_dia: pacienteDia as any,
           compilado_utis: compiladoUTIs,
-        })
-        .select("id")
-        .single();
+        }).eq("id", editingId);
+        if (upErr) throw upErr;
 
-      if (recErr) throw recErr;
+        const linhasToInsert = linhas.filter(l => l.quantidade > 0).map(l => ({
+          ddd_record_id: editingId,
+          antimicrobiano_id: l.antimicrobianoId,
+          nome: l.nome, apresentacao: l.apresentacao,
+          mg_por_unidade: l.mgPorUnidade, quantidade: l.quantidade,
+          total_mg: l.totalMg, total_g: l.totalG, ddd_padrao: l.dddPadrao,
+          valor_ab: l.valorAB, indicador: l.indicador,
+        }));
+        if (linhasToInsert.length > 0) {
+          const { error: lineErr } = await supabase.from("ddd_record_lines").insert(linhasToInsert);
+          if (lineErr) throw lineErr;
+        }
+        toast.success("Registro atualizado com sucesso!");
+      } else {
+        const { data: rec, error: recErr } = await supabase
+          .from("ddd_records")
+          .insert({
+            hospital_id: hospitalId,
+            user_id: user.id,
+            profissional: profissional.trim(),
+            data_vigilancia: dataVigilancia,
+            mes_vigilancia: mesVigilancia,
+            ano_vigilancia: anoVigilancia,
+            paciente_dia: pacienteDia as any,
+            compilado_utis: compiladoUTIs,
+          })
+          .select("id")
+          .single();
+        if (recErr) throw recErr;
 
-      const linhasToInsert = linhas
-        .filter(l => l.quantidade > 0)
-        .map(l => ({
+        const linhasToInsert = linhas.filter(l => l.quantidade > 0).map(l => ({
           ddd_record_id: rec.id,
           antimicrobiano_id: l.antimicrobianoId,
-          nome: l.nome,
-          apresentacao: l.apresentacao,
-          mg_por_unidade: l.mgPorUnidade,
-          quantidade: l.quantidade,
-          total_mg: l.totalMg,
-          total_g: l.totalG,
-          ddd_padrao: l.dddPadrao,
-          valor_ab: l.valorAB,
-          indicador: l.indicador,
+          nome: l.nome, apresentacao: l.apresentacao,
+          mg_por_unidade: l.mgPorUnidade, quantidade: l.quantidade,
+          total_mg: l.totalMg, total_g: l.totalG, ddd_padrao: l.dddPadrao,
+          valor_ab: l.valorAB, indicador: l.indicador,
         }));
-
-      if (linhasToInsert.length > 0) {
-        const { error: lineErr } = await supabase
-          .from("ddd_record_lines")
-          .insert(linhasToInsert);
-        if (lineErr) throw lineErr;
+        if (linhasToInsert.length > 0) {
+          const { error: lineErr } = await supabase.from("ddd_record_lines").insert(linhasToInsert);
+          if (lineErr) throw lineErr;
+        }
+        toast.success("Registro salvo com sucesso!");
       }
-
-      toast.success(editingId ? "Registro atualizado com sucesso!" : "Registro salvo com sucesso!");
     } catch (err: any) {
       console.error("Erro ao salvar no Supabase:", err);
       toast.error("Erro ao salvar no banco de dados: " + (err.message || ""));
     }
 
-    setRegistrosSalvos(listarRegistrosDDD());
+    setEditingId(null);
     handleClear();
+    if (showHistory) fetchHistory();
     window.scrollTo(0, 0);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    excluirRegistroDDD(deleteTarget.id);
-    setRegistrosSalvos(listarRegistrosDDD());
+    setDeleting(true);
+    await supabase.from("ddd_record_lines").delete().eq("ddd_record_id", deleteTarget.id);
+    const { error } = await supabase.from("ddd_records").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    if (error) { toast.error("Erro ao excluir"); return; }
+    setRegistrosSalvos(prev => prev.filter(r => r.id !== deleteTarget.id));
     setDeleteTarget(null);
     toast.success("Registro excluído.");
   };
 
-  const handleLoadRecord = (reg: DDDRegistroSalvo) => {
+  const handleLoadRecord = (reg: DDDRecordFromDB) => {
     setEditingId(reg.id);
     setProfissional(reg.profissional);
-    setDataVigilancia(reg.dataVigilancia);
-    setMesVigilancia(reg.mesVigilancia);
-    setAnoVigilancia(reg.anoVigilancia);
-    setPacienteDia(reg.pacienteDia);
+    setDataVigilancia(reg.data_vigilancia);
+    setMesVigilancia(reg.mes_vigilancia);
+    setAnoVigilancia(reg.ano_vigilancia);
+    setPacienteDia((reg.paciente_dia || {}) as Record<string, number>);
     const newQtd: Record<number, number> = {};
-    for (const linha of reg.linhas) {
-      newQtd[linha.antimicrobianoId] = linha.quantidade;
+    for (const linha of (reg.ddd_record_lines || [])) {
+      newQtd[linha.antimicrobiano_id] = linha.quantidade;
     }
     setQuantidades(prev => ({ ...prev, ...newQtd }));
     setShowHistory(false);
     toast.info("Registro carregado para edição.");
   };
 
-  const handleExportPdf = (reg: DDDRegistroSalvo) => {
+  const handleExportPdf = (reg: DDDRecordFromDB) => {
     if (!hospitalId) { toast.error("Hospital não identificado."); return; }
-    const linhasComDados = reg.linhas.filter(l => l.quantidade > 0);
+    const linhasComDados = (reg.ddd_record_lines || []).filter(l => l.quantidade > 0);
     exportPdf({
       type: "audits",
       hospitalId,
@@ -300,14 +299,14 @@ export default function IndicadoresDDD() {
         },
         audits: linhasComDados.map(l => ({
           type: l.nome,
-          sector: `${reg.mesVigilancia}/${reg.anoVigilancia}`,
-          date: reg.dataVigilancia,
+          sector: `${reg.mes_vigilancia}/${reg.ano_vigilancia}`,
+          date: reg.data_vigilancia,
           compliance: l.indicador ?? 0,
           compliant: l.quantidade,
           total: l.quantidade,
         })),
       },
-      filenamePrefix: `ddd-${reg.mesVigilancia}-${reg.anoVigilancia}`,
+      filenamePrefix: `ddd-${reg.mes_vigilancia}-${reg.ano_vigilancia}`,
     });
     toast.success("PDF exportado!");
   };
