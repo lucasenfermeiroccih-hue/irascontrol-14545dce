@@ -286,6 +286,17 @@ export default function PatientsMonitoring() {
   };
 
   const enterPatient = (patientId: string) => {
+    const pat = patients.find(p => p.id === patientId);
+    if (pat) {
+      setNeonatalDetail({
+        pesoRN: pat.pesoRN || "", diagnosticoRN: pat.diagnosticoRN || "",
+        tipoParto: pat.tipoParto || "", bolsaRotaH: pat.bolsaRotaH || "",
+        bolsaRotaDias: pat.bolsaRotaDias || "", apgar: pat.apgar || "",
+        idadeGestacional: pat.idadeGestacional || "", dataInternacaoRN: pat.dataInternacaoRN || "",
+      });
+      setInfeccaoMaternaDetail(pat.infeccaoMaterna || "");
+      setIrasTransplacentariaDetail(pat.irasTransplacentaria || "");
+    }
     setSelectedId(patientId);
     setCurrentStep(0);
     setViewMode("edit");
