@@ -57,6 +57,14 @@ interface MockPatient {
   status: PatientStatus;
   infeccaoMaterna?: string;
   irasTransplacentaria?: string;
+  pesoRN?: string;
+  diagnosticoRN?: string;
+  tipoParto?: string;
+  bolsaRotaH?: string;
+  bolsaRotaDias?: string;
+  apgar?: string;
+  idadeGestacional?: string;
+  dataInternacaoRN?: string;
 }
 
 const especialidades = [
