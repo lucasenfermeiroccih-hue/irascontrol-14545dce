@@ -396,6 +396,53 @@ export default function PatientsMonitoring() {
                 {(selected.unidade === "UTI Neonatal" || selected.unidade === "Alojamento Conjunto") && (
                   <>
                     <Separator className="my-5" />
+                    <h4 className="text-sm font-semibold text-foreground mb-3">Dados Neonatais</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium">Peso do RN ao Nascer (g)</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.pesoRN || "—"}</p> : <Input type="number" value={neonatalDetail.pesoRN} onChange={e => setNeonatalDetail(p => ({ ...p, pesoRN: e.target.value }))} placeholder="Ex: 3200" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Diagnóstico</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.diagnosticoRN || "—"}</p> : <Input value={neonatalDetail.diagnosticoRN} onChange={e => setNeonatalDetail(p => ({ ...p, diagnosticoRN: e.target.value }))} />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Parto</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.tipoParto || "—"}</p> : (
+                          <Select value={neonatalDetail.tipoParto} onValueChange={v => setNeonatalDetail(p => ({ ...p, tipoParto: v }))}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Cesárea">Cesárea</SelectItem>
+                              <SelectItem value="Normal">Normal</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Bolsa Rota</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.bolsaRotaH ? `${neonatalDetail.bolsaRotaH}h ${neonatalDetail.bolsaRotaDias}dias` : "—"}</p> : (
+                          <div className="flex items-center gap-2">
+                            <Input type="number" value={neonatalDetail.bolsaRotaH} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaH: e.target.value }))} placeholder="h" className="w-20" />
+                            <span className="text-sm text-muted-foreground">h</span>
+                            <Input type="number" value={neonatalDetail.bolsaRotaDias} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaDias: e.target.value }))} placeholder="dias" className="w-20" />
+                            <span className="text-sm text-muted-foreground">dias</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Apgar</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.apgar || "—"}</p> : <Input value={neonatalDetail.apgar} onChange={e => setNeonatalDetail(p => ({ ...p, apgar: e.target.value }))} placeholder="Ex: 8/9" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Idade Gestacional</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.idadeGestacional || "—"}</p> : <Input value={neonatalDetail.idadeGestacional} onChange={e => setNeonatalDetail(p => ({ ...p, idadeGestacional: e.target.value }))} placeholder="Ex: 38 semanas" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Data da Internação</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.dataInternacaoRN || "—"}</p> : <Input type="date" value={neonatalDetail.dataInternacaoRN} onChange={e => setNeonatalDetail(p => ({ ...p, dataInternacaoRN: e.target.value }))} />}
+                      </div>
+                    </div>
+                    <Separator className="my-5" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                       <div className="space-y-2">
                         <Label className="font-medium">Infecção Materna</Label>
