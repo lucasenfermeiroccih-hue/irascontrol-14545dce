@@ -192,6 +192,8 @@ export default function IndicadoresISC() {
   const [pendingRegistro, setPendingRegistro] = useState<ISCRegistro | null>(null);
 
   useEffect(() => {
+    const dismissed = sessionStorage.getItem("isc_resume_dismissed");
+    if (dismissed) return;
     const last = getLastISCRegistro();
     if (last) {
       setPendingRegistro(last);
@@ -214,12 +216,14 @@ export default function IndicadoresISC() {
       loadRegistro(pendingRegistro);
       toast.info("Registro anterior carregado para edição.");
     }
+    sessionStorage.setItem("isc_resume_dismissed", "1");
     setShowResumeDialog(false);
     setPendingRegistro(null);
   };
 
   const handleNewRecord = () => {
     setRegistroId(generateISCId());
+    sessionStorage.setItem("isc_resume_dismissed", "1");
     setShowResumeDialog(false);
     setPendingRegistro(null);
   };
