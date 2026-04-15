@@ -241,10 +241,10 @@ export default function IndicadoresDashboard() {
             <p className="text-xs md:text-sm text-muted-foreground">Análise gamificada dos indicadores epidemiológicos</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => {
-          if (!hospitalId) return;
-          exportPdf({ type: "analytics", hospitalId, data: { kpis: { totalCases: filtered.length, confirmedCases: 0, avgCompliance: 0, criticalAlerts: 0 }, monthlyTrend: [], infectionBySector: [], resistanceProfile: [] }, filenamePrefix: "indicadores" });
-        }}><Download className="h-4 w-4 mr-1" />PDF</Button>
+        <Button variant="outline" size="sm" onClick={exportTabPdf} disabled={exporting}>
+          {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
+          Exportar Aba PDF
+        </Button>
       </div>
 
       {/* Filters */}
