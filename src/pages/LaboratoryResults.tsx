@@ -25,6 +25,17 @@ const sirColor: Record<SIR, string> = {
   R: "bg-red-100 text-red-800 border-red-300",
 };
 
+const UNIDADES_INTERNACAO = [
+  "UTI 1", "UTI 2", "UTI 3", "UPO", "UTI Neonatal", "UTI Pediátrica",
+  "Isolamento", "Nova Emergência", "Emergência", "Trauma Clínico", "Trauma Cirúrgico",
+  "Sala Verde", "Enfermarias Cirúrgicas", "Enfermaria Clínica", "Pediatria Emergência",
+  "Enfermaria Pediátrica", "Alojamento Conjunto"
+];
+
+const IRAS_TRANSPLACENTARIA_OPTIONS = [
+  "Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"
+];
+
 const SAMPLE_TYPES = [
   "Sangue (Hemocultura)", "Urina (Urocultura)", "Secreção traqueal",
   "Líquor", "Líquido pleural", "Líquido ascítico", "Ponta de cateter",
