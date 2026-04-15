@@ -55,6 +55,7 @@ interface MockPatient {
   dataAlta: string; doencasBase: string; motivoInternacao: string; dataNascimento: string;
   sexo: string; dataAdmissao: string; especialidade: string; diagnostico: string;
   status: PatientStatus;
+  tipoAlta?: string;
   infeccaoMaterna?: string;
   irasTransplacentaria?: string;
   pesoRN?: string;
@@ -65,6 +66,43 @@ interface MockPatient {
   apgar?: string;
   idadeGestacional?: string;
   dataInternacaoRN?: string;
+}
+
+// Per-patient extra data stored in localStorage
+interface PatientExtraData {
+  dispInvasivos?: { cvcInsercao: string; cvcRetirada: string; svuInsercao: string; svuRetirada: string; vmInsercao: string; vmRetirada: string };
+  antibioticos?: { id: string; nome: string; dataInicio: string; dataFim: string }[];
+}
+
+const PATIENTS_STORAGE_KEY = "irascontrol_patients";
+const PATIENTS_EXTRA_KEY = "irascontrol_patients_extra";
+
+function loadPatients(): MockPatient[] {
+  try {
+    const stored = localStorage.getItem(PATIENTS_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return mockPatients as MockPatient[];
+}
+
+function persistPatients(patients: MockPatient[]) {
+  localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(patients));
+}
+
+function loadPatientExtra(patientId: string): PatientExtraData {
+  try {
+    const all = JSON.parse(localStorage.getItem(PATIENTS_EXTRA_KEY) || "{}");
+    return all[patientId] || {};
+  } catch {}
+  return {};
+}
+
+function savePatientExtra(patientId: string, data: PatientExtraData) {
+  try {
+    const all = JSON.parse(localStorage.getItem(PATIENTS_EXTRA_KEY) || "{}");
+    all[patientId] = data;
+    localStorage.setItem(PATIENTS_EXTRA_KEY, JSON.stringify(all));
+  } catch {}
 }
 
 const especialidades = [
@@ -156,7 +194,7 @@ function calcAge(birth: string) {
 // ─── Component ────────────────────────────────────────────────
 export default function PatientsMonitoring() {
   const navigate = useNavigate();
-  const [patients, setPatients] = useState<MockPatient[]>(mockPatients as MockPatient[]);
+  const [patients, setPatients] = useState<MockPatient[]>(() => loadPatients());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [newPatientOpen, setNewPatientOpen] = useState(false);
@@ -269,18 +307,22 @@ export default function PatientsMonitoring() {
   const handleNewPatient = () => {
     if (!newForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
     const id = "mock-" + Date.now();
-    setPatients(prev => [{
-      id, nome: newForm.nome, unidade: newForm.unidade || "UTI 1 Adulto", leito: newForm.leito || "—",
-      prontuario: newForm.prontuario || `PRO-${Date.now().toString().slice(-6)}`,
-      dataInternacaoHospitalar: new Date().toISOString().slice(0, 10),
-      origem: "", dataInternacaoCTI: "", dataAlta: "", doencasBase: "", motivoInternacao: "",
-       dataNascimento: newForm.dataNascimento, sexo: newForm.sexo, dataAdmissao: new Date().toISOString().slice(0, 10),
-      especialidade: "", diagnostico: "", status: "active" as const,
-      infeccaoMaterna: newForm.infeccaoMaterna, irasTransplacentaria: newForm.irasTransplacentaria,
-      pesoRN: newForm.pesoRN, diagnosticoRN: newForm.diagnosticoRN, tipoParto: newForm.tipoParto,
-      bolsaRotaH: newForm.bolsaRotaH, bolsaRotaDias: newForm.bolsaRotaDias, apgar: newForm.apgar,
-      idadeGestacional: newForm.idadeGestacional, dataInternacaoRN: newForm.dataInternacaoRN,
-    }, ...prev]);
+    setPatients(prev => {
+      const updated = [{
+        id, nome: newForm.nome, unidade: newForm.unidade || "UTI 1 Adulto", leito: newForm.leito || "—",
+        prontuario: newForm.prontuario || `PRO-${Date.now().toString().slice(-6)}`,
+        dataInternacaoHospitalar: new Date().toISOString().slice(0, 10),
+        origem: "", dataInternacaoCTI: "", dataAlta: "", doencasBase: "", motivoInternacao: "",
+        dataNascimento: newForm.dataNascimento, sexo: newForm.sexo, dataAdmissao: new Date().toISOString().slice(0, 10),
+        especialidade: "", diagnostico: "", status: "active" as const,
+        infeccaoMaterna: newForm.infeccaoMaterna, irasTransplacentaria: newForm.irasTransplacentaria,
+        pesoRN: newForm.pesoRN, diagnosticoRN: newForm.diagnosticoRN, tipoParto: newForm.tipoParto,
+        bolsaRotaH: newForm.bolsaRotaH, bolsaRotaDias: newForm.bolsaRotaDias, apgar: newForm.apgar,
+        idadeGestacional: newForm.idadeGestacional, dataInternacaoRN: newForm.dataInternacaoRN,
+      }, ...prev];
+      persistPatients(updated);
+      return updated;
+    });
     setNewPatientOpen(false);
     setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" });
     toast.success("Paciente cadastrado com ID: " + id);
@@ -291,7 +333,13 @@ export default function PatientsMonitoring() {
     const dpId = dischargePatientId;
     if (!dpId) return;
     const pat = patients.find(p => p.id === dpId);
-    setPatients(prev => prev.map(p => p.id === dpId ? { ...p, status: "discharged" as const, dataAlta: new Date().toISOString().slice(0, 10) } : p));
+    const statusMap: Record<string, PatientStatus> = { "Óbito": "deceased", "Alta": "discharged", "Transferência": "transferred" };
+    const newStatus = statusMap[dischargeType] || "discharged";
+    setPatients(prev => {
+      const updated = prev.map(p => p.id === dpId ? { ...p, status: newStatus, dataAlta: new Date().toISOString().slice(0, 10), tipoAlta: dischargeType } : p);
+      persistPatients(updated);
+      return updated;
+    });
     setDischargeOpen(false);
     setDischargePatientId(null);
     toast.success(`Paciente ${pat?.nome || ""} — ${dischargeType} registrada`);
@@ -313,9 +361,19 @@ export default function PatientsMonitoring() {
 
   const saveEditId = () => {
     if (!editIdForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    setPatients(prev => prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p));
+    setPatients(prev => {
+      const updated = prev.map(p => p.id === selectedId ? { ...p, ...editIdForm } : p);
+      persistPatients(updated);
+      return updated;
+    });
     setEditIdOpen(false);
     toast.success("Dados de identificação atualizados!");
+  };
+
+  // Persist device and antibiotic data for current patient
+  const persistCurrentPatientExtra = () => {
+    if (!selectedId) return;
+    savePatientExtra(selectedId, { dispInvasivos, antibioticos });
   };
 
   const enterPatient = (patientId: string) => {
@@ -329,6 +387,12 @@ export default function PatientsMonitoring() {
       });
       setInfeccaoMaternaDetail(pat.infeccaoMaterna || "");
       setIrasTransplacentariaDetail(pat.irasTransplacentaria || "");
+      // Load extra data (devices, antibiotics) from localStorage
+      const extra = loadPatientExtra(patientId);
+      if (extra.dispInvasivos) setDispInvasivos(extra.dispInvasivos);
+      else setDispInvasivos({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "" });
+      if (extra.antibioticos) setAntibioticos(extra.antibioticos);
+      else setAntibioticos([]);
     }
     setSelectedId(patientId);
     setCurrentStep(0);
@@ -342,8 +406,8 @@ export default function PatientsMonitoring() {
 
   const handleSave = () => {
     if (!selected) return;
-    // Conclusão fields are optional
-    // Justificativa clínica is optional
+    persistPatients(patients);
+    persistCurrentPatientExtra();
     toast.success("Dados salvos com sucesso!");
   };
 
