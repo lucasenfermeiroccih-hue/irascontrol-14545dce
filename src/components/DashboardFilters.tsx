@@ -38,7 +38,7 @@ function MultiSelect({
   selected,
   onChange,
   options,
-  width = "w-[140px]",
+  width = "w-[160px]",
 }: {
   label: string;
   selected: string[];
@@ -63,27 +63,27 @@ function MultiSelect({
       : `${selected.length} selecionados`;
 
   return (
-    <div className="space-y-1">
-      <Label className="text-[10px] text-muted-foreground">{label}</Label>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             size="sm"
-            className={`h-8 ${width} justify-between text-xs font-normal`}
+            className={`h-9 ${width} justify-between text-sm font-normal`}
           >
             <span className="truncate">{displayLabel}</span>
-            <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0" align="start">
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-xs font-medium">{label}</span>
+        <PopoverContent className="w-[220px] p-0" align="start">
+          <div className="flex items-center justify-between border-b px-3 py-2.5">
+            <span className="text-sm font-medium">{label}</span>
             {selected.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-[10px]"
+                className="h-7 px-2 text-xs"
                 onClick={() => onChange([])}
               >
                 Limpar
@@ -91,17 +91,17 @@ function MultiSelect({
               </Button>
             )}
           </div>
-          <ScrollArea className="max-h-[220px]">
-            <div className="p-2 space-y-1">
+          <ScrollArea className="max-h-[260px]">
+            <div className="p-2 space-y-0.5">
               {options.map((opt) => (
                 <label
                   key={opt}
-                  className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs cursor-pointer hover:bg-accent"
+                  className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm cursor-pointer hover:bg-accent transition-colors"
                 >
                   <Checkbox
                     checked={selected.includes(opt)}
                     onCheckedChange={() => toggle(opt)}
-                    className="h-3.5 w-3.5"
+                    className="h-4 w-4"
                   />
                   <span>{opt}</span>
                 </label>
@@ -123,22 +123,22 @@ export default function DashboardFilters({
   const totalActive = (dia?.length || 0) + mes.length + ano.length + setor.length;
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
+    <div className="flex flex-wrap items-end gap-4">
+      <div className="flex items-center gap-2 text-muted-foreground self-end pb-1.5">
         <Filter className="h-4 w-4" />
-        <span className="text-xs font-medium hidden sm:inline">Filtros:</span>
+        <span className="text-sm font-medium hidden sm:inline">Filtros:</span>
         {totalActive > 0 && (
-          <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+          <Badge variant="secondary" className="text-xs px-2">
             {totalActive}
           </Badge>
         )}
       </div>
       {setDia && dia !== undefined && (
-        <MultiSelect label="Dia" selected={dia} onChange={setDia} options={defaultDays} width="w-[100px]" />
+        <MultiSelect label="Dia" selected={dia} onChange={setDia} options={defaultDays} width="w-[110px]" />
       )}
-      <MultiSelect label="Mês" selected={mes} onChange={setMes} options={meses} width="w-[140px]" />
-      <MultiSelect label="Ano" selected={ano} onChange={setAno} options={years} width="w-[110px]" />
-      <MultiSelect label="Setor" selected={setor} onChange={setSetor} options={sectors} width="w-[160px]" />
+      <MultiSelect label="Mês" selected={mes} onChange={setMes} options={meses} width="w-[160px]" />
+      <MultiSelect label="Ano" selected={ano} onChange={setAno} options={years} width="w-[120px]" />
+      <MultiSelect label="Setor" selected={setor} onChange={setSetor} options={sectors} width="w-[180px]" />
     </div>
   );
 }
