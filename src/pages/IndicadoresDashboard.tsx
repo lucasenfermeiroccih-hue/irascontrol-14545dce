@@ -73,6 +73,63 @@ export default function IndicadoresDashboard() {
   const [mesFiltro, setMesFiltro] = useState("Todos");
   const [anoFiltro, setAnoFiltro] = useState(String(new Date().getFullYear()));
   const [setorFiltro, setSetorFiltro] = useState("Todos");
+  const [activeTab, setActiveTab] = useState("infeccao");
+  const [exporting, setExporting] = useState(false);
+
+  const tabRefs = {
+    infeccao: useRef<HTMLDivElement>(null),
+    dispositivos: useRef<HTMLDivElement>(null),
+    taxas: useRef<HTMLDivElement>(null),
+    permanencia: useRef<HTMLDivElement>(null),
+  };
+
+  const tabNames: Record<string, string> = {
+    infeccao: "Infecção",
+    dispositivos: "Dispositivos",
+    taxas: "Taxas Específicas",
+    permanencia: "Permanência / ATB",
+  };
+
+  const exportTabPdf = useCallback(async () => {
+    const ref = tabRefs[activeTab as keyof typeof tabRefs]?.current;
+    if (!ref) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(ref, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? "l" : "p", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const usableW = pageW - margin * 2;
+      const ratio = canvas.height / canvas.width;
+      const imgW = usableW;
+      const imgH = imgW * ratio;
+
+      // Title
+      pdf.setFontSize(14);
+      pdf.text(`Indicadores - ${tabNames[activeTab]}`, margin, margin + 5);
+      pdf.setFontSize(9);
+      pdf.text(`Filtros: Mês=${mesFiltro} | Ano=${anoFiltro} | Setor=${setorFiltro}`, margin, margin + 11);
+      pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, margin, margin + 16);
+
+      const startY = margin + 20;
+      if (imgH + startY <= pageH - margin) {
+        pdf.addImage(imgData, "PNG", margin, startY, imgW, imgH);
+      } else {
+        // Scale to fit page
+        const fitH = pageH - startY - margin;
+        const fitW = fitH / ratio;
+        pdf.addImage(imgData, "PNG", margin, startY, Math.min(fitW, usableW), Math.min(fitH, imgH));
+      }
+
+      pdf.save(`indicadores-${activeTab}-${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (err) {
+      console.error("Erro ao exportar PDF:", err);
+    } finally {
+      setExporting(false);
+    }
+  }, [activeTab, mesFiltro, anoFiltro, setorFiltro]);
 
   useEffect(() => {
     if (ctxLoading || !hospitalId) { setLoading(false); return; }
