@@ -1268,6 +1268,39 @@ export default function PatientsMonitoring() {
             <div className="space-y-2"><Label>Data Nascimento</Label><Input type="date" value={newForm.dataNascimento} onChange={e => setNewForm(p => ({ ...p, dataNascimento: e.target.value }))} /></div>
             {(newForm.unidade === "UTI Neonatal" || newForm.unidade === "Alojamento Conjunto") && (
               <>
+                <Separator />
+                <p className="text-sm font-semibold text-foreground">Dados Neonatais</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Peso do RN ao Nascer (g)</Label><Input type="number" value={newForm.pesoRN} onChange={e => setNewForm(p => ({ ...p, pesoRN: e.target.value }))} placeholder="Ex: 3200" /></div>
+                  <div className="space-y-2"><Label>Diagnóstico</Label><Input value={newForm.diagnosticoRN} onChange={e => setNewForm(p => ({ ...p, diagnosticoRN: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Parto</Label>
+                    <Select value={newForm.tipoParto} onValueChange={v => setNewForm(p => ({ ...p, tipoParto: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cesárea">Cesárea</SelectItem>
+                        <SelectItem value="Normal">Normal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bolsa Rota</Label>
+                    <div className="flex items-center gap-2">
+                      <Input type="number" value={newForm.bolsaRotaH} onChange={e => setNewForm(p => ({ ...p, bolsaRotaH: e.target.value }))} placeholder="h" className="w-20" />
+                      <span className="text-sm text-muted-foreground">h</span>
+                      <Input type="number" value={newForm.bolsaRotaDias} onChange={e => setNewForm(p => ({ ...p, bolsaRotaDias: e.target.value }))} placeholder="dias" className="w-20" />
+                      <span className="text-sm text-muted-foreground">dias</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Apgar</Label><Input value={newForm.apgar} onChange={e => setNewForm(p => ({ ...p, apgar: e.target.value }))} placeholder="Ex: 8/9" /></div>
+                  <div className="space-y-2"><Label>Idade Gestacional</Label><Input value={newForm.idadeGestacional} onChange={e => setNewForm(p => ({ ...p, idadeGestacional: e.target.value }))} placeholder="Ex: 38 semanas" /></div>
+                </div>
+                <div className="space-y-2"><Label>Data da Internação</Label><Input type="date" value={newForm.dataInternacaoRN} onChange={e => setNewForm(p => ({ ...p, dataInternacaoRN: e.target.value }))} /></div>
+                <Separator />
                 <div className="space-y-2">
                   <Label className="font-medium">Infecção Materna</Label>
                   <Select value={newForm.infeccaoMaterna} onValueChange={v => setNewForm(p => ({ ...p, infeccaoMaterna: v, irasTransplacentaria: v === "Não" ? "" : p.irasTransplacentaria }))}>
