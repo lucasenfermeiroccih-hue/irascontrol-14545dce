@@ -291,7 +291,13 @@ export default function PatientsMonitoring() {
     const dpId = dischargePatientId;
     if (!dpId) return;
     const pat = patients.find(p => p.id === dpId);
-    setPatients(prev => prev.map(p => p.id === dpId ? { ...p, status: "discharged" as const, dataAlta: new Date().toISOString().slice(0, 10) } : p));
+    const statusMap: Record<string, PatientStatus> = { "Óbito": "deceased", "Alta": "discharged", "Transferência": "transferred" };
+    const newStatus = statusMap[dischargeType] || "discharged";
+    setPatients(prev => {
+      const updated = prev.map(p => p.id === dpId ? { ...p, status: newStatus, dataAlta: new Date().toISOString().slice(0, 10), tipoAlta: dischargeType } : p);
+      persistPatients(updated);
+      return updated;
+    });
     setDischargeOpen(false);
     setDischargePatientId(null);
     toast.success(`Paciente ${pat?.nome || ""} — ${dischargeType} registrada`);
