@@ -1196,6 +1196,17 @@ export default function PatientsMonitoring() {
   }
 
   // ─── PATIENT LIST VIEW (main page) ─────────────────────────
+  if (patientsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="text-sm text-muted-foreground">Carregando pacientes...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
       {/* ─── Page Header ──────────────────────────────────── */}
