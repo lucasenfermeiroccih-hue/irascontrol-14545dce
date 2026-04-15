@@ -48,6 +48,7 @@ import AgentChat from "./pages/AgentChat.tsx";
 import NotificacaoInvestigacaoCCIH from "./pages/NotificacaoInvestigacaoCCIH.tsx";
 import AuditHandHygieneConsumptionNew from "./pages/AuditHandHygieneConsumptionNew.tsx";
 import HygieneConsumptionDashboard from "./pages/HygieneConsumptionDashboard.tsx";
+import PatientDashboardIndicators from "./pages/PatientDashboardIndicators.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
 import { RequireAdmin } from "./components/RequireAdmin.tsx";
