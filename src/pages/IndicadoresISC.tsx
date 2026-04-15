@@ -230,20 +230,7 @@ export default function IndicadoresISC() {
       return;
     }
 
-    // Save to localStorage (legacy)
-    const registro: ISCRegistro = {
-      id: registroId,
-      nomeProfissional: nome.trim(),
-      dataVigilancia,
-      mes: mesVigilancia,
-      ano: anoVigilancia,
-      indicadores: { ...data },
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    };
-    saveISCRegistro(registro);
-
-    // Save to Supabase
+    // Save to Supabase only
     try {
       const { data: iscRecord, error: recError } = await supabase
         .from("isc_records")
@@ -260,7 +247,6 @@ export default function IndicadoresISC() {
 
       if (recError) throw recError;
 
-      // Insert indicators for each clinica with data
       const indicators = clinicasVisiveis
         .filter((c) => {
           const d = data[c];
@@ -285,8 +271,8 @@ export default function IndicadoresISC() {
 
       toast.success("Dados salvos com sucesso!");
 
-      // Reset form for new entry
-      setRegistroId(generateISCId());
+      // Reset form
+      setRegistroId(null);
       setHospitalTipo("");
       setNome("");
       setDataVigilancia("");
