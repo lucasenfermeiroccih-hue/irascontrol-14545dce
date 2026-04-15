@@ -4,25 +4,63 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardAIInsightsProps {
+  /** Local fallback insights generator */
   generateInsights: () => string[];
+  /** Page title for AI context */
+  pageTitle?: string;
+  /** Structured context string with dashboard data */
+  contextData?: string;
 }
 
-export default function DashboardAIInsights({ generateInsights }: DashboardAIInsightsProps) {
+export default function DashboardAIInsights({
+  generateInsights,
+  pageTitle = "Dashboard",
+  contextData,
+}: DashboardAIInsightsProps) {
   const [insights, setInsights] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true);
-    setTimeout(() => {
-      const result = generateInsights();
-      setInsights(result);
-      setOpen(true);
-      setLoading(false);
-      toast.success("Insights gerados com sucesso!");
-    }, 1200);
+
+    // If contextData is provided, call the AI edge function
+    if (contextData) {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-insights", {
+          body: { context: contextData, pageTitle },
+        });
+
+        if (error) throw error;
+
+        if (data?.insights && data.insights.length > 0) {
+          setInsights(data.insights);
+          setOpen(true);
+          setLoading(false);
+          toast.success("Insights gerados com IA!");
+          return;
+        }
+      } catch (err: any) {
+        console.warn("AI insights failed, falling back to local:", err);
+        // Check for rate limit or payment errors
+        if (err?.message?.includes("429") || err?.status === 429) {
+          toast.error("Limite de requisições excedido. Tente novamente em alguns minutos.");
+        } else if (err?.message?.includes("402") || err?.status === 402) {
+          toast.error("Créditos de IA esgotados. Adicione créditos no workspace.");
+        }
+        // Fall through to local fallback
+      }
+    }
+
+    // Fallback: local insights
+    const result = generateInsights();
+    setInsights(result);
+    setOpen(true);
+    setLoading(false);
+    toast.success("Insights gerados com sucesso!");
   };
 
   return (
