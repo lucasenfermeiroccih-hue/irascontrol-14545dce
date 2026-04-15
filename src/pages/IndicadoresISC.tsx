@@ -192,6 +192,8 @@ export default function IndicadoresISC() {
   const [pendingRegistro, setPendingRegistro] = useState<ISCRegistro | null>(null);
 
   useEffect(() => {
+    const dismissed = sessionStorage.getItem("isc_resume_dismissed");
+    if (dismissed) return;
     const last = getLastISCRegistro();
     if (last) {
       setPendingRegistro(last);
