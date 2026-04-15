@@ -61,7 +61,7 @@ interface AntibioticEntry {
 
 const exameOptions = ["Hemocultura", "Urocultura", "Cultura de secreção traqueal", "Cultura de ferida operatória", "Cultura de ponta de cateter", "Líquor", "Outro"];
 
-const mockFatoresRisco = [
+const fatoresRiscoOptions = [
   "Idade > 65 anos", "Diabetes mellitus", "Imunossupressão",
   "Tempo de internação > 7 dias", "Uso prévio de antibióticos",
   "Ventilação mecânica prolongada", "Cateter venoso central > 5 dias",
