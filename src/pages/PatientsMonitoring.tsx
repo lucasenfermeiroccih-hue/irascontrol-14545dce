@@ -677,7 +677,7 @@ export default function PatientsMonitoring() {
                 <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-destructive" />Fatores de Risco</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {mockFatoresRisco.map(f => (
+                    {fatoresRiscoOptions.map(f => (
                       <div key={f} className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/10">
                         <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
                         <span className="text-sm">{f}</span>
