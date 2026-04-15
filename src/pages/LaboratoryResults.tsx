@@ -70,6 +70,7 @@ const LaboratoryResults = () => {
   const [showNewForm, setShowNewForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
+    patient_name: "",
     patient_id: "",
     sample_type: "",
     collection_date: new Date().toISOString().slice(0, 10),
@@ -77,8 +78,14 @@ const LaboratoryResults = () => {
     organism: "",
     notes: "",
     status: "pending" as "pending" | "completed",
+    unidade_internacao: "",
   });
   const [antibiogramEntries, setAntibiogramEntries] = useState<AntibiogramEntry[]>([]);
+  const [irasTransplacentaria, setIrasTransplacentaria] = useState("");
+  const [vdrlMae, setVdrlMae] = useState("");
+  const [vdrlRN, setVdrlRN] = useState("");
+  const [vdrlReagente, setVdrlReagente] = useState("");
+  const [cmvReagente, setCmvReagente] = useState("");
 
   // AI Insights
   const [showInsights, setShowInsights] = useState(false);
