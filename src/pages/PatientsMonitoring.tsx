@@ -143,7 +143,7 @@ export default function PatientsMonitoring() {
   const [viewPatientOpen, setViewPatientOpen] = useState(false);
   const [viewPatientId, setViewPatientId] = useState<string | null>(null);
 
-  const [newForm, setNewForm] = useState({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "" });
+  const [newForm, setNewForm] = useState({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" });
 
   const selected = selectedId ? patients.find(p => p.id === selectedId) || null : null;
   const viewPatient = viewPatientId ? patients.find(p => p.id === viewPatientId) || null : null;
@@ -159,6 +159,7 @@ export default function PatientsMonitoring() {
   const [iras, setIras] = useState({ temIras: "", numeroIras: "", quaisIras: "", dataFechamento: "" });
   const [infeccaoMaternaDetail, setInfeccaoMaternaDetail] = useState("");
   const [irasTransplacentariaDetail, setIrasTransplacentariaDetail] = useState("");
+  const [neonatalDetail, setNeonatalDetail] = useState({ pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" });
   const [conclusao, setConclusao] = useState({ classificacao: "", conclusaoEpidemiologica: "", condutas: "", desfecho: "", vinculoSurto: "" });
   const [criteriosSelecionados, setCriteriosSelecionados] = useState<string[]>([]);
   const [justificativa, setJustificativa] = useState("");
@@ -236,7 +237,7 @@ export default function PatientsMonitoring() {
       especialidade: "", diagnostico: "", status: "active" as const,
     }, ...prev]);
     setNewPatientOpen(false);
-    setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "" });
+    setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" });
     toast.success("Paciente cadastrado com ID: " + id);
   };
 
@@ -394,6 +395,53 @@ export default function PatientsMonitoring() {
                 </div>
                 {(selected.unidade === "UTI Neonatal" || selected.unidade === "Alojamento Conjunto") && (
                   <>
+                    <Separator className="my-5" />
+                    <h4 className="text-sm font-semibold text-foreground mb-3">Dados Neonatais</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium">Peso do RN ao Nascer (g)</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.pesoRN || "—"}</p> : <Input type="number" value={neonatalDetail.pesoRN} onChange={e => setNeonatalDetail(p => ({ ...p, pesoRN: e.target.value }))} placeholder="Ex: 3200" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Diagnóstico</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.diagnosticoRN || "—"}</p> : <Input value={neonatalDetail.diagnosticoRN} onChange={e => setNeonatalDetail(p => ({ ...p, diagnosticoRN: e.target.value }))} />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Parto</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.tipoParto || "—"}</p> : (
+                          <Select value={neonatalDetail.tipoParto} onValueChange={v => setNeonatalDetail(p => ({ ...p, tipoParto: v }))}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Cesárea">Cesárea</SelectItem>
+                              <SelectItem value="Normal">Normal</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Bolsa Rota</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.bolsaRotaH ? `${neonatalDetail.bolsaRotaH}h ${neonatalDetail.bolsaRotaDias}dias` : "—"}</p> : (
+                          <div className="flex items-center gap-2">
+                            <Input type="number" value={neonatalDetail.bolsaRotaH} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaH: e.target.value }))} placeholder="h" className="w-20" />
+                            <span className="text-sm text-muted-foreground">h</span>
+                            <Input type="number" value={neonatalDetail.bolsaRotaDias} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaDias: e.target.value }))} placeholder="dias" className="w-20" />
+                            <span className="text-sm text-muted-foreground">dias</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Apgar</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.apgar || "—"}</p> : <Input value={neonatalDetail.apgar} onChange={e => setNeonatalDetail(p => ({ ...p, apgar: e.target.value }))} placeholder="Ex: 8/9" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Idade Gestacional</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.idadeGestacional || "—"}</p> : <Input value={neonatalDetail.idadeGestacional} onChange={e => setNeonatalDetail(p => ({ ...p, idadeGestacional: e.target.value }))} placeholder="Ex: 38 semanas" />}
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="font-medium">Data da Internação</Label>
+                        {readOnly ? <p className="text-sm text-foreground">{neonatalDetail.dataInternacaoRN || "—"}</p> : <Input type="date" value={neonatalDetail.dataInternacaoRN} onChange={e => setNeonatalDetail(p => ({ ...p, dataInternacaoRN: e.target.value }))} />}
+                      </div>
+                    </div>
                     <Separator className="my-5" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                       <div className="space-y-2">
@@ -1267,6 +1315,39 @@ export default function PatientsMonitoring() {
             <div className="space-y-2"><Label>Data Nascimento</Label><Input type="date" value={newForm.dataNascimento} onChange={e => setNewForm(p => ({ ...p, dataNascimento: e.target.value }))} /></div>
             {(newForm.unidade === "UTI Neonatal" || newForm.unidade === "Alojamento Conjunto") && (
               <>
+                <Separator />
+                <p className="text-sm font-semibold text-foreground">Dados Neonatais</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Peso do RN ao Nascer (g)</Label><Input type="number" value={newForm.pesoRN} onChange={e => setNewForm(p => ({ ...p, pesoRN: e.target.value }))} placeholder="Ex: 3200" /></div>
+                  <div className="space-y-2"><Label>Diagnóstico</Label><Input value={newForm.diagnosticoRN} onChange={e => setNewForm(p => ({ ...p, diagnosticoRN: e.target.value }))} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Parto</Label>
+                    <Select value={newForm.tipoParto} onValueChange={v => setNewForm(p => ({ ...p, tipoParto: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cesárea">Cesárea</SelectItem>
+                        <SelectItem value="Normal">Normal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bolsa Rota</Label>
+                    <div className="flex items-center gap-2">
+                      <Input type="number" value={newForm.bolsaRotaH} onChange={e => setNewForm(p => ({ ...p, bolsaRotaH: e.target.value }))} placeholder="h" className="w-20" />
+                      <span className="text-sm text-muted-foreground">h</span>
+                      <Input type="number" value={newForm.bolsaRotaDias} onChange={e => setNewForm(p => ({ ...p, bolsaRotaDias: e.target.value }))} placeholder="dias" className="w-20" />
+                      <span className="text-sm text-muted-foreground">dias</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Apgar</Label><Input value={newForm.apgar} onChange={e => setNewForm(p => ({ ...p, apgar: e.target.value }))} placeholder="Ex: 8/9" /></div>
+                  <div className="space-y-2"><Label>Idade Gestacional</Label><Input value={newForm.idadeGestacional} onChange={e => setNewForm(p => ({ ...p, idadeGestacional: e.target.value }))} placeholder="Ex: 38 semanas" /></div>
+                </div>
+                <div className="space-y-2"><Label>Data da Internação</Label><Input type="date" value={newForm.dataInternacaoRN} onChange={e => setNewForm(p => ({ ...p, dataInternacaoRN: e.target.value }))} /></div>
+                <Separator />
                 <div className="space-y-2">
                   <Label className="font-medium">Infecção Materna</Label>
                   <Select value={newForm.infeccaoMaterna} onValueChange={v => setNewForm(p => ({ ...p, infeccaoMaterna: v, irasTransplacentaria: v === "Não" ? "" : p.irasTransplacentaria }))}>
@@ -1344,6 +1425,33 @@ export default function PatientsMonitoring() {
             <div className="sm:col-span-2 space-y-2"><Label>Motivo da internação</Label><Input value={editIdForm.motivoInternacao} onChange={e => setEditIdForm(p => ({ ...p, motivoInternacao: e.target.value }))} /></div>
             {(editIdForm.unidade === "UTI Neonatal" || editIdForm.unidade === "Alojamento Conjunto") && (
               <>
+                <div className="sm:col-span-2"><Separator className="my-2" /></div>
+                <p className="sm:col-span-2 text-sm font-semibold text-foreground">Dados Neonatais</p>
+                <div className="space-y-2"><Label>Peso do RN ao Nascer (g)</Label><Input type="number" value={neonatalDetail.pesoRN} onChange={e => setNeonatalDetail(p => ({ ...p, pesoRN: e.target.value }))} placeholder="Ex: 3200" /></div>
+                <div className="space-y-2"><Label>Diagnóstico RN</Label><Input value={neonatalDetail.diagnosticoRN} onChange={e => setNeonatalDetail(p => ({ ...p, diagnosticoRN: e.target.value }))} /></div>
+                <div className="space-y-2">
+                  <Label>Parto</Label>
+                  <Select value={neonatalDetail.tipoParto} onValueChange={v => setNeonatalDetail(p => ({ ...p, tipoParto: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cesárea">Cesárea</SelectItem>
+                      <SelectItem value="Normal">Normal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Bolsa Rota</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={neonatalDetail.bolsaRotaH} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaH: e.target.value }))} placeholder="h" className="w-20" />
+                    <span className="text-sm text-muted-foreground">h</span>
+                    <Input type="number" value={neonatalDetail.bolsaRotaDias} onChange={e => setNeonatalDetail(p => ({ ...p, bolsaRotaDias: e.target.value }))} placeholder="dias" className="w-20" />
+                    <span className="text-sm text-muted-foreground">dias</span>
+                  </div>
+                </div>
+                <div className="space-y-2"><Label>Apgar</Label><Input value={neonatalDetail.apgar} onChange={e => setNeonatalDetail(p => ({ ...p, apgar: e.target.value }))} placeholder="Ex: 8/9" /></div>
+                <div className="space-y-2"><Label>Idade Gestacional</Label><Input value={neonatalDetail.idadeGestacional} onChange={e => setNeonatalDetail(p => ({ ...p, idadeGestacional: e.target.value }))} placeholder="Ex: 38 semanas" /></div>
+                <div className="space-y-2"><Label>Data da Internação</Label><Input type="date" value={neonatalDetail.dataInternacaoRN} onChange={e => setNeonatalDetail(p => ({ ...p, dataInternacaoRN: e.target.value }))} /></div>
+                <div className="sm:col-span-2"><Separator className="my-2" /></div>
                 <div className="space-y-2">
                   <Label className="font-medium">Infecção Materna</Label>
                   <Select value={infeccaoMaternaDetail} onValueChange={v => { setInfeccaoMaternaDetail(v); if (v === "Não") setIrasTransplacentariaDetail(""); }}>
