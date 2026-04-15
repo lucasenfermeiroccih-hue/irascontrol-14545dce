@@ -365,7 +365,7 @@ export default function IndicadoresDDD() {
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Deseja realmente excluir o registro de <strong>{deleteTarget?.profissional}</strong> ({deleteTarget?.mesVigilancia}/{deleteTarget?.anoVigilancia})?
+              Deseja realmente excluir o registro de <strong>{deleteTarget?.profissional}</strong> ({deleteTarget?.mes_vigilancia}/{deleteTarget?.ano_vigilancia})?
               Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
@@ -454,10 +454,10 @@ export default function IndicadoresDDD() {
                       {filteredRegistros.map(reg => (
                         <TableRow key={reg.id}>
                           <TableCell className="font-medium">{reg.profissional}</TableCell>
-                          <TableCell><Badge variant="secondary">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge></TableCell>
-                          <TableCell>{reg.dataVigilancia}</TableCell>
-                          <TableCell className="font-mono">{reg.compiladoUTIs}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{new Date(reg.criadoEm).toLocaleString("pt-BR")}</TableCell>
+                          <TableCell><Badge variant="secondary">{reg.mes_vigilancia}/{reg.ano_vigilancia}</Badge></TableCell>
+                          <TableCell>{reg.data_vigilancia}</TableCell>
+                          <TableCell className="font-mono">{reg.compilado_utis}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{new Date(reg.created_at).toLocaleString("pt-BR")}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
                               <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => handleLoadRecord(reg)}>
@@ -483,9 +483,9 @@ export default function IndicadoresDDD() {
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="font-medium text-sm">{reg.profissional}</p>
-                          <Badge variant="secondary" className="mt-1">{reg.mesVigilancia}/{reg.anoVigilancia}</Badge>
+                          <Badge variant="secondary" className="mt-1">{reg.mes_vigilancia}/{reg.ano_vigilancia}</Badge>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{new Date(reg.criadoEm).toLocaleDateString("pt-BR")}</span>
+                        <span className="text-[10px] text-muted-foreground">{new Date(reg.created_at).toLocaleDateString("pt-BR")}</span>
                       </div>
                       <div className="flex gap-1.5">
                         <Button size="sm" variant="outline" className="flex-1 text-xs gap-1" onClick={() => handleLoadRecord(reg)}>
