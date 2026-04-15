@@ -70,7 +70,7 @@ interface MockPatient {
 
 // Per-patient extra data stored in localStorage
 interface PatientExtraData {
-  dispInvasivos?: { cvcInsercao: string; cvcRetirada: string; svuInsercao: string; svuRetirada: string; vmInsercao: string; vmRetirada: string };
+  dispInvasivos?: { cvcInsercao: string; cvcRetirada: string; svuInsercao: string; svuRetirada: string; vmInsercao: string; vmRetirada: string; tqtInsercao: string; tqtRetirada: string };
   antibioticos?: { id: string; nome: string; dataInicio: string; dataFim: string }[];
 }
 
@@ -222,7 +222,7 @@ export default function PatientsMonitoring() {
 
   // Section states
   const [exames, setExames] = useState({ hemocultura: "Não", urocultura: "Não", culturaTraqueal: "Não", culturaFerida: "Não", hemoculturaObs: "", uroculturaObs: "", culturaTraquealObs: "", culturaFeridaObs: "" });
-  const [dispositivos, setDispositivos] = useState({ cvc: "", cateterArterial: "Não", cateterHemodialise: "", ventilacao: "Não", cateterVesical: "Não", sonda: "Não", drenos: "Não", feridaOp: "Não" });
+  const [dispositivos, setDispositivos] = useState({ cvc: "", cateterArterial: "Não", cateterHemodialise: "", ventilacao: "Não", cateterVesical: "Não", sonda: "Não", drenos: "Não", feridaOp: "Não", tqt: "Não", vni: "Não" });
   const [evolucao, setEvolucao] = useState({ evolucaoInternacao: "", colonizacoes: "", antibioticoPrevio: "", culturasPreviaCTI: "", resultadoCulturasCTI: "", antibioticosCTI: "", dispositivosInvasivos: "", examesImagem: "", condutasDiarias: "" });
   const [sinaisVitais, setSinaisVitais] = useState({ temperatura: "", leucocitos: "", pressaoArterial: "", fio2Peep: "", hematuria: "", spo2: "" });
   type SinaisVitaisEntry = typeof sinaisVitais & { data: string; hora: string };
@@ -237,7 +237,7 @@ export default function PatientsMonitoring() {
   const [criteriosSelecionados, setCriteriosSelecionados] = useState<string[]>([]);
   const [justificativa, setJustificativa] = useState("");
   const [ocorrencia, setOcorrencia] = useState({ unidadeSetor: "", leito: "", dataSintomas: "", dataSuspeita: "", dataNotificacao: "", origemNotificacao: "" });
-  const [dispInvasivos, setDispInvasivos] = useState({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "" });
+  const [dispInvasivos, setDispInvasivos] = useState({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "", tqtInsercao: "", tqtRetirada: "" });
   const [labPanel, setLabPanel] = useState<LabEntry[]>(initialLabPanel);
   const [newLabOpen, setNewLabOpen] = useState(false);
   const [newLab, setNewLab] = useState({ exame: "", data: "", microrganismo: "", sensibilidade: "", mdr: false });
@@ -390,7 +390,7 @@ export default function PatientsMonitoring() {
       // Load extra data (devices, antibiotics) from localStorage
       const extra = loadPatientExtra(patientId);
       if (extra.dispInvasivos) setDispInvasivos(extra.dispInvasivos);
-      else setDispInvasivos({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "" });
+      else setDispInvasivos({ cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "", tqtInsercao: "", tqtRetirada: "" });
       if (extra.antibioticos) setAntibioticos(extra.antibioticos);
       else setAntibioticos([]);
     }
@@ -414,6 +414,7 @@ export default function PatientsMonitoring() {
   const cvcDays = dispInvasivos.cvcInsercao ? calcDiasUso(dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada) : null;
   const svuDays = dispInvasivos.svuInsercao ? calcDiasUso(dispInvasivos.svuInsercao, dispInvasivos.svuRetirada) : null;
   const vmDays = dispInvasivos.vmInsercao ? calcDiasUso(dispInvasivos.vmInsercao, dispInvasivos.vmRetirada) : null;
+  const tqtDays = dispInvasivos.tqtInsercao ? calcDiasUso(dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada) : null;
 
   // ─── PATIENT DETAIL VIEW (full page with tabs) ─────────────
   if (selected) {
@@ -740,6 +741,8 @@ export default function PatientsMonitoring() {
                   <DeviceSelect label="Sonda Nasogástrica/Nasoenteral" disabled={readOnly} value={dispositivos.sonda} onChange={v => setDispositivos(p => ({ ...p, sonda: v }))} options={["Sim", "Não"]} />
                   <DeviceSelect label="Drenos" disabled={readOnly} value={dispositivos.drenos} onChange={v => setDispositivos(p => ({ ...p, drenos: v }))} options={["Sim", "Não"]} />
                   <DeviceSelect label="Ferida Operatória" disabled={readOnly} value={dispositivos.feridaOp} onChange={v => setDispositivos(p => ({ ...p, feridaOp: v }))} options={["Sim", "Não"]} />
+                  <DeviceSelect label="TQT (Traqueostomia)" disabled={readOnly} value={dispositivos.tqt} onChange={v => setDispositivos(p => ({ ...p, tqt: v }))} options={["Sim", "Não"]} />
+                  <DeviceSelect label="VNI (Ventilação Não Invasiva)" disabled={readOnly} value={dispositivos.vni} onChange={v => setDispositivos(p => ({ ...p, vni: v }))} options={["Sim", "Não"]} />
                 </CardContent>
               </Card>
 
@@ -751,6 +754,7 @@ export default function PatientsMonitoring() {
                       ["CVC", dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, cvcDays, "cvcInsercao", "cvcRetirada"],
                       ["SVD", dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, svuDays, "svuInsercao", "svuRetirada"],
                       ["VM", dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, vmDays, "vmInsercao", "vmRetirada"],
+                      ["TQT", dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, tqtDays, "tqtInsercao", "tqtRetirada"],
                     ] as const).map(([label, insVal, retVal, days, insKey, retKey]) => (
                       <div key={label} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end p-3 rounded-lg border bg-muted/30">
                         <div className="space-y-2"><Label className="font-medium">{label} — Inserção</Label><Input disabled={readOnly} type="date" value={insVal} onChange={e => setDispInvasivos(p => ({ ...p, [insKey]: e.target.value }))} /></div>
