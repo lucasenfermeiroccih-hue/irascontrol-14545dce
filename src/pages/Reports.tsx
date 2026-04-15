@@ -435,16 +435,16 @@ const Reports = () => {
         },
       });
 
-      if (error) throw error;
       if (data?.insights && Array.isArray(data.insights)) {
         setAiInsights(data.insights);
+        setAiDialogOpen(true);
       } else {
-        // Fallback local insights
         setAiInsights(generateLocalInsights());
+        setAiDialogOpen(true);
       }
     } catch {
-      // Fallback: generate local insights
       setAiInsights(generateLocalInsights());
+      setAiDialogOpen(true);
     }
     setAiLoading(false);
   };
