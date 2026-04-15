@@ -229,7 +229,14 @@ const LaboratoryResults = () => {
           collection_date: formData.collection_date,
           result_date: formData.result_date || null,
           organism: formData.organism || null,
-          notes: formData.notes || null,
+          notes: [
+            formData.notes,
+            formData.unidade_internacao ? `Unidade: ${formData.unidade_internacao}` : "",
+            formData.patient_name ? `Paciente: ${formData.patient_name}` : "",
+            irasTransplacentaria ? `IRAS Transplacentária: ${irasTransplacentaria}` : "",
+            irasTransplacentaria === "Sífilis" ? `VDRL Mãe: ${vdrlMae || "—"}, VDRL RN: ${vdrlRN || "—"}, Resultado: ${vdrlReagente || "—"}` : "",
+            irasTransplacentaria === "Citomegalovírus" ? `CMV Resultado: ${cmvReagente || "—"}` : "",
+          ].filter(Boolean).join(" | ") || null,
           status: formData.status,
           created_by: user.id,
         })
