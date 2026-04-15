@@ -55,6 +55,8 @@ interface MockPatient {
   dataAlta: string; doencasBase: string; motivoInternacao: string; dataNascimento: string;
   sexo: string; dataAdmissao: string; especialidade: string; diagnostico: string;
   status: PatientStatus;
+  infeccaoMaterna?: string;
+  irasTransplacentaria?: string;
 }
 
 const especialidades = [
@@ -141,7 +143,7 @@ export default function PatientsMonitoring() {
   const [viewPatientOpen, setViewPatientOpen] = useState(false);
   const [viewPatientId, setViewPatientId] = useState<string | null>(null);
 
-  const [newForm, setNewForm] = useState({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "" });
+  const [newForm, setNewForm] = useState({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "" });
 
   const selected = selectedId ? patients.find(p => p.id === selectedId) || null : null;
   const viewPatient = viewPatientId ? patients.find(p => p.id === viewPatientId) || null : null;
@@ -155,6 +157,8 @@ export default function PatientsMonitoring() {
   const [sinaisVitaisHistorico, setSinaisVitaisHistorico] = useState<SinaisVitaisEntry[]>([]);
   const [showHistorico, setShowHistorico] = useState(false);
   const [iras, setIras] = useState({ temIras: "", numeroIras: "", quaisIras: "", dataFechamento: "" });
+  const [infeccaoMaternaDetail, setInfeccaoMaternaDetail] = useState("");
+  const [irasTransplacentariaDetail, setIrasTransplacentariaDetail] = useState("");
   const [conclusao, setConclusao] = useState({ classificacao: "", conclusaoEpidemiologica: "", condutas: "", desfecho: "", vinculoSurto: "" });
   const [criteriosSelecionados, setCriteriosSelecionados] = useState<string[]>([]);
   const [justificativa, setJustificativa] = useState("");
@@ -232,7 +236,7 @@ export default function PatientsMonitoring() {
       especialidade: "", diagnostico: "", status: "active" as const,
     }, ...prev]);
     setNewPatientOpen(false);
-    setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "" });
+    setNewForm({ nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "" });
     toast.success("Paciente cadastrado com ID: " + id);
   };
 
@@ -388,6 +392,44 @@ export default function PatientsMonitoring() {
                   <Field label="Doenças de base" value={selected.doencasBase} className="lg:col-span-2" />
                   <Field label="Motivo da internação" value={selected.motivoInternacao} className="lg:col-span-2" />
                 </div>
+                {(selected.unidade === "UTI Neonatal" || selected.unidade === "Alojamento Conjunto") && (
+                  <>
+                    <Separator className="my-5" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                      <div className="space-y-2">
+                        <Label className="font-medium">Infecção Materna</Label>
+                        {readOnly ? (
+                          <p className="text-sm text-foreground">{infeccaoMaternaDetail || "—"}</p>
+                        ) : (
+                          <Select value={infeccaoMaternaDetail} onValueChange={v => { setInfeccaoMaternaDetail(v); if (v === "Não") setIrasTransplacentariaDetail(""); }}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Sim">Sim</SelectItem>
+                              <SelectItem value="Não">Não</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                      {infeccaoMaternaDetail === "Sim" && (
+                        <div className="space-y-2">
+                          <Label className="font-medium">IRAS Transplacentária</Label>
+                          {readOnly ? (
+                            <p className="text-sm text-foreground">{irasTransplacentariaDetail || "—"}</p>
+                          ) : (
+                            <Select value={irasTransplacentariaDetail} onValueChange={v => setIrasTransplacentariaDetail(v)}>
+                              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                {["Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"].map(item => (
+                                  <SelectItem key={item} value={item}>{item}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
                 <div className="mt-5 flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 w-fit">
                   <Clock className="h-5 w-5 text-primary" />
                   <div>
@@ -1223,6 +1265,33 @@ export default function PatientsMonitoring() {
               <div className="space-y-2"><Label>Leito</Label><Input value={newForm.leito} onChange={e => setNewForm(p => ({ ...p, leito: e.target.value }))} /></div>
             </div>
             <div className="space-y-2"><Label>Data Nascimento</Label><Input type="date" value={newForm.dataNascimento} onChange={e => setNewForm(p => ({ ...p, dataNascimento: e.target.value }))} /></div>
+            {(newForm.unidade === "UTI Neonatal" || newForm.unidade === "Alojamento Conjunto") && (
+              <>
+                <div className="space-y-2">
+                  <Label className="font-medium">Infecção Materna</Label>
+                  <Select value={newForm.infeccaoMaterna} onValueChange={v => setNewForm(p => ({ ...p, infeccaoMaterna: v, irasTransplacentaria: v === "Não" ? "" : p.irasTransplacentaria }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sim">Sim</SelectItem>
+                      <SelectItem value="Não">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {newForm.infeccaoMaterna === "Sim" && (
+                  <div className="space-y-2">
+                    <Label className="font-medium">IRAS Transplacentária</Label>
+                    <Select value={newForm.irasTransplacentaria} onValueChange={v => setNewForm(p => ({ ...p, irasTransplacentaria: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {["Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"].map(item => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewPatientOpen(false)}>Cancelar</Button>
@@ -1246,7 +1315,17 @@ export default function PatientsMonitoring() {
               </Select>
             </div>
             <div className="space-y-2"><Label>Data Nascimento</Label><Input type="date" value={editIdForm.dataNascimento} onChange={e => setEditIdForm(p => ({ ...p, dataNascimento: e.target.value }))} /></div>
-            <div className="space-y-2"><Label>Unidade</Label><Input value={editIdForm.unidade} onChange={e => setEditIdForm(p => ({ ...p, unidade: e.target.value }))} /></div>
+            <div className="space-y-2">
+              <Label>Unidade</Label>
+              <Select value={editIdForm.unidade} onValueChange={v => setEditIdForm(p => ({ ...p, unidade: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
+                <SelectContent>
+                  {["UTI 1 Adulto", "UTI 2 Adulto", "UTI 3 Adulto", "UTI Neonatal", "UTI Pediátrica", "UPO", "Trauma Clínico", "Clínica Médica", "Clínica Cirúrgica", "Contêiner", "Pediatria", "Pediatria (Enfermaria)", "Alojamento Conjunto"].map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2"><Label>Leito</Label><Input value={editIdForm.leito} onChange={e => setEditIdForm(p => ({ ...p, leito: e.target.value }))} /></div>
             <div className="space-y-2"><Label>Origem</Label><Input value={editIdForm.origem} onChange={e => setEditIdForm(p => ({ ...p, origem: e.target.value }))} /></div>
             <div className="space-y-2"><Label>Data Int. Hospitalar</Label><Input type="date" value={editIdForm.dataInternacaoHospitalar} onChange={e => setEditIdForm(p => ({ ...p, dataInternacaoHospitalar: e.target.value }))} /></div>
@@ -1263,6 +1342,33 @@ export default function PatientsMonitoring() {
             <div className="sm:col-span-2 space-y-2"><Label>Diagnóstico</Label><Input value={editIdForm.diagnostico} onChange={e => setEditIdForm(p => ({ ...p, diagnostico: e.target.value }))} /></div>
             <div className="sm:col-span-2 space-y-2"><Label>Doenças de base</Label><Input value={editIdForm.doencasBase} onChange={e => setEditIdForm(p => ({ ...p, doencasBase: e.target.value }))} /></div>
             <div className="sm:col-span-2 space-y-2"><Label>Motivo da internação</Label><Input value={editIdForm.motivoInternacao} onChange={e => setEditIdForm(p => ({ ...p, motivoInternacao: e.target.value }))} /></div>
+            {(editIdForm.unidade === "UTI Neonatal" || editIdForm.unidade === "Alojamento Conjunto") && (
+              <>
+                <div className="space-y-2">
+                  <Label className="font-medium">Infecção Materna</Label>
+                  <Select value={infeccaoMaternaDetail} onValueChange={v => { setInfeccaoMaternaDetail(v); if (v === "Não") setIrasTransplacentariaDetail(""); }}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Sim">Sim</SelectItem>
+                      <SelectItem value="Não">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {infeccaoMaternaDetail === "Sim" && (
+                  <div className="space-y-2">
+                    <Label className="font-medium">IRAS Transplacentária</Label>
+                    <Select value={irasTransplacentariaDetail} onValueChange={v => setIrasTransplacentariaDetail(v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        {["Herpes simples", "Toxoplasmose", "Rubéola", "Citomegalovírus", "Sífilis", "Hepatite B", "Vírus HIV"].map(item => (
+                          <SelectItem key={item} value={item}>{item}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditIdOpen(false)}>Cancelar</Button>
