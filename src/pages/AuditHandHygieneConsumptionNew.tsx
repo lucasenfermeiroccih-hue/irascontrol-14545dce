@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { HandMetal, Save, Calculator, TrendingUp, Droplets, Users } from "lucide-react";
+import { HandMetal, Save, Calculator, TrendingUp, Droplets, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useHospitalContext } from "@/hooks/useHospitalContext";
 import AuditHistory from "@/components/AuditHistory";
 
 const meses = [
@@ -17,6 +18,7 @@ const meses = [
 ];
 
 export default function AuditHandHygieneConsumptionNew() {
+  const { hospitalId, userId, loading: ctxLoading } = useHospitalContext();
   const [setor, setSetor] = useState("");
   const [responsavel, setResponsavel] = useState("");
   const [mes, setMes] = useState("");
@@ -58,27 +60,47 @@ export default function AuditHandHygieneConsumptionNew() {
   }, [consumoAlcool, consumoSabonete, pacienteDia]);
 
   const handleSave = async () => {
-    if (!responsavel.trim() || !mes || !ano) {
-      toast.error("Preencha o responsável, mês e ano de referência.");
+    if (!responsavel.trim() || !mes || !ano || !setor) {
+      toast.error("Preencha o responsável, setor, mês e ano de referência.");
+      return;
+    }
+    if (!hospitalId || !userId) {
+      toast.error("Contexto do hospital não disponível.");
       return;
     }
 
     setSaving(true);
     try {
-      // For now, save as a toast confirmation (no specific table yet)
+      const { error } = await supabase.from("hygiene_consumption_records").insert({
+        hospital_id: hospitalId,
+        user_id: userId,
+        setor,
+        mes,
+        ano,
+        responsavel: responsavel.trim(),
+        total_formularios: parseInt(totalFormularios) || 0,
+        instancias_com_higienizacao: parseInt(instanciasComHigienizacao) || 0,
+        instancias_sem_higienizacao: parseInt(instanciasSemHigienizacao) || 0,
+        consumo_alcool_ml: parseFloat(consumoAlcool) || 0,
+        consumo_sabonete_ml: parseFloat(consumoSabonete) || 0,
+        paciente_dia: parseInt(pacienteDia) || 0,
+      });
+
+      if (error) throw error;
+
       toast.success("Registro de consumo de higiene das mãos salvo com sucesso!", {
         description: `${mes}/${ano} — Taxa conformidade: ${taxaConformidade ?? "—"}% | Consumo/PD: ${consumoPorPacienteDia ?? "—"} ML/PD`,
       });
 
-      // Reset form
       setTotalFormularios("");
       setInstanciasComHigienizacao("");
       setInstanciasSemHigienizacao("");
       setConsumoAlcool("");
       setConsumoSabonete("");
       setPacienteDia("");
-    } catch {
-      toast.error("Erro ao salvar o registro.");
+      setSetor("");
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + (err?.message || ""));
     } finally {
       setSaving(false);
     }
