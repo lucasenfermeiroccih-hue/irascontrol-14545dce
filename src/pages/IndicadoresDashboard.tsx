@@ -496,8 +496,11 @@ export default function IndicadoresDashboard() {
 
           {monthlyData.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader className="p-4 pb-0"><CardTitle className="text-sm">Taxas de Infecção PAV / CVC / SVD por Mês (‰)</CardTitle></CardHeader>
+              <Card ref={chartRefs.taxasPavCvcSvd}>
+                <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm">Taxas de Infecção PAV / CVC / SVD por Mês (‰)</CardTitle>
+                  <ChartActions chartRef={chartRefs.taxasPavCvcSvd} chartTitle="Taxas PAV CVC SVD" metaValue={metas.taxasPav} onMetaChange={v => setMeta("taxasPav", v)} metaUnit="‰" />
+                </CardHeader>
                 <CardContent className="p-3 pt-2">
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={monthlyData}>
@@ -509,12 +512,16 @@ export default function IndicadoresDashboard() {
                       <Bar dataKey="taxaInfVM" name="PAV (VM)" fill="hsl(38 92% 50%)" radius={[4,4,0,0]} />
                       <Bar dataKey="taxaInfCVC" name="CVC" fill="hsl(217 91% 60%)" radius={[4,4,0,0]} />
                       <Bar dataKey="taxaInfSVD" name="SVD" fill="hsl(168 66% 34%)" radius={[4,4,0,0]} />
+                      {metas.taxasPav !== undefined && <ReferenceLine y={metas.taxasPav} stroke="hsl(0 72% 51%)" strokeDasharray="6 3" strokeWidth={2} label={{ value: `Meta: ${metas.taxasPav}`, position: "right", fontSize: 10, fill: "hsl(0 72% 51%)" }} />}
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader className="p-4 pb-0"><CardTitle className="text-sm">Infecções Importadas vs Hospitalares</CardTitle></CardHeader>
+              <Card ref={chartRefs.importadasHospitalares}>
+                <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm">Infecções Importadas vs Hospitalares</CardTitle>
+                  <ChartActions chartRef={chartRefs.importadasHospitalares} chartTitle="Importadas vs Hospitalares" metaValue={metas.importadas} onMetaChange={v => setMeta("importadas", v)} />
+                </CardHeader>
                 <CardContent className="p-3 pt-2">
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={monthlyData}>
@@ -525,6 +532,7 @@ export default function IndicadoresDashboard() {
                       <Legend wrapperStyle={{ fontSize: 10 }} />
                       <Bar dataKey="numInfeccoesImportadas" name="Importadas" fill="hsl(262 83% 58%)" radius={[4,4,0,0]} />
                       <Bar dataKey="numInfeccoes" name="Hospitalares" fill="hsl(0 72% 51%)" radius={[4,4,0,0]} />
+                      {metas.importadas !== undefined && <ReferenceLine y={metas.importadas} stroke="hsl(168 66% 34%)" strokeDasharray="6 3" strokeWidth={2} label={{ value: `Meta: ${metas.importadas}`, position: "right", fontSize: 10, fill: "hsl(168 66% 34%)" }} />}
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
