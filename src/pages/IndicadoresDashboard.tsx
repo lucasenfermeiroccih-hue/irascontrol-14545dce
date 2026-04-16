@@ -85,6 +85,23 @@ export default function IndicadoresDashboard() {
     permanencia: useRef<HTMLDivElement>(null),
   };
 
+  // Individual chart refs
+  const chartRefs = {
+    taxaInfeccaoMes: useRef<HTMLDivElement>(null),
+    obitosInfeccoesMes: useRef<HTMLDivElement>(null),
+    taxaLetalidadeMes: useRef<HTMLDivElement>(null),
+    infeccaoDispositivo: useRef<HTMLDivElement>(null),
+    taxaInfDispositivo: useRef<HTMLDivElement>(null),
+    taxasPavCvcSvd: useRef<HTMLDivElement>(null),
+    importadasHospitalares: useRef<HTMLDivElement>(null),
+    tempoPermanencia: useRef<HTMLDivElement>(null),
+    taxaUsoAtb: useRef<HTMLDivElement>(null),
+  };
+
+  // Meta goals state
+  const [metas, setMetas] = useState<Record<string, number | undefined>>({});
+  const setMeta = (key: string, val: number | undefined) => setMetas(prev => ({ ...prev, [key]: val }));
+
   const tabNames: Record<string, string> = {
     infeccao: "Infecção",
     dispositivos: "Dispositivos",
