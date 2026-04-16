@@ -226,9 +226,26 @@ export default function PatientsMonitoring() {
     setAntibioticos(prev => prev.filter(a => a.id !== id));
   };
 
-  const filtered = patients.filter(p =>
-    !search || p.nome.toLowerCase().includes(search.toLowerCase()) || p.prontuario.toLowerCase().includes(search.toLowerCase())
-  );
+  const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const statusLabels: Record<string, string> = { active: "Internado", discharged: "Alta", transferred: "Transferido", deceased: "Óbito" };
+  const statusOptions = ["active", "discharged", "transferred", "deceased"];
+
+  const allSectors = Array.from(new Set(patients.map(p => p.unidade).filter(Boolean)));
+
+  const filtered = patients.filter(p => {
+    if (search && !p.nome.toLowerCase().includes(search.toLowerCase()) && !p.prontuario.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterStatus.length > 0 && !filterStatus.includes(p.status)) return false;
+    if (filterSetor.length > 0 && !filterSetor.includes(p.unidade)) return false;
+    const admDate = p.dataAdmissao || p.dataInternacaoHospitalar;
+    if (admDate) {
+      const d = new Date(admDate);
+      if (filterMes.length > 0 && !filterMes.includes(meses[d.getMonth()])) return false;
+      if (filterAno.length > 0 && !filterAno.includes(String(d.getFullYear()))) return false;
+    } else {
+      if (filterMes.length > 0 || filterAno.length > 0) return false;
+    }
+    return true;
+  });
   const activeCount = patients.filter(p => p.status === "active").length;
 
   const handleNewPatient = async () => {
