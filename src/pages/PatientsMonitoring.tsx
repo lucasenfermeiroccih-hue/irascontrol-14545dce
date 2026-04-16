@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import DashboardFilters from "@/components/DashboardFilters";
 import {
   Stethoscope, Search, Users, AlertTriangle, Activity, Thermometer,
   Plus, Pencil, LogOut, Clock, Save, Eye, FileText, ShieldAlert, Syringe,
@@ -119,6 +120,10 @@ export default function PatientsMonitoring() {
   const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn } = usePatientMonitoring();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [filterMes, setFilterMes] = useState<string[]>([]);
+  const [filterAno, setFilterAno] = useState<string[]>([]);
+  const [filterSetor, setFilterSetor] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [newPatientOpen, setNewPatientOpen] = useState(false);
   const [dischargeOpen, setDischargeOpen] = useState(false);
   const [dischargeConfirmOpen, setDischargeConfirmOpen] = useState(false);
@@ -221,9 +226,26 @@ export default function PatientsMonitoring() {
     setAntibioticos(prev => prev.filter(a => a.id !== id));
   };
 
-  const filtered = patients.filter(p =>
-    !search || p.nome.toLowerCase().includes(search.toLowerCase()) || p.prontuario.toLowerCase().includes(search.toLowerCase())
-  );
+  const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const statusLabels: Record<string, string> = { active: "Internado", discharged: "Alta", transferred: "Transferido", deceased: "Óbito" };
+  const statusOptions = ["active", "discharged", "transferred", "deceased"];
+
+  const allSectors = Array.from(new Set(patients.map(p => p.unidade).filter(Boolean)));
+
+  const filtered = patients.filter(p => {
+    if (search && !p.nome.toLowerCase().includes(search.toLowerCase()) && !p.prontuario.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterStatus.length > 0 && !filterStatus.includes(p.status)) return false;
+    if (filterSetor.length > 0 && !filterSetor.includes(p.unidade)) return false;
+    const admDate = p.dataAdmissao || p.dataInternacaoHospitalar;
+    if (admDate) {
+      const d = new Date(admDate);
+      if (filterMes.length > 0 && !filterMes.includes(meses[d.getMonth()])) return false;
+      if (filterAno.length > 0 && !filterAno.includes(String(d.getFullYear()))) return false;
+    } else {
+      if (filterMes.length > 0 || filterAno.length > 0) return false;
+    }
+    return true;
+  });
   const activeCount = patients.filter(p => p.status === "active").length;
 
   const handleNewPatient = async () => {
@@ -1247,7 +1269,33 @@ export default function PatientsMonitoring() {
         <Input placeholder="Buscar paciente ou prontuário..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      {/* ─── Empty State ─────────────────────────────────── */}
+      {/* ─── Filters ──────────────────────────────────────── */}
+      <div className="flex flex-wrap items-end gap-4">
+        <DashboardFilters
+          mes={filterMes}
+          setMes={setFilterMes}
+          ano={filterAno}
+          setAno={setFilterAno}
+          setor={filterSetor}
+          setSetor={setFilterSetor}
+          sectors={allSectors.length > 0 ? allSectors : undefined}
+        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground">Status</label>
+          <Select value={filterStatus.length === 1 ? filterStatus[0] : "all"} onValueChange={v => setFilterStatus(v === "all" ? [] : [v])}>
+            <SelectTrigger className="h-9 w-[150px] text-sm">
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {statusOptions.map(s => (
+                <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {patients.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 space-y-4">
