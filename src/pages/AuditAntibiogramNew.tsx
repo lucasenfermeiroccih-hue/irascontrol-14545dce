@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save, Plus, Trash2, AlertTriangle, ShieldAlert, Loader2, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
-import AuditHistory from "@/components/AuditHistory";
+import AntibiogramHistory, { type AntibiogramRecord } from "@/components/AntibiogramHistory";
 import { ComboboxSearch } from "@/components/ComboboxSearch";
 import { sampleCategories, materialsByCategory, sampleLocations, carbapenemaseTypes } from "@/data/sample-categories";
 import { microorganismsList } from "@/data/microorganisms";
