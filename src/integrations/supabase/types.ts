@@ -186,6 +186,7 @@ export type Database = {
           mic_value: number | null
           notes: string | null
           sensitivity: string
+          sir_category: string | null
         }
         Insert: {
           antibiotic: string
@@ -195,6 +196,7 @@ export type Database = {
           mic_value?: number | null
           notes?: string | null
           sensitivity: string
+          sir_category?: string | null
         }
         Update: {
           antibiotic?: string
@@ -204,6 +206,7 @@ export type Database = {
           mic_value?: number | null
           notes?: string | null
           sensitivity?: string
+          sir_category?: string | null
         }
         Relationships: [
           {
@@ -1052,43 +1055,64 @@ export type Database = {
       }
       lab_results: {
         Row: {
+          carbapenemase: string | null
+          carbapenemase_type: string | null
           collection_date: string
           created_at: string
           created_by: string | null
+          esbl: string | null
           hospital_id: string
           id: string
           notes: string | null
           organism: string | null
           patient_id: string | null
           result_date: string | null
+          sample_category: string | null
+          sample_location_detail: string | null
+          sample_location_enabled: string | null
+          sample_material: string | null
           sample_type: string | null
           status: Database["public"]["Enums"]["lab_result_status"]
           updated_at: string
         }
         Insert: {
+          carbapenemase?: string | null
+          carbapenemase_type?: string | null
           collection_date?: string
           created_at?: string
           created_by?: string | null
+          esbl?: string | null
           hospital_id: string
           id?: string
           notes?: string | null
           organism?: string | null
           patient_id?: string | null
           result_date?: string | null
+          sample_category?: string | null
+          sample_location_detail?: string | null
+          sample_location_enabled?: string | null
+          sample_material?: string | null
           sample_type?: string | null
           status?: Database["public"]["Enums"]["lab_result_status"]
           updated_at?: string
         }
         Update: {
+          carbapenemase?: string | null
+          carbapenemase_type?: string | null
           collection_date?: string
           created_at?: string
           created_by?: string | null
+          esbl?: string | null
           hospital_id?: string
           id?: string
           notes?: string | null
           organism?: string | null
           patient_id?: string | null
           result_date?: string | null
+          sample_category?: string | null
+          sample_location_detail?: string | null
+          sample_location_enabled?: string | null
+          sample_material?: string | null
           sample_type?: string | null
           status?: Database["public"]["Enums"]["lab_result_status"]
           updated_at?: string
@@ -1116,6 +1140,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      microorganisms: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       patient_devices: {
         Row: {
