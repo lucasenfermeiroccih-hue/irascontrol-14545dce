@@ -561,7 +561,7 @@ export default function HospitalUsers() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
             <DialogDescription>
@@ -579,22 +579,24 @@ export default function HospitalUsers() {
                 onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="usuario@hospital.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Telefone</Label>
-              <Input
-                value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                placeholder="(11) 99999-0000"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  placeholder="usuario@hospital.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  placeholder="(11) 99999-0000"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Nova Senha</Label>
@@ -603,6 +605,7 @@ export default function HospitalUsers() {
                 value={editForm.password}
                 onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                 placeholder="Deixe vazio para manter a senha atual"
+                autoComplete="new-password"
               />
               <p className="text-xs text-muted-foreground">Mínimo 6 caracteres. Deixe vazio para não alterar.</p>
             </div>
@@ -618,9 +621,9 @@ export default function HospitalUsers() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
-            <Button onClick={handleEditUser} disabled={editing}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+            <Button onClick={handleEditUser} disabled={editing} className="w-full sm:w-auto">
               {editing && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Salvar Alterações
             </Button>
