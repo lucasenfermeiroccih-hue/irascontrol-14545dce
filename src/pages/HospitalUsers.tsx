@@ -311,30 +311,30 @@ export default function HospitalUsers() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciar Usuários</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Gerenciar Usuários</h1>
+          <p className="text-sm text-muted-foreground mt-1 truncate">
             {hospitalName && (
               <>Hospital: <span className="font-medium text-foreground">{hospitalName}</span></>
             )}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadHospitalAndUsers}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={loadHospitalAndUsers} className="flex-1 sm:flex-initial">
             <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
           </Button>
 
           {/* Create Dialog */}
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
+              <Button size="sm" className="flex-1 sm:flex-initial">
                 <UserPlus className="h-4 w-4 mr-1" /> Novo Usuário
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-[calc(100%-2rem)] max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
                 <DialogDescription>
@@ -350,22 +350,24 @@ export default function HospitalUsers() {
                     placeholder="Dr. Maria Silva"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>E-mail *</Label>
-                  <Input
-                    type="email"
-                    value={createForm.email}
-                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                    placeholder="maria@hospital.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={createForm.phone}
-                    onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                    placeholder="(11) 99999-0000"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>E-mail *</Label>
+                    <Input
+                      type="email"
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      placeholder="maria@hospital.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={createForm.phone}
+                      onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                      placeholder="(11) 99999-0000"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Perfil de Acesso *</Label>
@@ -401,9 +403,9 @@ export default function HospitalUsers() {
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateUser} disabled={creating}>
+              <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+                <Button variant="outline" onClick={() => setCreateOpen(false)} className="w-full sm:w-auto">Cancelar</Button>
+                <Button onClick={handleCreateUser} disabled={creating} className="w-full sm:w-auto">
                   {creating && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                   Criar Usuário
                 </Button>
