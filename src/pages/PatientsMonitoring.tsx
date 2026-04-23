@@ -362,6 +362,7 @@ export default function PatientsMonitoring() {
   };
 
   const cvcDays = dispInvasivos.cvcInsercao ? calcDiasUso(dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada) : null;
+  const cvpDays = dispInvasivos.cvpInsercao ? calcDiasUso(dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada) : null;
   const svuDays = dispInvasivos.svuInsercao ? calcDiasUso(dispInvasivos.svuInsercao, dispInvasivos.svuRetirada) : null;
   const vmDays = dispInvasivos.vmInsercao ? calcDiasUso(dispInvasivos.vmInsercao, dispInvasivos.vmRetirada) : null;
   const tqtDays = dispInvasivos.tqtInsercao ? calcDiasUso(dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada) : null;
