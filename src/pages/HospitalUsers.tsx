@@ -428,7 +428,7 @@ export default function HospitalUsers() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {users.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
@@ -436,98 +436,125 @@ export default function HospitalUsers() {
               <p className="text-xs mt-1">Clique em "Novo Usuário" para começar.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>E-mail</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((u) => {
-                  const profile = u.profiles;
-                  const roles = u.user_roles || [];
-                  const isSelf = u.user_id === currentUserId;
-                  const isAdmin = isAdminRole(u);
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="hidden md:table-cell">E-mail</TableHead>
+                    <TableHead className="hidden lg:table-cell">Telefone</TableHead>
+                    <TableHead className="hidden sm:table-cell">Perfil</TableHead>
+                    <TableHead className="hidden lg:table-cell">Tipo</TableHead>
+                    <TableHead className="w-12"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => {
+                    const profile = u.profiles;
+                    const roles = u.user_roles || [];
+                    const isSelf = u.user_id === currentUserId;
+                    const isAdmin = isAdminRole(u);
 
-                  return (
-                    <TableRow key={u.user_id}>
-                      <TableCell className="font-medium">
-                        {profile?.full_name || "—"}
-                        {isSelf && (
-                          <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">
-                            Você
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {profile?.email || "—"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {profile?.phone || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {roles.map((r, i) => (
-                            <Badge
-                              key={i}
-                              variant="outline"
-                              className={`text-xs ${ROLE_COLORS[r.role] || ""}`}
-                            >
-                              {ROLE_LABELS[r.role] || r.role}
+                    return (
+                      <TableRow key={u.user_id}>
+                        <TableCell className="font-medium align-top">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="break-all">{profile?.full_name || "—"}</span>
+                            {isSelf && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                Você
+                              </Badge>
+                            )}
+                            {u.is_primary_admin && (
+                              <Badge variant="outline" className="lg:hidden text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
+                                Admin
+                              </Badge>
+                            )}
+                          </div>
+                          {/* Mobile-only: e-mail, telefone e perfil empilhados */}
+                          <div className="md:hidden mt-1 space-y-1">
+                            <p className="text-xs text-muted-foreground break-all">{profile?.email || "—"}</p>
+                            {profile?.phone && (
+                              <p className="text-xs text-muted-foreground">{profile.phone}</p>
+                            )}
+                            <div className="flex flex-wrap gap-1 sm:hidden">
+                              {roles.map((r, i) => (
+                                <Badge
+                                  key={i}
+                                  variant="outline"
+                                  className={`text-[10px] ${ROLE_COLORS[r.role] || ""}`}
+                                >
+                                  {ROLE_LABELS[r.role] || r.role}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground break-all">
+                          {profile?.email || "—"}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                          {profile?.phone || "—"}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="flex flex-wrap gap-1">
+                            {roles.map((r, i) => (
+                              <Badge
+                                key={i}
+                                variant="outline"
+                                className={`text-xs ${ROLE_COLORS[r.role] || ""}`}
+                              >
+                                {ROLE_LABELS[r.role] || r.role}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {u.is_primary_admin && (
+                            <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                              Admin Principal
                             </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {u.is_primary_admin && (
-                          <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
-                            Admin Principal
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {!u.is_primary_admin && !isSelf && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {!isAdmin && (
-                                <DropdownMenuItem onClick={() => openEditDialog(u)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Editar
+                          )}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {!u.is_primary_admin && !isSelf && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {!isAdmin && (
+                                  <DropdownMenuItem onClick={() => openEditDialog(u)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => openConfirmDialog(u, "deactivate")}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Desativar
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => openConfirmDialog(u, "deactivate")}
-                              >
-                                <UserX className="h-4 w-4 mr-2" />
-                                Desativar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => openConfirmDialog(u, "activate")}
-                              >
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Reativar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                                <DropdownMenuItem
+                                  onClick={() => openConfirmDialog(u, "activate")}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Reativar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
