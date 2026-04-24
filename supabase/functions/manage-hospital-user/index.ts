@@ -169,6 +169,12 @@ Deno.serve(async (req) => {
         if (password.length < 6) {
           return json({ error: "A senha deve ter no mínimo 6 caracteres" }, 400);
         }
+        if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+          return json(
+            { error: "A senha deve conter pelo menos uma letra e um número" },
+            400,
+          );
+        }
         authUpdates.password = password;
       }
 
