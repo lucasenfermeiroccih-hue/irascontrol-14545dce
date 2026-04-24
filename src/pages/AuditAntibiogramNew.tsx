@@ -44,6 +44,7 @@ interface AntibioticResult {
   method: string;
   micValue: string;
   sir: SIR;
+  isCustom?: boolean;
 }
 
 const criticalPhenotypes = [
@@ -300,6 +301,7 @@ export default function AuditAntibiogramNew() {
       method: r.notes || "",
       micValue: r.mic_value != null ? String(r.mic_value) : "",
       sir: ((r.sir_category || r.sensitivity) as SIR) || "",
+      isCustom: r.antibiotic ? !commonAntibiotics.includes(r.antibiotic) : false,
     }));
     setResults(rows);
     toast.info("Registro carregado para edição.");
@@ -522,10 +524,30 @@ export default function AuditAntibiogramNew() {
                     {results.map(row => (
                       <TableRow key={row.id}>
                         <TableCell>
-                          <Select value={row.antibiotic} onValueChange={v => updateRow(row.id, "antibiotic", v)}>
+                          <Select
+                            value={row.isCustom ? "__OUTROS__" : row.antibiotic}
+                            onValueChange={v => {
+                              if (v === "__OUTROS__") {
+                                setResults(p => p.map(r => r.id === row.id ? { ...r, isCustom: true, antibiotic: "" } : r));
+                              } else {
+                                setResults(p => p.map(r => r.id === row.id ? { ...r, isCustom: false, antibiotic: v } : r));
+                              }
+                            }}
+                          >
                             <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                            <SelectContent>{commonAntibiotics.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                              {commonAntibiotics.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                              <SelectItem value="__OUTROS__">Outros (descrever)</SelectItem>
+                            </SelectContent>
                           </Select>
+                          {row.isCustom && (
+                            <Input
+                              className="h-9 mt-2"
+                              placeholder="Descreva o antimicrobiano"
+                              value={row.antibiotic}
+                              onChange={e => updateRow(row.id, "antibiotic", e.target.value)}
+                            />
+                          )}
                         </TableCell>
                         <TableCell>
                           <Select value={row.method} onValueChange={v => handleMethodChange(row.id, v)}>
