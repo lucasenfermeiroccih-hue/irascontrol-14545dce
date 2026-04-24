@@ -44,6 +44,7 @@ interface AntibioticResult {
   method: string;
   micValue: string;
   sir: SIR;
+  isCustom?: boolean;
 }
 
 const criticalPhenotypes = [
