@@ -99,6 +99,7 @@ export default function AuditAntibiogramNew() {
 
   // Microrganismo
   const [organism, setOrganism] = useState("");
+  const [organismCustom, setOrganismCustom] = useState(false);
 
   // Fenótipos
   const [esbl, setEsbl] = useState<"sim" | "nao" | "ignorado">("ignorado");
@@ -270,7 +271,7 @@ export default function AuditAntibiogramNew() {
     setRefreshKey(k => k + 1);
     setCollectionDate(""); setSampleId(""); setSector(""); setPatientId("");
     setSampleCategory(""); setSampleMaterial(""); setLocationEnabled("na"); setLocationDetail("");
-    setOrganism(""); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
+    setOrganism(""); setOrganismCustom(false); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
     setResults([]);
     window.scrollTo(0, 0);
   };
@@ -279,6 +280,7 @@ export default function AuditAntibiogramNew() {
     setEditingId(record.id);
     setCollectionDate(record.collection_date || "");
     setOrganism(record.organism || "");
+    setOrganismCustom(record.organism ? !microorganismsList.includes(record.organism) : false);
     setSampleCategory(record.sample_category || "");
     setSampleMaterial(record.sample_material || "");
     setLocationEnabled((record.sample_location_enabled as any) || "na");
@@ -312,7 +314,7 @@ export default function AuditAntibiogramNew() {
     setEditingId(null);
     setCollectionDate(""); setSampleId(""); setSector(""); setPatientId("");
     setSampleCategory(""); setSampleMaterial(""); setLocationEnabled("na"); setLocationDetail("");
-    setOrganism(""); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
+    setOrganism(""); setOrganismCustom(false); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
     setResults([]);
   };
 
@@ -400,11 +402,27 @@ export default function AuditAntibiogramNew() {
             <div className="space-y-2">
               <Label>Microrganismo *</Label>
               <ComboboxSearch
-                options={microorganismsList}
-                value={organism}
-                onValueChange={setOrganism}
+                options={[...microorganismsList, "Outros (descrever)"]}
+                value={organismCustom ? "Outros (descrever)" : organism}
+                onValueChange={(v) => {
+                  if (v === "Outros (descrever)") {
+                    setOrganismCustom(true);
+                    setOrganism("");
+                  } else {
+                    setOrganismCustom(false);
+                    setOrganism(v);
+                  }
+                }}
                 placeholder="Digite para buscar microrganismo"
               />
+              {organismCustom && (
+                <Input
+                  className="mt-2"
+                  placeholder="Descreva o microrganismo"
+                  value={organism}
+                  onChange={e => setOrganism(e.target.value)}
+                />
+              )}
             </div>
 
             <Separator />
