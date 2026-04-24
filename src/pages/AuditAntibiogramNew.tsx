@@ -99,6 +99,7 @@ export default function AuditAntibiogramNew() {
 
   // Microrganismo
   const [organism, setOrganism] = useState("");
+  const [organismCustom, setOrganismCustom] = useState(false);
 
   // Fenótipos
   const [esbl, setEsbl] = useState<"sim" | "nao" | "ignorado">("ignorado");
