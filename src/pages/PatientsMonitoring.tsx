@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientMonitoring, PatientRecord } from "@/hooks/usePatientMonitoring";
+import { ComboboxSearch } from "@/components/ComboboxSearch";
+import { MICROORGANISMS } from "@/data/microorganisms";
 
 type PatientStatus = "active" | "discharged" | "transferred" | "deceased";
 
