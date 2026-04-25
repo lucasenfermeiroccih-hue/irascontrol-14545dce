@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientMonitoring, PatientRecord } from "@/hooks/usePatientMonitoring";
+import { ComboboxSearch } from "@/components/ComboboxSearch";
+import { MICROORGANISMS } from "@/data/microorganisms";
 
 type PatientStatus = "active" | "discharged" | "transferred" | "deceased";
 
@@ -1283,7 +1285,16 @@ export default function PatientsMonitoring() {
                 </Select>
               </div>
               <div className="space-y-2"><Label className="font-medium">Data</Label><Input value={newLab.data} onChange={e => setNewLab(p => ({ ...p, data: e.target.value }))} placeholder="dd/mm/aaaa" /></div>
-              <div className="space-y-2"><Label className="font-medium">Microrganismo</Label><Input value={newLab.microrganismo} onChange={e => setNewLab(p => ({ ...p, microrganismo: e.target.value }))} placeholder="Ex: Staphylococcus aureus" /></div>
+              <div className="space-y-2">
+                <Label className="font-medium">Microrganismo</Label>
+                <ComboboxSearch
+                  options={MICROORGANISMS}
+                  value={newLab.microrganismo}
+                  onValueChange={v => setNewLab(p => ({ ...p, microrganismo: v }))}
+                  placeholder="Selecione o microrganismo"
+                  emptyText="Nenhum microrganismo encontrado"
+                />
+              </div>
               <div className="space-y-2"><Label className="font-medium">Perfil de Sensibilidade</Label><Input value={newLab.sensibilidade} onChange={e => setNewLab(p => ({ ...p, sensibilidade: e.target.value }))} placeholder="Ex: MRSA, ESBL, Sensível..." /></div>
               <div className="flex items-center gap-2">
                 <Checkbox checked={newLab.mdr} onCheckedChange={checked => setNewLab(p => ({ ...p, mdr: !!checked }))} id="mdr-check" />
