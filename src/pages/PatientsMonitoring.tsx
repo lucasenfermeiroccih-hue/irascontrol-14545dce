@@ -1292,8 +1292,7 @@ export default function PatientsMonitoring() {
                   value={newLab.microrganismo}
                   onValueChange={v => setNewLab(p => ({ ...p, microrganismo: v }))}
                   placeholder="Selecione o microrganismo"
-                  searchPlaceholder="Buscar microrganismo..."
-                  emptyMessage="Nenhum microrganismo encontrado"
+                  emptyText="Nenhum microrganismo encontrado"
                 />
               </div>
               <div className="space-y-2"><Label className="font-medium">Perfil de Sensibilidade</Label><Input value={newLab.sensibilidade} onChange={e => setNewLab(p => ({ ...p, sensibilidade: e.target.value }))} placeholder="Ex: MRSA, ESBL, Sensível..." /></div>
