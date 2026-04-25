@@ -738,19 +738,46 @@ export default function PatientsMonitoring() {
                 <CardContent>
                   <div className="space-y-4">
                     {([
-                      ["CVC", dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, cvcDays, "cvcInsercao", "cvcRetirada"],
-                      ["CVP (Cateter Venoso Periférico)", dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, cvpDays, "cvpInsercao", "cvpRetirada"],
-                      ["SVD", dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, svuDays, "svuInsercao", "svuRetirada"],
-                      ["VM", dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, vmDays, "vmInsercao", "vmRetirada"],
-                      ["TQT", dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, tqtDays, "tqtInsercao", "tqtRetirada"],
-                    ] as const).map(([label, insVal, retVal, days, insKey, retKey]) => (
-                      <div key={label} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end p-3 rounded-lg border bg-muted/30">
-                        <div className="space-y-2"><Label className="font-medium">{label} — Inserção</Label><Input disabled={readOnly} type="date" value={insVal} onChange={e => setDispInvasivos(p => ({ ...p, [insKey]: e.target.value }))} /></div>
-                        <div className="space-y-2"><Label>{label} — Retirada</Label><Input disabled={readOnly} type="date" value={retVal} onChange={e => setDispInvasivos(p => ({ ...p, [retKey]: e.target.value }))} /></div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">Permanência: <strong className="text-foreground">{days != null ? `${days} dias` : "—"}</strong></span>
+                      ["CVC", dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, cvcDays, "cvcInsercao", "cvcRetirada", "cvcTroca", "cvcNovaInsercao", "cvcNovaRetirada", dispInvasivos.cvcTroca, dispInvasivos.cvcNovaInsercao, dispInvasivos.cvcNovaRetirada],
+                      ["CVP (Cateter Venoso Periférico)", dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, cvpDays, "cvpInsercao", "cvpRetirada", "cvpTroca", "cvpNovaInsercao", "cvpNovaRetirada", dispInvasivos.cvpTroca, dispInvasivos.cvpNovaInsercao, dispInvasivos.cvpNovaRetirada],
+                      ["SVD", dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, svuDays, "svuInsercao", "svuRetirada", "svuTroca", "svuNovaInsercao", "svuNovaRetirada", dispInvasivos.svuTroca, dispInvasivos.svuNovaInsercao, dispInvasivos.svuNovaRetirada],
+                      ["VM", dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, vmDays, "vmInsercao", "vmRetirada", "vmTroca", "vmNovaInsercao", "vmNovaRetirada", dispInvasivos.vmTroca, dispInvasivos.vmNovaInsercao, dispInvasivos.vmNovaRetirada],
+                      ["TQT", dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, tqtDays, "tqtInsercao", "tqtRetirada", "tqtTroca", "tqtNovaInsercao", "tqtNovaRetirada", dispInvasivos.tqtTroca, dispInvasivos.tqtNovaInsercao, dispInvasivos.tqtNovaRetirada],
+                      ["Cateter de Hemodiálise", dispInvasivos.hemoInsercao, dispInvasivos.hemoRetirada, hemoDays, "hemoInsercao", "hemoRetirada", "hemoTroca", "hemoNovaInsercao", "hemoNovaRetirada", dispInvasivos.hemoTroca, dispInvasivos.hemoNovaInsercao, dispInvasivos.hemoNovaRetirada],
+                    ] as const).map(([label, insVal, retVal, days, insKey, retKey, trocaKey, novaInsKey, novaRetKey, trocaVal, novaInsVal, novaRetVal]) => (
+                      <div key={label} className="space-y-3 p-3 rounded-lg border bg-muted/30">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                          <div className="space-y-2"><Label className="font-medium">{label} — Inserção</Label><Input disabled={readOnly} type="date" value={insVal} onChange={e => setDispInvasivos(p => ({ ...p, [insKey]: e.target.value }))} /></div>
+                          <div className="space-y-2"><Label>{label} — Retirada</Label><Input disabled={readOnly} type="date" value={retVal} onChange={e => setDispInvasivos(p => ({ ...p, [retKey]: e.target.value }))} /></div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Permanência: <strong className="text-foreground">{days != null ? `${days} dias` : "—"}</strong></span>
+                          </div>
                         </div>
+                        <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+                          <Label className="text-sm font-medium">Realizado troca de dispositivo?</Label>
+                          <RadioGroup
+                            disabled={readOnly}
+                            value={trocaVal || "Não"}
+                            onValueChange={v => setDispInvasivos(p => ({ ...p, [trocaKey]: v }))}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="Sim" id={`${trocaKey}-sim`} />
+                              <Label htmlFor={`${trocaKey}-sim`} className="cursor-pointer">Sim</Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="Não" id={`${trocaKey}-nao`} />
+                              <Label htmlFor={`${trocaKey}-nao`} className="cursor-pointer">Não</Label>
+                            </div>
+                          </RadioGroup>
+                        </div>
+                        {trocaVal === "Sim" && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <div className="space-y-2"><Label>Nova Inserção</Label><Input disabled={readOnly} type="date" value={novaInsVal} onChange={e => setDispInvasivos(p => ({ ...p, [novaInsKey]: e.target.value }))} /></div>
+                            <div className="space-y-2"><Label>Nova Retirada</Label><Input disabled={readOnly} type="date" value={novaRetVal} onChange={e => setDispInvasivos(p => ({ ...p, [novaRetKey]: e.target.value }))} /></div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
