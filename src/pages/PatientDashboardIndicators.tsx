@@ -47,6 +47,7 @@ const PatientDashboardIndicators = () => {
   const currentMonth = new Date().getMonth();
   const [year, setYear] = useState(String(currentYear));
   const [month, setMonth] = useState(String(currentMonth));
+  const [unit, setUnit] = useState<string>("all");
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -76,9 +77,23 @@ const PatientDashboardIndicators = () => {
     })();
   }, [hospitalId, ctxLoading]);
 
+  const units = useMemo(() => {
+    const set = new Set<string>();
+    patients.forEach(p => { if (p.sector) set.add(p.sector); });
+    return Array.from(set).sort();
+  }, [patients]);
+
+  const filteredPatients = useMemo(
+    () => unit === "all" ? patients : patients.filter(p => p.sector === unit),
+    [patients, unit]
+  );
+
   const indicators = useMemo(() => {
     const selectedMonth = Number(month);
     const selectedYear = Number(year);
+    const patientIdSet = new Set(filteredPatients.map(p => p.id));
+    const filteredDevices = devices.filter(d => patientIdSet.has(d.patient_id));
+    const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
 
     const admittedInMonth = patients.filter(p => {
       if (!p.admission_date) return false;
