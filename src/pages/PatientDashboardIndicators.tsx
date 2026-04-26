@@ -47,6 +47,7 @@ const PatientDashboardIndicators = () => {
   const currentMonth = new Date().getMonth();
   const [year, setYear] = useState(String(currentYear));
   const [month, setMonth] = useState(String(currentMonth));
+  const [unit, setUnit] = useState<string>("all");
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
@@ -76,11 +77,25 @@ const PatientDashboardIndicators = () => {
     })();
   }, [hospitalId, ctxLoading]);
 
+  const units = useMemo(() => {
+    const set = new Set<string>();
+    patients.forEach(p => { if (p.sector) set.add(p.sector); });
+    return Array.from(set).sort();
+  }, [patients]);
+
+  const filteredPatients = useMemo(
+    () => unit === "all" ? patients : patients.filter(p => p.sector === unit),
+    [patients, unit]
+  );
+
   const indicators = useMemo(() => {
     const selectedMonth = Number(month);
     const selectedYear = Number(year);
+    const patientIdSet = new Set(filteredPatients.map(p => p.id));
+    const filteredDevices = devices.filter(d => patientIdSet.has(d.patient_id));
+    const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
 
-    const admittedInMonth = patients.filter(p => {
+    const admittedInMonth = filteredPatients.filter(p => {
       if (!p.admission_date) return false;
       const d = new Date(p.admission_date);
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
@@ -99,13 +114,13 @@ const PatientDashboardIndicators = () => {
       internacoes: bySpecialty[s] || 0,
     }));
 
-    const deaths = patients.filter(p => {
+    const deaths = filteredPatients.filter(p => {
       if (p.status !== "deceased" && p.discharge_type !== "Óbito") return false;
       const d = p.discharge_date ? new Date(p.discharge_date) : null;
       return d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
-    const discharges = patients.filter(p => {
+    const discharges = filteredPatients.filter(p => {
       if (p.discharge_type === "Óbito" || p.status === "deceased") return false;
       if (p.status !== "discharged" && p.discharge_type !== "Alta") return false;
       const d = p.discharge_date ? new Date(p.discharge_date) : null;
@@ -116,7 +131,7 @@ const PatientDashboardIndicators = () => {
     const endOfMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0));
 
     let totalPatientDays = 0;
-    patients.forEach(p => {
+    filteredPatients.forEach(p => {
       if (!p.admission_date) return;
       const admDate = new Date(p.admission_date);
       const disDate = p.discharge_date ? new Date(p.discharge_date) : new Date();
@@ -128,7 +143,7 @@ const PatientDashboardIndicators = () => {
 
     const calcDeviceDays = (type: string) => {
       let total = 0;
-      devices.filter(d => d.device_type === type).forEach(dev => {
+      filteredDevices.filter(d => d.device_type === type).forEach(dev => {
         const ins = new Date(dev.insertion_date);
         const rem = dev.removal_date ? new Date(dev.removal_date) : new Date();
         const from = ins > startOfMonth ? ins : startOfMonth;
@@ -142,13 +157,13 @@ const PatientDashboardIndicators = () => {
     const svuDays = calcDeviceDays("svu");
     const vmDays = calcDeviceDays("vm");
 
-    const abCount = prescriptions.filter(rx => {
+    const abCount = filteredPrescriptions.filter(rx => {
       if (!rx.start_date) return false;
       const d = new Date(rx.start_date);
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
-    const extubations = devices.filter(d => {
+    const extubations = filteredDevices.filter(d => {
       if (d.device_type !== "vm" || !d.removal_date) return false;
       const rd = new Date(d.removal_date);
       return rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear;
@@ -157,11 +172,11 @@ const PatientDashboardIndicators = () => {
     const outcomeData = [
       { name: "Altas", value: discharges, color: "hsl(168, 66%, 34%)" },
       { name: "Óbitos", value: deaths, color: "hsl(0, 70%, 50%)" },
-      { name: "Internados", value: patients.filter(p => p.status === "active").length, color: "hsl(210, 60%, 50%)" },
+      { name: "Internados", value: filteredPatients.filter(p => p.status === "active").length, color: "hsl(210, 60%, 50%)" },
     ].filter(d => d.value > 0);
 
     return { specialtyData, deaths, discharges, totalPatientDays, cvcDays, svuDays, vmDays, abCount, extubations, totalAdmitted: admittedInMonth.length, outcomeData };
-  }, [patients, devices, prescriptions, month, year]);
+  }, [filteredPatients, devices, prescriptions, month, year]);
 
   if (loading || ctxLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -185,6 +200,15 @@ const PatientDashboardIndicators = () => {
             if (indicators.extubations > 0) ins.push(`✅ ${indicators.extubations} extubações realizadas com sucesso.`);
             return ins;
           }} />
+          <Select value={unit} onValueChange={setUnit}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Unidade" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as unidades</SelectItem>
+              {units.map(u => (
+                <SelectItem key={u} value={u}>{u}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={month} onValueChange={setMonth}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
