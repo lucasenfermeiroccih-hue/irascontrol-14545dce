@@ -8,17 +8,31 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
+interface MetaField {
+  key: string;
+  label: string;
+  value?: number;
+  onChange: (value: number | undefined) => void;
+}
+
 interface ChartActionsProps {
   chartRef: React.RefObject<HTMLDivElement>;
   chartTitle: string;
   metaValue?: number;
   onMetaChange?: (value: number | undefined) => void;
   metaUnit?: string;
+  /** Optional: define multiple metas (e.g. one per device). When provided, overrides single metaValue/onMetaChange. */
+  metaFields?: MetaField[];
 }
 
-export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaChange, metaUnit = "" }: ChartActionsProps) {
+export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaChange, metaUnit = "", metaFields }: ChartActionsProps) {
+  const multi = metaFields && metaFields.length > 0;
+  const hasAnyMeta = multi
+    ? metaFields!.some(f => f.value !== undefined)
+    : metaValue !== undefined;
   const [metaOpen, setMetaOpen] = useState(false);
   const [metaInput, setMetaInput] = useState("");
+  const [multiInputs, setMultiInputs] = useState<Record<string, string>>({});
 
   const exportJPG = async () => {
     if (!chartRef.current) return;
@@ -57,13 +71,33 @@ export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaCh
   };
 
   const openMeta = () => {
-    setMetaInput(metaValue !== undefined ? String(metaValue) : "");
+    if (multi) {
+      const init: Record<string, string> = {};
+      metaFields!.forEach(f => { init[f.key] = f.value !== undefined ? String(f.value) : ""; });
+      setMultiInputs(init);
+    } else {
+      setMetaInput(metaValue !== undefined ? String(metaValue) : "");
+    }
     setMetaOpen(true);
   };
 
   const saveMeta = () => {
-    const val = parseFloat(metaInput);
-    onMetaChange?.(isNaN(val) ? undefined : val);
+    if (multi) {
+      metaFields!.forEach(f => {
+        const raw = multiInputs[f.key] ?? "";
+        const val = parseFloat(raw);
+        f.onChange(raw === "" || isNaN(val) ? undefined : val);
+      });
+    } else {
+      const val = parseFloat(metaInput);
+      onMetaChange?.(isNaN(val) ? undefined : val);
+    }
+    setMetaOpen(false);
+  };
+
+  const clearAllMetas = () => {
+    if (multi) metaFields!.forEach(f => f.onChange(undefined));
+    else onMetaChange?.(undefined);
     setMetaOpen(false);
   };
 
@@ -87,11 +121,11 @@ export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaCh
             </TooltipTrigger>
             <TooltipContent side="top"><p className="text-xs">Exportar PDF</p></TooltipContent>
           </Tooltip>
-          {onMetaChange && (
+          {(onMetaChange || multi) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openMeta}>
-                  <Target className={`h-3.5 w-3.5 ${metaValue !== undefined ? "text-primary" : "text-muted-foreground"}`} />
+                  <Target className={`h-3.5 w-3.5 ${hasAnyMeta ? "text-primary" : "text-muted-foreground"}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top"><p className="text-xs">Definir Meta</p></TooltipContent>
@@ -106,19 +140,34 @@ export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaCh
             <DialogTitle className="text-base">Definir Meta — {chartTitle}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Valor da meta {metaUnit ? `(${metaUnit})` : ""}</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={metaInput}
-                onChange={e => setMetaInput(e.target.value)}
-                placeholder="Ex: 10"
-              />
-            </div>
-            {metaValue !== undefined && (
-              <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={() => { onMetaChange?.(undefined); setMetaOpen(false); }}>
-                Remover meta
+            {multi ? (
+              metaFields!.map(f => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label className="text-sm">{f.label} {metaUnit ? `(${metaUnit})` : ""}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={multiInputs[f.key] ?? ""}
+                    onChange={e => setMultiInputs(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder="Ex: 10"
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-sm">Valor da meta {metaUnit ? `(${metaUnit})` : ""}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={metaInput}
+                  onChange={e => setMetaInput(e.target.value)}
+                  placeholder="Ex: 10"
+                />
+              </div>
+            )}
+            {hasAnyMeta && (
+              <Button variant="ghost" size="sm" className="text-xs text-destructive" onClick={clearAllMetas}>
+                Remover {multi ? "todas as metas" : "meta"}
               </Button>
             )}
           </div>
