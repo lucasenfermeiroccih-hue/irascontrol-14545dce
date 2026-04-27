@@ -71,22 +71,41 @@ export default function DashboardISC() {
   const [anoFiltro, setAnoFiltro] = useState("Todos");
   const [profFiltro, setProfFiltro] = useState("Todos");
   const [setorFiltro, setSetorFiltro] = useState("Todos");
+  // Filtro de período (mês inicial/final). Formato YYYY-MM (compatível com <input type="month">)
+  const [periodoInicio, setPeriodoInicio] = useState("");
+  const [periodoFim, setPeriodoFim] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiReport, setAiReport] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   const anos = useMemo(() => [...new Set(allRecords.map((r) => String(r.ano)))].sort(), [allRecords]);
   const profissionais = useMemo(() => [...new Set(allRecords.map((r) => r.profissional))].sort(), [allRecords]);
   const clinicas = useMemo(() => [...new Set(allRecords.map((r) => r.clinica))].sort(), [allRecords]);
 
+  // Converte ano+mês em valor numérico comparável (YYYYMM)
+  const toYearMonth = (ano: number, mes: number) => ano * 100 + mes;
+  const parseYM = (s: string) => {
+    if (!s) return null;
+    const [y, m] = s.split("-").map(Number);
+    if (!y || !m) return null;
+    return y * 100 + m;
+  };
+
   const filtered = useMemo(() => {
+    const ymIni = parseYM(periodoInicio);
+    const ymFim = parseYM(periodoFim);
     return allRecords.filter((r) => {
       if (anoFiltro !== "Todos" && String(r.ano) !== anoFiltro) return false;
       if (mesFiltro !== "Todos" && r.mes !== mesesFiltro.indexOf(mesFiltro)) return false;
       if (profFiltro !== "Todos" && r.profissional !== profFiltro) return false;
       if (setorFiltro !== "Todos" && r.clinica !== setorFiltro) return false;
+      const ym = toYearMonth(r.ano, r.mes);
+      if (ymIni !== null && ym < ymIni) return false;
+      if (ymFim !== null && ym > ymFim) return false;
       return true;
     });
-  }, [allRecords, mesFiltro, anoFiltro, profFiltro, setorFiltro]);
+  }, [allRecords, mesFiltro, anoFiltro, profFiltro, setorFiltro, periodoInicio, periodoFim]);
 
   const hasData = allRecords.length > 0;
 
