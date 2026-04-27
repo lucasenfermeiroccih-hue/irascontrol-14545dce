@@ -495,6 +495,14 @@ export default function DashboardISC() {
           <Button
             variant="outline"
             size="sm"
+            onClick={exportCsv}
+            disabled={!hasData}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-1" />Exportar CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={exportDashboardPdf}
             disabled={exportingPdf || !hasData}
           >
