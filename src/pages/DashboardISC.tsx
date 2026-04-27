@@ -351,10 +351,12 @@ export default function DashboardISC() {
       {!hasData || filtered.length === 0 ? <EmptyState /> : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
             {[
               { label: "Total Cirurgias", value: kpis.totalCirurgias, icon: <Stethoscope className="h-5 w-5 text-primary" /> },
-              { label: "Contatos Atendidos", value: kpis.totalContatos, icon: <Phone className="h-5 w-5 text-primary" /> },
+              { label: "Contatos Telefônicos", value: kpis.totalContatos, icon: <Phone className="h-5 w-5 text-primary" /> },
+              { label: "Retorno Ambulatório", value: kpis.totalRetAmb, icon: <CalendarDays className="h-5 w-5 text-primary" /> },
+              { label: "Retorno WhatsApp", value: kpis.totalRetWpp, icon: <MessageCircle className="h-5 w-5 text-primary" /> },
               { label: "Taxa Resposta", value: `${kpis.taxaResposta.toFixed(1)}%`, icon: <Activity className="h-5 w-5 text-primary" /> },
               { label: "Reinternações", value: kpis.totalReinternacoes, icon: <AlertTriangle className="h-5 w-5 text-primary" /> },
               { label: "ISC Confirmadas", value: kpis.totalISC, icon: <AlertTriangle className="h-5 w-5 text-primary" /> },
@@ -374,6 +376,55 @@ export default function DashboardISC() {
               </Card>
             ))}
           </div>
+
+          {/* Tabs — Contatos absolutos por mês */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Contatos por Mês — Números Absolutos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="telefonico" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 max-w-xl">
+                  <TabsTrigger value="telefonico">Telefônico</TabsTrigger>
+                  <TabsTrigger value="ambulatorio">Ambulatório</TabsTrigger>
+                  <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+                </TabsList>
+                <TabsContent value="telefonico" className="h-[320px] mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={contatosMensais}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="telefonico" name="Contatos Telefônicos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+                <TabsContent value="ambulatorio" className="h-[320px] mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={contatosMensais}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="ambulatorio" name="Retorno Ambulatório" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+                <TabsContent value="whatsapp" className="h-[320px] mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={contatosMensais}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="whatsapp" name="Retorno WhatsApp" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
           {/* Charts */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
