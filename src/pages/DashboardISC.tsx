@@ -376,6 +376,95 @@ export default function DashboardISC() {
     }
   };
 
+  // Exporta KPIs + séries usadas nos gráficos em CSV (com filtros aplicados)
+  const exportCsv = () => {
+    const esc = (v: unknown) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows: string[][] = [];
+
+    rows.push(["Dashboard ISC — Exportação CSV"]);
+    rows.push(["Gerado em", new Date().toLocaleString("pt-BR")]);
+    rows.push(["Filtros aplicados"]);
+    rows.push(["Mês", mesFiltro]);
+    rows.push(["Ano", anoFiltro]);
+    rows.push(["Setor/Clínica", setorFiltro]);
+    rows.push(["Profissional", profFiltro]);
+    rows.push(["Período inicial", periodoInicio || "—"]);
+    rows.push(["Período final", periodoFim || "—"]);
+    rows.push([]);
+
+    rows.push(["KPIs"]);
+    rows.push(["Indicador", "Valor"]);
+    rows.push(["Total Cirurgias", String(kpis.totalCirurgias)]);
+    rows.push(["Contatos Telefônicos", String(kpis.totalContatos)]);
+    rows.push(["Retorno Ambulatório", String(kpis.totalRetAmb)]);
+    rows.push(["Retorno WhatsApp", String(kpis.totalRetWpp)]);
+    rows.push(["Total Respostas", String(kpis.totalRespostas)]);
+    rows.push(["Taxa de Resposta (%)", kpis.taxaResposta.toFixed(2)]);
+    rows.push(["Reinternações", String(kpis.totalReinternacoes)]);
+    rows.push(["ISC Confirmadas", String(kpis.totalISC)]);
+    rows.push(["Taxa de ISC (%)", kpis.taxaISC.toFixed(2)]);
+    rows.push([]);
+
+    rows.push(["Contatos por Mês — Números Absolutos"]);
+    rows.push(["Mês/Ano", "Telefônico", "Ambulatório", "WhatsApp"]);
+    contatosMensais.forEach((d) => rows.push([d.name, String(d.telefonico), String(d.ambulatorio), String(d.whatsapp)]));
+    rows.push([]);
+
+    rows.push(["Cirurgias por Clínica"]);
+    rows.push(["Clínica", "Cirurgias"]);
+    barClinicaData.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["Evolução Mensal — Taxa de ISC (%)"]);
+    rows.push(["Mês/Ano", "Taxa ISC (%)"]);
+    lineData.forEach((d) => rows.push([d.name, String(d.taxa)]));
+    rows.push([]);
+
+    rows.push(["Distribuição por Tipo de ISC"]);
+    rows.push(["Tipo", "Quantidade"]);
+    pieData.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["Reinternações por Clínica"]);
+    rows.push(["Clínica", "Reinternações"]);
+    barReintData.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["Reinternações por Mês"]);
+    rows.push(["Mês/Ano", "Reinternações"]);
+    reinternacoesMensais.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["ISC Confirmadas por Mês"]);
+    rows.push(["Mês/Ano", "ISC Confirmadas"]);
+    iscMensais.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["Sítio de Cirurgia"]);
+    rows.push(["Sítio", "Cirurgias"]);
+    sitioData.forEach((d) => rows.push([d.name, String(d.value)]));
+    rows.push([]);
+
+    rows.push(["Total de Cirurgias por Mês — por Especialidade"]);
+    rows.push(["Mês/Ano", ...cirurgiasEspecialidadeMes.especialidades]);
+    cirurgiasEspecialidadeMes.rows.forEach((row) => {
+      rows.push([row.name, ...cirurgiasEspecialidadeMes.especialidades.map((e) => String(row[e] ?? 0))]);
+    });
+
+    const csv = "\uFEFF" + rows.map((r) => r.map(esc).join(";")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dashboard-isc-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exportado com sucesso!");
+  };
+
   if (dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
