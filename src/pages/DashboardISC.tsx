@@ -140,6 +140,74 @@ export default function DashboardISC() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
+  // Helper para chave mês/ano ordenada
+  const sortMesAno = ([a]: [string, any], [b]: [string, any]) => {
+    const [mA, yA] = a.split("/").map(Number);
+    const [mB, yB] = b.split("/").map(Number);
+    return yA * 100 + mA - (yB * 100 + mB);
+  };
+
+  // Contatos absolutos por mês (telefônicos, ambulatório, whatsapp)
+  const contatosMensais = useMemo(() => {
+    const map: Record<string, { telefonico: number; ambulatorio: number; whatsapp: number }> = {};
+    filtered.forEach((r) => {
+      const key = `${r.mes}/${r.ano}`;
+      if (!map[key]) map[key] = { telefonico: 0, ambulatorio: 0, whatsapp: 0 };
+      map[key].telefonico += r.contatosAtendidos;
+      map[key].ambulatorio += r.retornoAmbulatorio || 0;
+      map[key].whatsapp += r.retornoWhatsapp || 0;
+    });
+    return Object.entries(map).sort(sortMesAno).map(([name, v]) => ({ name, ...v }));
+  }, [filtered]);
+
+  // Reinternações por mês
+  const reinternacoesMensais = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((r) => {
+      const key = `${r.mes}/${r.ano}`;
+      map[key] = (map[key] || 0) + r.reinternacoes;
+    });
+    return Object.entries(map).sort(sortMesAno).map(([name, value]) => ({ name, value }));
+  }, [filtered]);
+
+  // ISC absolutas por mês
+  const iscMensais = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((r) => {
+      const key = `${r.mes}/${r.ano}`;
+      map[key] = (map[key] || 0) + r.iscConfirmada;
+    });
+    return Object.entries(map).sort(sortMesAno).map(([name, value]) => ({ name, value }));
+  }, [filtered]);
+
+  // Sítio cirúrgico (distribuição por sítio entre as cirurgias com sítio informado)
+  const sitioData = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach((r) => {
+      if (r.sitio) map[r.sitio] = (map[r.sitio] || 0) + r.totalCirurgias;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [filtered]);
+
+  // Cirurgias por especialidade (clinica) por mês — empilhado
+  const cirurgiasEspecialidadeMes = useMemo(() => {
+    const especialidades = [...new Set(filtered.map(r => r.clinica))];
+    const mapMes: Record<string, Record<string, number>> = {};
+    filtered.forEach((r) => {
+      const key = `${r.mes}/${r.ano}`;
+      if (!mapMes[key]) mapMes[key] = {};
+      mapMes[key][r.clinica] = (mapMes[key][r.clinica] || 0) + r.totalCirurgias;
+    });
+    const rows = Object.entries(mapMes)
+      .sort(sortMesAno)
+      .map(([name, vals]) => {
+        const row: Record<string, any> = { name };
+        especialidades.forEach(e => { row[e] = vals[e] || 0; });
+        return row;
+      });
+    return { rows, especialidades };
+  }, [filtered]);
+
   const clinicaStats = useMemo(() => {
     const map: Record<string, { cirurgias: number; isc: number; reinternacoes: number; contatos: number }> = {};
     filtered.forEach((r) => {
