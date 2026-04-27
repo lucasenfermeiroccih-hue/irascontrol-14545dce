@@ -1,4 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -68,22 +71,41 @@ export default function DashboardISC() {
   const [anoFiltro, setAnoFiltro] = useState("Todos");
   const [profFiltro, setProfFiltro] = useState("Todos");
   const [setorFiltro, setSetorFiltro] = useState("Todos");
+  // Filtro de período (mês inicial/final). Formato YYYY-MM (compatível com <input type="month">)
+  const [periodoInicio, setPeriodoInicio] = useState("");
+  const [periodoFim, setPeriodoFim] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiReport, setAiReport] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   const anos = useMemo(() => [...new Set(allRecords.map((r) => String(r.ano)))].sort(), [allRecords]);
   const profissionais = useMemo(() => [...new Set(allRecords.map((r) => r.profissional))].sort(), [allRecords]);
   const clinicas = useMemo(() => [...new Set(allRecords.map((r) => r.clinica))].sort(), [allRecords]);
 
+  // Converte ano+mês em valor numérico comparável (YYYYMM)
+  const toYearMonth = (ano: number, mes: number) => ano * 100 + mes;
+  const parseYM = (s: string) => {
+    if (!s) return null;
+    const [y, m] = s.split("-").map(Number);
+    if (!y || !m) return null;
+    return y * 100 + m;
+  };
+
   const filtered = useMemo(() => {
+    const ymIni = parseYM(periodoInicio);
+    const ymFim = parseYM(periodoFim);
     return allRecords.filter((r) => {
       if (anoFiltro !== "Todos" && String(r.ano) !== anoFiltro) return false;
       if (mesFiltro !== "Todos" && r.mes !== mesesFiltro.indexOf(mesFiltro)) return false;
       if (profFiltro !== "Todos" && r.profissional !== profFiltro) return false;
       if (setorFiltro !== "Todos" && r.clinica !== setorFiltro) return false;
+      const ym = toYearMonth(r.ano, r.mes);
+      if (ymIni !== null && ym < ymIni) return false;
+      if (ymFim !== null && ym > ymFim) return false;
       return true;
     });
-  }, [allRecords, mesFiltro, anoFiltro, profFiltro, setorFiltro]);
+  }, [allRecords, mesFiltro, anoFiltro, profFiltro, setorFiltro, periodoInicio, periodoFim]);
 
   const hasData = allRecords.length > 0;
 
@@ -260,6 +282,81 @@ export default function DashboardISC() {
     </Card>
   );
 
+  const exportDashboardPdf = async () => {
+    if (!dashboardRef.current) return;
+    setExportingPdf(true);
+    toast.info("Gerando PDF do dashboard...");
+    try {
+      // Aguarda um tick para o badge de "exportando" não aparecer no canvas
+      await new Promise((r) => setTimeout(r, 100));
+      const canvas = await html2canvas(dashboardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        windowWidth: dashboardRef.current.scrollWidth,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const usableW = pageW - margin * 2;
+      const ratio = canvas.height / canvas.width;
+      const fullH = usableW * ratio;
+
+      // Cabeçalho
+      pdf.setFontSize(14);
+      pdf.text("Dashboard ISC — Infecção de Sítio Cirúrgico", margin, margin + 5);
+      pdf.setFontSize(9);
+      const periodoLabel = periodoInicio || periodoFim
+        ? `Período: ${periodoInicio || "início"} até ${periodoFim || "atual"}`
+        : "Período: todos";
+      pdf.text(`${periodoLabel}  •  Gerado em ${new Date().toLocaleDateString("pt-BR")}`, margin, margin + 11);
+
+      const headerOffset = margin + 16;
+      const availableH = pageH - headerOffset - margin;
+
+      if (fullH <= availableH) {
+        pdf.addImage(imgData, "PNG", margin, headerOffset, usableW, fullH);
+      } else {
+        // Quebra em múltiplas páginas usando recortes do canvas
+        const pxPerMm = canvas.width / usableW;
+        const sliceHpx = availableH * pxPerMm;
+        let yPx = 0;
+        let firstPage = true;
+        while (yPx < canvas.height) {
+          const hPx = Math.min(sliceHpx, canvas.height - yPx);
+          const sliceCanvas = document.createElement("canvas");
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = hPx;
+          const ctx = sliceCanvas.getContext("2d");
+          if (ctx) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+            ctx.drawImage(canvas, 0, yPx, canvas.width, hPx, 0, 0, canvas.width, hPx);
+          }
+          const sliceImg = sliceCanvas.toDataURL("image/png");
+          if (!firstPage) {
+            pdf.addPage();
+            pdf.setFontSize(9);
+            pdf.text(`Dashboard ISC — continuação`, margin, margin + 5);
+          }
+          pdf.addImage(sliceImg, "PNG", margin, firstPage ? headerOffset : margin + 8, usableW, hPx / pxPerMm);
+          yPx += hPx;
+          firstPage = false;
+        }
+      }
+
+      pdf.save(`dashboard-isc-${new Date().toISOString().split("T")[0]}.pdf`);
+      toast.success("PDF gerado com sucesso!");
+    } catch (e) {
+      console.error("Erro ao exportar PDF:", e);
+      toast.error("Erro ao gerar PDF.");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -269,13 +366,13 @@ export default function DashboardISC() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 md:p-6" ref={dashboardRef}>
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard ISC</h1>
           <p className="text-muted-foreground">Infecção de Sítio Cirúrgico — Visão analítica</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap" data-html2canvas-ignore="true">
           <DashboardAIInsights generateInsights={() => {
             const ins: string[] = [];
             ins.push(`📊 ${kpis.totalCirurgias} cirurgias com ${kpis.totalISC} ISC confirmadas (Taxa: ${kpis.taxaISC.toFixed(1)}%).`);
@@ -287,17 +384,16 @@ export default function DashboardISC() {
             if (clinicaStats.length > 0) { const worst = clinicaStats.sort((a, b) => b.taxaISC - a.taxaISC)[0]; ins.push(`🏥 Clínica com maior taxa: ${worst.name} (${worst.taxaISC.toFixed(1)}%).`); }
             return ins;
           }} />
-          <Button variant="outline" size="sm" onClick={() => {
-            if (!hospitalId) return;
-            exportPdf({
-              type: "isc", hospitalId,
-              data: {
-                kpis: { totalSurgeries: kpis.totalCirurgias, totalISC: kpis.totalISC, iscRate: kpis.taxaISC.toFixed(1) },
-                indicators: filtered.map(r => ({ procedimento: r.clinica, total_cirurgias: r.totalCirurgias, isc_confirmada: r.iscConfirmada })),
-              },
-              filenamePrefix: "isc",
-            });
-          }}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportDashboardPdf}
+            disabled={exportingPdf || !hasData}
+          >
+            {exportingPdf
+              ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Gerando...</>
+              : <><Download className="h-4 w-4 mr-1" />Exportar PDF</>}
+          </Button>
         </div>
       </div>
 
@@ -345,6 +441,43 @@ export default function DashboardISC() {
               </Select>
             </div>
           </div>
+
+          {/* Período (mês inicial / final) */}
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label>Período — Mês inicial</Label>
+              <Input
+                type="month"
+                value={periodoInicio}
+                onChange={(e) => setPeriodoInicio(e.target.value)}
+                max={periodoFim || undefined}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Período — Mês final</Label>
+              <Input
+                type="month"
+                value={periodoFim}
+                onChange={(e) => setPeriodoFim(e.target.value)}
+                min={periodoInicio || undefined}
+              />
+            </div>
+            <div className="space-y-1.5 flex flex-col justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setPeriodoInicio(""); setPeriodoFim(""); }}
+                disabled={!periodoInicio && !periodoFim}
+              >
+                Limpar período
+              </Button>
+            </div>
+          </div>
+          {(periodoInicio || periodoFim) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Exibindo dados de <strong>{periodoInicio || "início"}</strong> até <strong>{periodoFim || "atual"}</strong>.
+            </p>
+          )}
         </CardContent>
       </Card>
 
