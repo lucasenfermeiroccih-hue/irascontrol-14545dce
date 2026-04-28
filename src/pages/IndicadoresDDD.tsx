@@ -392,12 +392,12 @@ export default function IndicadoresDDD() {
       </div>
 
       {/* Histórico */}
-      {showHistory && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base md:text-lg">Registros Salvos</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-base md:text-lg">Registros Salvos</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1 min-w-[140px]">
