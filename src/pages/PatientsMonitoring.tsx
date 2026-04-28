@@ -12,14 +12,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardFilters from "@/components/DashboardFilters";
 import {
   Stethoscope, Search, Users, AlertTriangle, Activity, Thermometer,
   Plus, Pencil, LogOut, Clock, Save, Eye, FileText, ShieldAlert, Syringe,
-  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull
+  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientMonitoring, PatientRecord } from "@/hooks/usePatientMonitoring";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ComboboxSearch } from "@/components/ComboboxSearch";
 import { MICROORGANISMS } from "@/data/microorganisms";
 
