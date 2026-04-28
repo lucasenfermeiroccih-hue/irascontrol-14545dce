@@ -123,7 +123,17 @@ export default function AuditAntibiogramNew() {
   const [carbapenemaseType, setCarbapenemaseType] = useState("");
 
   // Resultados
-  const [results, setResults] = useState<AntibioticResult[]>([]);
+  const buildDefaultResults = (): AntibioticResult[] => [
+    ...commonAntibiotics.map(a => ({
+      id: newId(),
+      antibiotic: a,
+      method: "",
+      micValue: "",
+      sir: "" as SIR,
+    })),
+    { id: newId(), antibiotic: "", method: "", micValue: "", sir: "" as SIR, isCustom: true },
+  ];
+  const [results, setResults] = useState<AntibioticResult[]>(() => buildDefaultResults());
 
   const materialOptions = useMemo(
     () => (sampleCategory ? materialsByCategory[sampleCategory] ?? [] : []),
