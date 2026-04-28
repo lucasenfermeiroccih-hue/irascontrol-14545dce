@@ -503,9 +503,9 @@ export default function IndicadoresDDD() {
                 </div>
               </>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Identificação */}
       <Card>
