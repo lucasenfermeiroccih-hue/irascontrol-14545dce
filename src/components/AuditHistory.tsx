@@ -324,8 +324,9 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
