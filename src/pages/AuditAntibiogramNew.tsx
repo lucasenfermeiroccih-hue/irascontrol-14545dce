@@ -346,7 +346,7 @@ export default function AuditAntibiogramNew() {
     setCollectionDate(""); setSampleId(""); setSector(""); setPatientId("");
     setSampleCategory(""); setSampleMaterial(""); setLocationEnabled("na"); setLocationDetail("");
     setOrganism(""); setOrganismCustom(false); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
-    setResults([]);
+    setResults(buildDefaultResults());
   };
 
   return (
