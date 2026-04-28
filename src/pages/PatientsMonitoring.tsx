@@ -1047,7 +1047,7 @@ export default function PatientsMonitoring() {
               </Card>
 
               {/* Dialog para adicionar antibiótico */}
-              <Dialog open={newAtbOpen} onOpenChange={v => { setNewAtbOpen(v); if (!v) { setEditingAtbId(null); setNewAtb({ nome: "", dataInicio: "", dataFim: "" }); } }}>
+              <Dialog open={newAtbOpen} onOpenChange={v => { setNewAtbOpen(v); if (!v) { setEditingAtbId(null); setNewAtb({ nome: "", nomeOutros: "", dataInicio: "", dataFim: "" }); } }}>
                 <DialogContent className="max-w-md">
                   <DialogHeader><DialogTitle>{editingAtbId ? "Editar Antibiótico" : "Adicionar Antibiótico"}</DialogTitle></DialogHeader>
                   <div className="space-y-4">
@@ -1101,7 +1101,7 @@ export default function PatientsMonitoring() {
                     )}
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => { setNewAtbOpen(false); setEditingAtbId(null); setNewAtb({ nome: "", dataInicio: "", dataFim: "" }); }}>Cancelar</Button>
+                    <Button variant="outline" onClick={() => { setNewAtbOpen(false); setEditingAtbId(null); setNewAtb({ nome: "", nomeOutros: "", dataInicio: "", dataFim: "" }); }}>Cancelar</Button>
                     <Button onClick={editingAtbId ? handleSaveEditAtb : handleAddAtb}>{editingAtbId ? "Salvar" : "Adicionar"}</Button>
                   </DialogFooter>
                 </DialogContent>
