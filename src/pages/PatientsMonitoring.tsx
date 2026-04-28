@@ -12,14 +12,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import DashboardFilters from "@/components/DashboardFilters";
 import {
   Stethoscope, Search, Users, AlertTriangle, Activity, Thermometer,
   Plus, Pencil, LogOut, Clock, Save, Eye, FileText, ShieldAlert, Syringe,
-  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull
+  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientMonitoring, PatientRecord } from "@/hooks/usePatientMonitoring";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ComboboxSearch } from "@/components/ComboboxSearch";
 import { MICROORGANISMS } from "@/data/microorganisms";
 
@@ -119,7 +121,11 @@ function calcAge(birth: string) {
 // ─── Component ────────────────────────────────────────────────
 export default function PatientsMonitoring() {
   const navigate = useNavigate();
-  const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn } = usePatientMonitoring();
+  const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn, deletePatient, changePatientStatus } = usePatientMonitoring();
+  const { isAdmin } = useIsAdmin();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [statusChangeId, setStatusChangeId] = useState<string | null>(null);
+  const [newStatus, setNewStatus] = useState<PatientRecord["status"]>("active");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterMes, setFilterMes] = useState<string[]>([]);
@@ -1492,6 +1498,16 @@ export default function PatientsMonitoring() {
                               <LogOut className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {isAdmin && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setStatusChangeId(p.id); setNewStatus(p.status); }} title="Alterar status (admin)">
+                                <RefreshCw className="h-3.5 w-3.5 text-warning" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteConfirmId(p.id)} title="Excluir paciente (admin)">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1539,6 +1555,16 @@ export default function PatientsMonitoring() {
                         <LogOut className="h-3 w-3" /> Alta
                       </Button>
                     )}
+                    {isAdmin && (
+                      <>
+                        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => { setStatusChangeId(p.id); setNewStatus(p.status); }}>
+                          <RefreshCw className="h-3 w-3" /> Status
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteConfirmId(p.id)}>
+                          <Trash2 className="h-3 w-3" /> Excluir
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -1548,6 +1574,71 @@ export default function PatientsMonitoring() {
       </Card>
       </>
       )}
+
+      {/* ─── DELETE CONFIRMATION (admin) ─────────────────── */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => !o && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente e removerá todos os dados de {patients.find(p => p.id === deleteConfirmId)?.nome || "este paciente"}.
+              Não é possível desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deleteConfirmId) {
+                  const ok = await deletePatient(deleteConfirmId);
+                  if (ok) setDeleteConfirmId(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ─── CHANGE STATUS (admin) ───────────────────────── */}
+      <AlertDialog open={!!statusChangeId} onOpenChange={(o) => !o && setStatusChangeId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar status do paciente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecione o novo status para {patients.find(p => p.id === statusChangeId)?.nome || "o paciente"}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Label className="text-xs">Novo status</Label>
+            <Select value={newStatus} onValueChange={(v) => setNewStatus(v as PatientRecord["status"])}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Internado</SelectItem>
+                <SelectItem value="discharged">Alta</SelectItem>
+                <SelectItem value="transferred">Transferido</SelectItem>
+                <SelectItem value="deceased">Óbito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (statusChangeId) {
+                  const dischargeMap: Record<string, string> = { discharged: "Alta", transferred: "Transferência", deceased: "Óbito" };
+                  const ok = await changePatientStatus(statusChangeId, newStatus, dischargeMap[newStatus]);
+                  if (ok) setStatusChangeId(null);
+                }
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ─── NEW PATIENT MODAL ────────────────────────────── */}
       <Dialog open={newPatientOpen} onOpenChange={setNewPatientOpen}>
