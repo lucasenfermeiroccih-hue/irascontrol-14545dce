@@ -1062,13 +1062,23 @@ export default function PatientsMonitoring() {
                             "Doxiciclina","Minociclina","Tigeciclina","Eravaciclina",
                             "Sulfametoxazol-trimetoprim","Sulfadiazina","Metronidazol","Tinidazol",
                             "Cloranfenicol","Fosfomicina","Nitrofurantoína","Rifampicina","Rifabutina",
-                            "Mupirocina","Polimixina B","Colistina","Fidaxomicina","Bacitracina"
+                            "Mupirocina","Polimixina B","Colistina","Fidaxomicina","Bacitracina","Outros"
                           ].map(atb => (
                             <SelectItem key={atb} value={atb}>{atb}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                    {newAtb.nome === "Outros" && (
+                      <div className="space-y-2">
+                        <Label className="font-medium">Descreva o antibiótico *</Label>
+                        <Input
+                          placeholder="Digite o nome do antibiótico"
+                          value={newAtb.nomeOutros || ""}
+                          onChange={e => setNewAtb(p => ({ ...p, nomeOutros: e.target.value }))}
+                        />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label className="font-medium">Data de Início *</Label>
                       <Input type="date" value={newAtb.dataInicio} onChange={e => setNewAtb(p => ({ ...p, dataInicio: e.target.value }))} />
