@@ -296,8 +296,9 @@ export default function AntibiogramHistory({ onEdit, refreshKey }: Props) {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
         <AlertDialogContent>
