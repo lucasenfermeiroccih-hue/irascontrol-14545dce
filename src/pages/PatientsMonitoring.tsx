@@ -121,7 +121,11 @@ function calcAge(birth: string) {
 // ─── Component ────────────────────────────────────────────────
 export default function PatientsMonitoring() {
   const navigate = useNavigate();
-  const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn } = usePatientMonitoring();
+  const { patients, loading: patientsLoading, createPatient, updatePatient, dischargePatient: dischargePatientFn, deletePatient, changePatientStatus } = usePatientMonitoring();
+  const { isAdmin } = useIsAdmin();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [statusChangeId, setStatusChangeId] = useState<string | null>(null);
+  const [newStatus, setNewStatus] = useState<PatientRecord["status"]>("active");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterMes, setFilterMes] = useState<string[]>([]);
