@@ -156,7 +156,7 @@ export default function Dashboard() {
             complianceRate,
             irasBySector,
             topMicro,
-            activeAlerts: alerts.length,
+            activeAlerts: fAlerts.length,
           },
         },
       });
@@ -206,7 +206,7 @@ export default function Dashboard() {
           <DashboardAIInsights generateInsights={() => {
             const insights: string[] = [];
             insights.push(`📊 ${activePatients.length} pacientes monitorados com ${confirmedCases.length} IRAS confirmadas.`);
-            if (alerts.length > 0) insights.push(`⚠️ ${alerts.length} alerta(s) ativo(s) requerem atenção.`);
+            if (fAlerts.length > 0) insights.push(`⚠️ ${fAlerts.length} alerta(s) ativo(s) requerem atenção.`);
             insights.push(`✅ Taxa de conformidade geral em ${complianceRate}%.`);
             if (topMicro.length > 0) insights.push(`🦠 Principal patógeno: ${topMicro[0].name} (${topMicro[0].count} isolados).`);
             return insights;
@@ -258,7 +258,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader><CardTitle className="text-base">Conformidade Geral</CardTitle></CardHeader>
           <CardContent>
-            {audits.length > 0 ? (
+            {fAudits.length > 0 ? (
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
                   <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}%`}>
@@ -279,8 +279,8 @@ export default function Dashboard() {
         <Card>
           <CardHeader><CardTitle className="text-base">Alertas Ativos ({alerts.length})</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {alerts.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta ativo</p>}
-            {alerts.slice(0, 5).map((a) => (
+            {fAlerts.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta ativo</p>}
+            {fAlerts.slice(0, 5).map((a) => (
               <div key={a.id} className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -318,8 +318,8 @@ export default function Dashboard() {
         <Card>
           <CardHeader><CardTitle className="text-base">Resumo de Auditorias</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {audits.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma auditoria registrada</p>}
-            {audits.slice(0, 5).map((a) => (
+            {fAudits.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma auditoria registrada</p>}
+            {fAudits.slice(0, 5).map((a) => (
               <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium capitalize">{a.audit_type?.replace("_", " ")}</p>
