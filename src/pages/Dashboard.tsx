@@ -277,7 +277,7 @@ export default function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Alertas */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Alertas Ativos ({alerts.length})</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Alertas Ativos ({fAlerts.length})</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {fAlerts.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta ativo</p>}
             {fAlerts.slice(0, 5).map((a) => (
