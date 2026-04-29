@@ -354,15 +354,17 @@ export default function AuditAntibiogramNew() {
   return (
     <TooltipProvider>
       <div className="max-w-5xl mx-auto space-y-4 md:space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold">{editingId ? "Editar Antibiograma" : "Registro de Antibiograma"}</h1>
-              <p className="text-muted-foreground text-sm">Perfil de sensibilidade — BrCAST/EUCAST</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0"><ArrowLeft className="h-5 w-5" /></Button>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">{editingId ? "Editar Antibiograma" : "Registro de Antibiograma"}</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm">Perfil de sensibilidade — BrCAST/EUCAST</p>
             </div>
           </div>
-          <AntibiogramHistory refreshKey={refreshKey} onEdit={(record) => loadForEdit(record)} />
+          <div className="sm:self-auto self-end">
+            <AntibiogramHistory refreshKey={refreshKey} onEdit={(record) => loadForEdit(record)} />
+          </div>
         </div>
 
         <Card>
