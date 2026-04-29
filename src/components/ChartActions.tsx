@@ -247,16 +247,56 @@ export default function ChartActions({ chartRef, chartTitle, metaValue, onMetaCh
           aria-modal="true"
           aria-label={`${chartTitle} — tela cheia`}
         >
-          <div className="flex items-center justify-between px-6 py-3 border-b bg-background">
+          <div className="flex items-center justify-between gap-4 px-6 py-3 border-b bg-background shadow-sm">
             <h2 className="text-base font-semibold truncate">{chartTitle}</h2>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground hidden sm:inline">Pressione ESC para sair</span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setZoom(z => Math.max(0.5, +(z - 0.1).toFixed(2)))}
+                aria-label="Diminuir zoom"
+                disabled={zoom <= 0.5}
+              >
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="text-xs font-medium tabular-nums w-12 text-center text-muted-foreground">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setZoom(z => Math.min(2.5, +(z + 0.1).toFixed(2)))}
+                aria-label="Aumentar zoom"
+                disabled={zoom >= 2.5}
+              >
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setZoom(1)}
+                aria-label="Restaurar zoom"
+                disabled={zoom === 1}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              <div className="w-px h-5 bg-border mx-2" />
+              <span className="text-xs text-muted-foreground hidden md:inline mr-1">ESC para sair</span>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsFs(false)} aria-label="Sair da tela cheia">
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
-          <div id="chart-fs-host" className="flex-1 min-h-0 p-6 overflow-auto" />
+          <div className="flex-1 min-h-0 overflow-auto flex items-center justify-center p-6">
+            <div
+              id="chart-fs-host"
+              className="w-full max-w-[1600px] mx-auto origin-center transition-transform duration-150"
+              style={{ transform: `scale(${zoom})` }}
+            />
+          </div>
         </div>,
         document.body
       )}
