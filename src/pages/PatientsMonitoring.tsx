@@ -1309,6 +1309,7 @@ export default function PatientsMonitoring() {
           </DialogContent>
         </Dialog>
 
+
         {/* ─── NEW LAB EXAM MODAL ──────────────────────────── */}
         <Dialog open={newLabOpen} onOpenChange={setNewLabOpen}>
           <DialogContent className="max-w-md">
