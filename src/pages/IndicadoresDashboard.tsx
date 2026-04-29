@@ -407,6 +407,42 @@ export default function IndicadoresDashboard() {
         contextKey={insightsKey}
       />
 
+      {/* Médias Anuais */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Médias Anuais
+              <Badge variant="outline" className="text-[10px] ml-1">
+                {anoFiltro === "Todos" ? "Todos os anos" : anoFiltro}
+              </Badge>
+            </CardTitle>
+            <span className="text-[11px] text-muted-foreground">
+              Calculado sobre {mediaAnual.mesesComDados} {mediaAnual.mesesComDados === 1 ? "mês" : "meses"} com dados
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {mediaAnual.mesesComDados === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Sem dados para o período selecionado.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <KpiCard label="Méd. Anual Taxa Infecção" value={mediaAnual.taxaInfeccao} unit="‰" icon={Bug} color="hsl(0,72%,51%)" />
+              <KpiCard label="Méd. Anual Letalidade" value={mediaAnual.taxaLetalidade} unit="%" icon={Heart} color="hsl(330,81%,60%)" />
+              <KpiCard label="Méd. Anual Inf. p/ Dispositivo" value={mediaAnual.taxaInfDispositivo} unit="‰" icon={Syringe} color="hsl(217,91%,60%)" />
+              <KpiCard label="Méd. Anual Taxa PAV (VM)" value={mediaAnual.taxaInfPAV} unit="‰" icon={ShieldAlert} color="hsl(38,92%,50%)" />
+              <KpiCard label="Méd. Anual Taxa SVD" value={mediaAnual.taxaInfSVD} unit="‰" icon={ShieldAlert} color="hsl(262,83%,58%)" />
+              <KpiCard label="Méd. Anual Taxa CVC" value={mediaAnual.taxaInfCVC} unit="‰" icon={ShieldAlert} color="hsl(168,66%,34%)" />
+              <KpiCard label="Méd. Anual T. Permanência" value={mediaAnual.tempoPermanencia} unit=" dias" icon={Timer} color="hsl(217,91%,60%)" />
+              <KpiCard label="Méd. Mensal Inf. p/ Dispositivo" value={mediaAnual.infeccoesDispositivoMes} unit="" icon={Syringe} color="hsl(0,72%,51%)" />
+              <KpiCard label="Méd. Mensal de Óbitos" value={mediaAnual.obitosMes} unit="" icon={Skull} color="hsl(262,83%,58%)" />
+              <KpiCard label="Méd. Mensal de Infecções" value={mediaAnual.infeccoesMes} unit="" icon={Thermometer} color="hsl(38,92%,50%)" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1">
