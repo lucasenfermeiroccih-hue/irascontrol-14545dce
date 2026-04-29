@@ -4,6 +4,7 @@ import {
   Syringe, TrendingUp, ShieldAlert, Thermometer, FileDown,
 } from "lucide-react";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
+import SmartInsightsPanel from "@/components/SmartInsightsPanel";
 import ChartActions from "@/components/ChartActions";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -259,6 +260,24 @@ export default function IndicadoresDashboard() {
 
   const clearFilters = () => { setMesFiltro("Todos"); setAnoFiltro(String(new Date().getFullYear())); setSetorFiltro("Todos"); };
 
+  const buildInsights = (): string[] => {
+    const ins: string[] = [];
+    ins.push(`📊 Taxa de infecção hospitalar: ${taxaInfeccao.toFixed(2)}‰ (${agg.numInfeccoes} infecções / ${agg.numPacienteDiaTotal} pac-dia).`);
+    ins.push(`💀 Taxa de letalidade: ${taxaLetalidade.toFixed(2)}% (${agg.numObitosInfeccao} óbitos por infecção em ${agg.numPacientesInfeccaoHospitalar} pacientes infectados).`);
+    ins.push(`💉 CVC: taxa de uso ${taxaUtilCVC.toFixed(2)}%, taxa de infecção ${taxaInfCVC.toFixed(2)}‰.`);
+    ins.push(`🔧 SVD: taxa de uso ${taxaUtilSVD.toFixed(2)}%, taxa de infecção ${taxaInfSVD.toFixed(2)}‰.`);
+    ins.push(`🌬️ VM: taxa de uso ${taxaUtilVM.toFixed(2)}%, taxa de infecção ${taxaInfVM.toFixed(2)}‰.`);
+    ins.push(`⏱️ Tempo médio de permanência: ${tempoPermanencia.toFixed(2)} dias.`);
+    ins.push(`💊 Taxa de uso de ATB: ${taxaUsoAtb.toFixed(2)}% (${agg.numAntibioticosUtilizados}/${pacienteExposto}).`);
+    if (taxaInfeccao > 10) ins.push(`🚨 Taxa de infecção acima de 10‰ — ações corretivas urgentes recomendadas.`);
+    if (taxaLetalidade > 20) ins.push(`🚨 Letalidade elevada (>20%) — revisar protocolos assistenciais.`);
+    if (taxaInfCVC > 5) ins.push(`🚨 Infecção em CVC acima de 5‰ — revisar bundle de prevenção.`);
+    if (taxaUsoAtb > 60) ins.push(`💡 Uso elevado de antibióticos — avaliar programa de stewardship.`);
+    return ins;
+  };
+
+  const insightsKey = `${mesFiltro}|${anoFiltro}|${setorFiltro}|${filtered.length}`;
+
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -273,18 +292,7 @@ export default function IndicadoresDashboard() {
           </div>
         </div>
         <div className="flex gap-2">
-          <DashboardAIInsights generateInsights={() => {
-            const ins: string[] = [];
-            ins.push(`📊 Taxa de infecção hospitalar: ${taxaInfeccao.toFixed(2)}‰ (${agg.numInfeccoes} infecções / ${agg.numPacienteDiaTotal} pac-dia).`);
-            ins.push(`💀 Taxa de letalidade: ${taxaLetalidade.toFixed(2)}% (${agg.numObitosInfeccao} óbitos por infecção).`);
-            ins.push(`💉 CVC: taxa uso ${taxaUtilCVC.toFixed(2)}%, taxa infecção ${taxaInfCVC.toFixed(2)}‰.`);
-            ins.push(`🔧 SVD: taxa uso ${taxaUtilSVD.toFixed(2)}%, taxa infecção ${taxaInfSVD.toFixed(2)}‰.`);
-            ins.push(`🌬️ VM: taxa uso ${taxaUtilVM.toFixed(2)}%, taxa infecção ${taxaInfVM.toFixed(2)}‰.`);
-            ins.push(`⏱️ Tempo médio de permanência: ${tempoPermanencia.toFixed(2)} dias.`);
-            ins.push(`💊 Taxa de uso de ATB: ${taxaUsoAtb.toFixed(2)}%.`);
-            if (taxaInfeccao > 10) ins.push(`🚨 Taxa de infecção acima de 10‰ — ações corretivas urgentes.`);
-            return ins;
-          }} />
+          <DashboardAIInsights generateInsights={buildInsights} />
           <Button variant="outline" size="sm" onClick={exportTabPdf} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
             Exportar Aba PDF
@@ -332,6 +340,13 @@ export default function IndicadoresDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Smart Insights Panel */}
+      <SmartInsightsPanel
+        generateInsights={buildInsights}
+        pageTitle="Dashboard de Indicadores Epidemiológicos"
+        contextKey={insightsKey}
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
