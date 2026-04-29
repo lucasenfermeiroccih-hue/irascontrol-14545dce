@@ -418,24 +418,24 @@ export default function PatientsMonitoring() {
     return (
       <div className="pb-24">
         {/* ─── Sticky Patient Header ─────────────────────── */}
-        <div className="sticky top-0 z-30 bg-background border-b p-4 -mx-1 px-1">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedId(null)}>
+        <div className="sticky top-0 z-30 bg-background border-b p-3 sm:p-4 -mx-1 px-1">
+          <div className="flex items-start sm:items-center justify-between flex-wrap gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setSelectedId(null)}>
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <Stethoscope className="h-5 w-5 text-primary" />
-              <span className="font-bold text-foreground text-lg">{selected.nome}</span>
-              <Badge variant={selected.status === "active" ? "default" : "secondary"}>
+              <Stethoscope className="h-5 w-5 text-primary shrink-0" />
+              <span className="font-bold text-foreground text-sm sm:text-lg truncate">{selected.nome}</span>
+              <Badge variant={selected.status === "active" ? "default" : "secondary"} className="shrink-0 text-[10px] sm:text-xs">
                 {selected.status === "active" ? "Internado" : selected.status === "discharged" ? "Alta" : selected.status}
               </Badge>
             </div>
-            <div className="flex gap-2">
-              <Button variant={viewMode === "edit" ? "default" : "outline"} size="sm" onClick={() => setViewMode("edit")}><Pencil className="h-4 w-4 mr-1" />Editar</Button>
-              <Button variant={viewMode === "view" ? "default" : "outline"} size="sm" onClick={() => setViewMode("view")}><Eye className="h-4 w-4 mr-1" />Visualizar</Button>
+            <div className="flex gap-2 shrink-0">
+              <Button variant={viewMode === "edit" ? "default" : "outline"} size="sm" onClick={() => setViewMode("edit")} className="h-8 px-2 sm:px-3"><Pencil className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Editar</span></Button>
+              <Button variant={viewMode === "view" ? "default" : "outline"} size="sm" onClick={() => setViewMode("view")} className="h-8 px-2 sm:px-3"><Eye className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Visualizar</span></Button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-1 text-xs ml-10">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-1 text-[11px] sm:text-xs sm:ml-10">
             <div><span className="text-muted-foreground">Pront:</span> <span className="font-medium">{selected.prontuario}</span></div>
             <div><span className="text-muted-foreground">Unidade:</span> <span className="font-medium">{selected.unidade}</span></div>
             <div><span className="text-muted-foreground">Leito:</span> <span className="font-medium">{selected.leito}</span></div>
@@ -453,9 +453,9 @@ export default function PatientsMonitoring() {
               </span>
             </div>
           </div>
-          {/* Tab Navigation (no progress bar) */}
-          <div className="mt-3 ml-10">
-            <div className="flex gap-1 overflow-x-auto pb-1">
+          {/* Tab Navigation */}
+          <div className="mt-3 sm:ml-10">
+            <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
               {STEPS.map((step, i) => {
                 const Icon = step.icon;
                 const isActive = i === currentStep;
@@ -463,13 +463,13 @@ export default function PatientsMonitoring() {
                   <button
                     key={step.key}
                     onClick={() => setCurrentStep(i)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors shrink-0
                       ${isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"}
                     `}
                   >
                     <Icon className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{step.label}</span>
-                    <span className="sm:hidden">{i + 1}</span>
+                    <span className="hidden md:inline">{step.label}</span>
+                    <span className="md:hidden">{isActive ? step.label : i + 1}</span>
                   </button>
                 );
               })}
@@ -1420,7 +1420,7 @@ export default function PatientsMonitoring() {
       </div>
 
       {/* ─── Filters ──────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 sm:gap-4">
         <DashboardFilters
           mes={filterMes}
           setMes={setFilterMes}
@@ -1430,10 +1430,10 @@ export default function PatientsMonitoring() {
           setSetor={setFilterSetor}
           sectors={allSectors.length > 0 ? allSectors : undefined}
         />
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 w-full sm:w-auto">
           <label className="text-xs font-medium text-muted-foreground">Status</label>
           <Select value={filterStatus.length === 1 ? filterStatus[0] : "all"} onValueChange={v => setFilterStatus(v === "all" ? [] : [v])}>
-            <SelectTrigger className="h-9 w-[150px] text-sm">
+            <SelectTrigger className="h-9 w-full sm:w-[150px] text-sm">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
             <SelectContent>
@@ -1572,27 +1572,27 @@ export default function PatientsMonitoring() {
                     <span>Int.: <strong className={`${dias > 14 ? "text-destructive" : "text-foreground"}`}>{dias}d</strong></span>
                     <span>CTI: <strong className={`${diasCti !== null && diasCti > 7 ? "text-destructive" : "text-foreground"}`}>{diasCti !== null ? `${diasCti}d` : "—"}</strong></span>
                   </div>
-                  <div className="flex gap-2 pt-1 border-t border-border">
-                    <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => openEditId(p.id)}>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => openEditId(p.id)}>
                       <Pencil className="h-3 w-3" /> Editar
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => openViewPatient(p.id)}>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => openViewPatient(p.id)}>
                       <Eye className="h-3 w-3" /> Ver
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => enterPatient(p.id)}>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => enterPatient(p.id)}>
                       <LogIn className="h-3 w-3" /> Entrar
                     </Button>
                     {p.status === "active" && (
-                      <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => openDischargeConfirm(p.id)}>
+                      <Button variant="outline" size="sm" className="h-8 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => openDischargeConfirm(p.id)}>
                         <LogOut className="h-3 w-3" /> Alta
                       </Button>
                     )}
                     {isAdmin && (
                       <>
-                        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => { setStatusChangeId(p.id); setNewStatus(p.status); }}>
+                        <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => { setStatusChangeId(p.id); setNewStatus(p.status); }}>
                           <RefreshCw className="h-3 w-3" /> Status
                         </Button>
-                        <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteConfirmId(p.id)}>
+                        <Button variant="outline" size="sm" className="h-8 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setDeleteConfirmId(p.id)}>
                           <Trash2 className="h-3 w-3" /> Excluir
                         </Button>
                       </>
