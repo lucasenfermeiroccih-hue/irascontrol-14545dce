@@ -292,12 +292,30 @@ const CasesInvestigation = () => {
 
   useEffect(() => { if (hospitalId) fetchCases(); }, [hospitalId]);
 
+  const mesesNomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+  const anosDisponiveis = Array.from(new Set(cases.map(c => c.detection_date ? new Date(c.detection_date).getFullYear() : null).filter(Boolean) as number[]))
+    .sort((a, b) => b - a)
+    .map(String);
+  if (!anosDisponiveis.includes(String(new Date().getFullYear()))) anosDisponiveis.unshift(String(new Date().getFullYear()));
+
   const filtered = cases.filter((c) => {
     if (filterStatus !== "todos" && c.status !== filterStatus) return false;
+    if (filterEvento !== "Todos" && c.infection_type !== filterEvento) return false;
+    if (filterSetor !== "Todos" && c.patient?.sector !== filterSetor) return false;
+    if (c.detection_date) {
+      const d = new Date(c.detection_date);
+      if (filterAno !== "Todos" && String(d.getFullYear()) !== filterAno) return false;
+      if (filterMes !== "Todos" && mesesNomes[d.getMonth()] !== filterMes) return false;
+    }
     const name = c.patient?.full_name || "";
     const record = c.patient?.medical_record || "";
     return !search || name.toLowerCase().includes(search.toLowerCase()) || record.toLowerCase().includes(search.toLowerCase());
   });
+
+  const clearFilters = () => {
+    setFilterMes("Todos"); setFilterAno(String(new Date().getFullYear()));
+    setFilterSetor("Todos"); setFilterEvento("Todos");
+  };
 
   const kpis = {
     abertos: cases.filter(c => c.status === "open").length,
