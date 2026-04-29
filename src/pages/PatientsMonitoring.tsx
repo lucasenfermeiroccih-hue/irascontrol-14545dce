@@ -1396,19 +1396,19 @@ export default function PatientsMonitoring() {
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-destructive/10"><AlertTriangle className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">Total</p><p className="text-2xl font-bold">{patients.length}</p></div>
+          <div><p className="text-xs text-muted-foreground">Total</p><p className="text-2xl font-bold">{totalCount}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent"><Skull className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">Óbitos</p><p className="text-2xl font-bold text-destructive">{patients.filter(p => p.status === "deceased").length}</p></div>
+          <div><p className="text-xs text-muted-foreground">Óbitos</p><p className="text-2xl font-bold text-destructive">{deceasedCount}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent"><Clock className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-xs text-muted-foreground">Transferidos</p><p className="text-2xl font-bold">{patients.filter(p => p.status === "transferred").length}</p></div>
+          <div><p className="text-xs text-muted-foreground">Transferidos</p><p className="text-2xl font-bold">{transferredCount}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="p-2 rounded-lg bg-accent"><Activity className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-xs text-muted-foreground">Altas</p><p className="text-2xl font-bold">{patients.filter(p => p.status === "discharged").length}</p></div>
+          <div><p className="text-xs text-muted-foreground">Altas</p><p className="text-2xl font-bold">{dischargedCount}</p></div>
         </CardContent></Card>
       </div>
 
