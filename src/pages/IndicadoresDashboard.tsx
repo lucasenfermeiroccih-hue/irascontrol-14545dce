@@ -260,6 +260,24 @@ export default function IndicadoresDashboard() {
 
   const clearFilters = () => { setMesFiltro("Todos"); setAnoFiltro(String(new Date().getFullYear())); setSetorFiltro("Todos"); };
 
+  const buildInsights = (): string[] => {
+    const ins: string[] = [];
+    ins.push(`📊 Taxa de infecção hospitalar: ${taxaInfeccao.toFixed(2)}‰ (${agg.numInfeccoes} infecções / ${agg.numPacienteDiaTotal} pac-dia).`);
+    ins.push(`💀 Taxa de letalidade: ${taxaLetalidade.toFixed(2)}% (${agg.numObitosInfeccao} óbitos por infecção em ${agg.numPacientesInfeccaoHospitalar} pacientes infectados).`);
+    ins.push(`💉 CVC: taxa de uso ${taxaUtilCVC.toFixed(2)}%, taxa de infecção ${taxaInfCVC.toFixed(2)}‰.`);
+    ins.push(`🔧 SVD: taxa de uso ${taxaUtilSVD.toFixed(2)}%, taxa de infecção ${taxaInfSVD.toFixed(2)}‰.`);
+    ins.push(`🌬️ VM: taxa de uso ${taxaUtilVM.toFixed(2)}%, taxa de infecção ${taxaInfVM.toFixed(2)}‰.`);
+    ins.push(`⏱️ Tempo médio de permanência: ${tempoPermanencia.toFixed(2)} dias.`);
+    ins.push(`💊 Taxa de uso de ATB: ${taxaUsoAtb.toFixed(2)}% (${agg.numAntibioticosUtilizados}/${pacienteExposto}).`);
+    if (taxaInfeccao > 10) ins.push(`🚨 Taxa de infecção acima de 10‰ — ações corretivas urgentes recomendadas.`);
+    if (taxaLetalidade > 20) ins.push(`🚨 Letalidade elevada (>20%) — revisar protocolos assistenciais.`);
+    if (taxaInfCVC > 5) ins.push(`🚨 Infecção em CVC acima de 5‰ — revisar bundle de prevenção.`);
+    if (taxaUsoAtb > 60) ins.push(`💡 Uso elevado de antibióticos — avaliar programa de stewardship.`);
+    return ins;
+  };
+
+  const insightsKey = `${mesFiltro}|${anoFiltro}|${setorFiltro}|${filtered.length}`;
+
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
