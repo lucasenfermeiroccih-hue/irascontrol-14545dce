@@ -221,6 +221,51 @@ export default function DashboardISC() {
     return Object.entries(map).sort(sortMesAno).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
+  // Médias anuais — taxa de ISC média mensal (geral e por sítio cirúrgico)
+  // Para cada mês com dados, calcula taxa = (ISC / cirurgias) × 100, e tira a média dos meses.
+  const mediaAnualISC = useMemo(() => {
+    // Geral por mês
+    const porMes: Record<string, { cirurgias: number; isc: number }> = {};
+    filtered.forEach((r) => {
+      const k = `${r.mes}/${r.ano}`;
+      if (!porMes[k]) porMes[k] = { cirurgias: 0, isc: 0 };
+      porMes[k].cirurgias += r.totalCirurgias;
+      porMes[k].isc += r.iscConfirmada;
+    });
+    const taxasMensais = Object.values(porMes)
+      .filter((v) => v.cirurgias > 0)
+      .map((v) => (v.isc / v.cirurgias) * 100);
+    const taxaMediaGeral = taxasMensais.length
+      ? taxasMensais.reduce((a, b) => a + b, 0) / taxasMensais.length
+      : 0;
+
+    // Por sítio cirúrgico
+    const porSitioMes: Record<string, Record<string, { cirurgias: number; isc: number }>> = {};
+    filtered.forEach((r) => {
+      if (!r.sitio) return;
+      const k = `${r.mes}/${r.ano}`;
+      if (!porSitioMes[r.sitio]) porSitioMes[r.sitio] = {};
+      if (!porSitioMes[r.sitio][k]) porSitioMes[r.sitio][k] = { cirurgias: 0, isc: 0 };
+      porSitioMes[r.sitio][k].cirurgias += r.totalCirurgias;
+      porSitioMes[r.sitio][k].isc += r.iscConfirmada;
+    });
+    const porSitio = Object.entries(porSitioMes).map(([sitio, mapMes]) => {
+      const taxas = Object.values(mapMes)
+        .filter((v) => v.cirurgias > 0)
+        .map((v) => (v.isc / v.cirurgias) * 100);
+      const media = taxas.length ? taxas.reduce((a, b) => a + b, 0) / taxas.length : 0;
+      const totalCirurgias = Object.values(mapMes).reduce((s, v) => s + v.cirurgias, 0);
+      const totalISC = Object.values(mapMes).reduce((s, v) => s + v.isc, 0);
+      return { sitio, media, mesesComDados: taxas.length, totalCirurgias, totalISC };
+    }).sort((a, b) => b.media - a.media);
+
+    return {
+      taxaMediaGeral,
+      mesesComDados: taxasMensais.length,
+      porSitio,
+    };
+  }, [filtered]);
+
   // Sítio cirúrgico (distribuição por sítio entre as cirurgias com sítio informado)
   const sitioData = useMemo(() => {
     const map: Record<string, number> = {};
@@ -964,6 +1009,86 @@ export default function DashboardISC() {
                 <div className="rounded-lg border bg-muted/30 p-4">
                   <pre className="whitespace-pre-wrap text-sm text-foreground font-mono">{aiReport}</pre>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Médias Anuais das Taxas de ISC */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Médias Anuais das Taxas de ISC
+                  <Badge variant="outline" className="text-[10px] ml-1">
+                    {anoFiltro === "Todos" ? "Todos os anos" : anoFiltro}
+                  </Badge>
+                </CardTitle>
+                <span className="text-[11px] text-muted-foreground">
+                  Média das taxas mensais (ISC ÷ cirurgias × 100) sobre {mediaAnualISC.mesesComDados} {mediaAnualISC.mesesComDados === 1 ? "mês" : "meses"} com dados
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {mediaAnualISC.mesesComDados === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">Sem dados suficientes para calcular médias.</p>
+              ) : (
+                <>
+                  {/* Card geral */}
+                  <Card className={`border ${statusColor(mediaAnualISC.taxaMediaGeral)}`}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-background/60 flex items-center justify-center shrink-0">
+                        <Activity className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium uppercase tracking-wide opacity-80">
+                          Média Anual da Taxa de ISC — Geral
+                        </p>
+                        <p className="text-3xl font-bold mt-0.5">
+                          {mediaAnualISC.taxaMediaGeral.toFixed(2)}
+                          <span className="text-base font-normal opacity-70 ml-1">%</span>
+                        </p>
+                      </div>
+                      {mediaAnualISC.taxaMediaGeral <= 2 && (
+                        <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+                          <Award className="h-3 w-3 mr-1" /> Meta atingida
+                        </Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Por sítio cirúrgico */}
+                  {mediaAnualISC.porSitio.length > 0 && (
+                    <div>
+                      <p className="text-sm font-semibold text-foreground mb-2">
+                        Média Anual por Sítio Cirúrgico
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {mediaAnualISC.porSitio.map((s) => (
+                          <Card key={s.sitio} className={`border ${statusColor(s.media)}`}>
+                            <CardContent className="p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium leading-snug break-words">
+                                    {s.sitio}
+                                  </p>
+                                  <p className="text-2xl font-bold mt-1">
+                                    {s.media.toFixed(2)}
+                                    <span className="text-xs font-normal opacity-70 ml-1">%</span>
+                                  </p>
+                                </div>
+                                {statusIcon(s.media)}
+                              </div>
+                              <p className="text-[10px] opacity-75 mt-2">
+                                {s.totalISC} ISC / {s.totalCirurgias} cirurgias · {s.mesesComDados} {s.mesesComDados === 1 ? "mês" : "meses"}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
