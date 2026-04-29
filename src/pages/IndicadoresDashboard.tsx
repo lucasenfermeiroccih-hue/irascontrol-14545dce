@@ -341,6 +341,13 @@ export default function IndicadoresDashboard() {
         </CardContent>
       </Card>
 
+      {/* Smart Insights Panel */}
+      <SmartInsightsPanel
+        generateInsights={buildInsights}
+        pageTitle="Dashboard de Indicadores Epidemiológicos"
+        contextKey={insightsKey}
+      />
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1">
