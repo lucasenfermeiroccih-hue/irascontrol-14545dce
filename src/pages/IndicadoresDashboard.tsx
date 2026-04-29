@@ -274,18 +274,7 @@ export default function IndicadoresDashboard() {
           </div>
         </div>
         <div className="flex gap-2">
-          <DashboardAIInsights generateInsights={() => {
-            const ins: string[] = [];
-            ins.push(`📊 Taxa de infecção hospitalar: ${taxaInfeccao.toFixed(2)}‰ (${agg.numInfeccoes} infecções / ${agg.numPacienteDiaTotal} pac-dia).`);
-            ins.push(`💀 Taxa de letalidade: ${taxaLetalidade.toFixed(2)}% (${agg.numObitosInfeccao} óbitos por infecção).`);
-            ins.push(`💉 CVC: taxa uso ${taxaUtilCVC.toFixed(2)}%, taxa infecção ${taxaInfCVC.toFixed(2)}‰.`);
-            ins.push(`🔧 SVD: taxa uso ${taxaUtilSVD.toFixed(2)}%, taxa infecção ${taxaInfSVD.toFixed(2)}‰.`);
-            ins.push(`🌬️ VM: taxa uso ${taxaUtilVM.toFixed(2)}%, taxa infecção ${taxaInfVM.toFixed(2)}‰.`);
-            ins.push(`⏱️ Tempo médio de permanência: ${tempoPermanencia.toFixed(2)} dias.`);
-            ins.push(`💊 Taxa de uso de ATB: ${taxaUsoAtb.toFixed(2)}%.`);
-            if (taxaInfeccao > 10) ins.push(`🚨 Taxa de infecção acima de 10‰ — ações corretivas urgentes.`);
-            return ins;
-          }} />
+          <DashboardAIInsights generateInsights={buildInsights} />
           <Button variant="outline" size="sm" onClick={exportTabPdf} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
             Exportar Aba PDF
