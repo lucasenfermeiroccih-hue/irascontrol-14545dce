@@ -716,12 +716,12 @@ export default function AuditAntibiogramNew() {
         </Card>
 
         <Separator />
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
           {editingId && (
-            <Button variant="ghost" onClick={cancelEdit}>Cancelar edição</Button>
+            <Button variant="ghost" onClick={cancelEdit} className="w-full sm:w-auto">Cancelar edição</Button>
           )}
-          <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
+          <Button variant="outline" onClick={() => navigate(-1)} className="w-full sm:w-auto">Voltar</Button>
+          <Button onClick={handleSave} disabled={saving} className="gap-2 w-full sm:w-auto">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {editingId ? "Atualizar registro" : "Salvar e Atualizar"}
           </Button>
