@@ -535,7 +535,7 @@ export default function DashboardAntibiogram() {
               Agente de Relatórios Microbiológicos
             </DialogTitle>
             <DialogDescription>
-              Gere relatórios completos de antibiograma e perfil de sensibilidade com IA
+              Gere relatórios completos de exames/culturas e perfil de sensibilidade com IA
             </DialogDescription>
           </DialogHeader>
 
