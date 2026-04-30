@@ -277,7 +277,7 @@ const LaboratoryResults = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Resultados Laboratoriais</h1>
-          <p className="text-muted-foreground">Culturas, antibiogramas e perfil de resistência</p>
+          <p className="text-muted-foreground">Culturas, exames e perfil de resistência</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setShowInsights(true)} variant="outline" className="gap-2">
