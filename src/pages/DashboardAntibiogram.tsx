@@ -34,11 +34,11 @@ export default function DashboardAntibiogram() {
   const navigate = useNavigate();
   const { data: allData, loading: dataLoading } = useAntibiogramDashboard();
 
-  const [filtroSetor, setFiltroSetor] = useState("all");
-  const [filtroSite, setFiltroSite] = useState("all");
-  const [filtroOrg, setFiltroOrg] = useState("all");
-  const [filtroMes, setFiltroMes] = useState("all");
-  const [filtroAno, setFiltroAno] = useState("all");
+  const [filtroSetor, setFiltroSetor] = useState<string[]>([]);
+  const [filtroSite, setFiltroSite] = useState<string[]>([]);
+  const [filtroOrg, setFiltroOrg] = useState<string[]>([]);
+  const [filtroMes, setFiltroMes] = useState<string[]>([]);
+  const [filtroAno, setFiltroAno] = useState<string[]>([]);
 
   // Chart refs + metas
   const chartRefs = {
