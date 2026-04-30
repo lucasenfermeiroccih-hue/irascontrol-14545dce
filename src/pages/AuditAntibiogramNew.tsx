@@ -727,6 +727,13 @@ export default function AuditAntibiogramNew() {
                 </div>
               </>
             )}
+            {results.length > 0 && (
+              <div className="mt-4 flex justify-center">
+                <Button variant="outline" size="sm" onClick={addRow} className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10">
+                  <PlusCircle className="h-4 w-4" />Adicionar antimicrobiano
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
