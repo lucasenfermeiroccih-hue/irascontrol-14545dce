@@ -362,7 +362,7 @@ const LaboratoryResults = () => {
                 </div>
                 {detail.antibiogram_results?.length > 0 ? (
                   <div>
-                    <h4 className="font-semibold mb-2">Antibiograma</h4>
+                    <h4 className="font-semibold mb-2">Exames/Culturas</h4>
                     <div className="grid grid-cols-2 gap-1.5">
                       {detail.antibiogram_results.map((ab: any) => (
                         <div key={ab.id} className="flex items-center justify-between text-sm border rounded px-2 py-1">
