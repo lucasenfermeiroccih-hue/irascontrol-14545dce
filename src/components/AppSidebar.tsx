@@ -40,7 +40,7 @@ const publicSections = [
       { title: "Vigilância de Processos", url: "/audits/infection-control/new", icon: MonitorCheck },
       { title: "Dispensers", url: "/audits/dispenser/new", icon: FlaskConical },
       { title: "Infraestrutura CTI", url: "/audits/infrastructure/cti/new", icon: Building2 },
-      { title: "Antibiograma", url: "/audits/antimicrobial-sensitivity/new", icon: Microscope },
+      { title: "Exames/Culturas", url: "/audits/antimicrobial-sensitivity/new", icon: Microscope },
     ],
   },
   {
