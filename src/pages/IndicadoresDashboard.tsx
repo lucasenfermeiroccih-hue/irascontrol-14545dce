@@ -168,7 +168,8 @@ export default function IndicadoresDashboard() {
       pdf.setFontSize(14);
       pdf.text(`Indicadores - ${tabNames[activeTab]}`, margin, margin + 5);
       pdf.setFontSize(9);
-      pdf.text(`Filtros: Mês=${mesFiltro} | Ano=${anoFiltro} | Setor=${setorFiltro}`, margin, margin + 11);
+      const fmt = (arr: string[]) => arr.length === 0 ? "Todos" : arr.join(", ");
+      pdf.text(`Filtros: Mês=${fmt(mesFiltro)} | Ano=${fmt(anoFiltro)} | Setor=${fmt(setorFiltro)}`, margin, margin + 11);
       pdf.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR")}`, margin, margin + 16);
 
       const startY = margin + 20;
