@@ -39,6 +39,17 @@ export default function DashboardAntibiogram() {
   const [filtroMes, setFiltroMes] = useState("all");
   const [filtroAno, setFiltroAno] = useState("all");
 
+  // Chart refs + metas
+  const chartRefs = {
+    setor: useRef<HTMLDivElement>(null),
+    organismos: useRef<HTMLDivElement>(null),
+    sirAntibiotico: useRef<HTMLDivElement>(null),
+    tendenciaMensal: useRef<HTMLDivElement>(null),
+    fenotipos: useRef<HTMLDivElement>(null),
+  };
+  const [metas, setMetas] = useState<Record<string, number | undefined>>({});
+  const setMeta = (k: string, v: number | undefined) => setMetas(prev => ({ ...prev, [k]: v }));
+
   const setores = useMemo(() => [...new Set(allData.map(d => d.sector))].sort(), [allData]);
   const sites = useMemo(() => [...new Set(allData.map(d => d.site))].sort(), [allData]);
   const organismos = useMemo(() => [...new Set(allData.map(d => d.organism))].sort(), [allData]);
