@@ -160,21 +160,21 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
 
   const filtered = useMemo(() => {
     return records.filter(r => {
-      if (anoFiltro !== "Todos" && !r.audit_date?.startsWith(anoFiltro)) return false;
-      if (mesFiltro !== "Todos") {
-        const monthIdx = meses.indexOf(mesFiltro);
+      if (anoFiltro.length > 0 && !anoFiltro.some(a => r.audit_date?.startsWith(a))) return false;
+      if (mesFiltro.length > 0) {
         const recMonth = r.audit_date ? new Date(r.audit_date + "T00:00:00").getMonth() : -1;
-        if (monthIdx !== recMonth) return false;
+        const allowed = mesFiltro.map(m => meses.indexOf(m));
+        if (!allowed.includes(recMonth)) return false;
       }
-      if (setorFiltro !== "Todos" && r.sector !== setorFiltro) return false;
+      if (setorFiltro.length > 0 && !setorFiltro.includes(r.sector || "")) return false;
       return true;
     });
   }, [records, mesFiltro, anoFiltro, setorFiltro]);
 
   const clearFilters = () => {
-    setMesFiltro("Todos");
-    setAnoFiltro("Todos");
-    setSetorFiltro("Todos");
+    setMesFiltro([]);
+    setAnoFiltro([]);
+    setSetorFiltro([]);
   };
 
   return (
