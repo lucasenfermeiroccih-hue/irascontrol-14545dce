@@ -343,6 +343,7 @@ export default function DashboardAntibiogram() {
         </div>
       </div>
 
+      <div ref={dashboardRef} className="space-y-4 md:space-y-6 bg-background">
       {/* Risk & Badges */}
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={`${risk.color} gap-1 text-xs py-0.5 px-2`}>
@@ -635,6 +636,9 @@ export default function DashboardAntibiogram() {
           </ul>
         </CardContent>
       </Card>
+
+      </div>
+      {/* /dashboardRef */}
 
       {/* AI Generated Insights Dialog */}
       <Dialog open={!!aiInsights} onOpenChange={(o) => !o && setAiInsights(null)}>
