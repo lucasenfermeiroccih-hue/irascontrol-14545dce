@@ -54,9 +54,9 @@ export default function AntibiogramHistory({ onEdit, refreshKey }: Props) {
   const [open, setOpen] = useState(false);
   const [records, setRecords] = useState<AntibiogramRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [mesFiltro, setMesFiltro] = useState("Todos");
-  const [anoFiltro, setAnoFiltro] = useState("Todos");
-  const [organismoFiltro, setOrganismoFiltro] = useState("Todos");
+  const [mesFiltro, setMesFiltro] = useState<string[]>([]);
+  const [anoFiltro, setAnoFiltro] = useState<string[]>([]);
+  const [organismoFiltro, setOrganismoFiltro] = useState<string[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
