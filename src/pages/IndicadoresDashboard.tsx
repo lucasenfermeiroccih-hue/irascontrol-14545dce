@@ -287,8 +287,8 @@ export default function IndicadoresDashboard() {
   // Agrupa registros do ano selecionado (ignorando filtro de mês) por mês para calcular médias mensais
   const yearlyMonthly = useMemo(() => {
     const baseRecords = records.filter((r: any) => {
-      if (anoFiltro !== "Todos" && String(r.ano_vigilancia) !== anoFiltro) return false;
-      if (setorFiltro !== "Todos" && r.setor !== setorFiltro) return false;
+      if (anoFiltro.length > 0 && !anoFiltro.includes(String(r.ano_vigilancia))) return false;
+      if (setorFiltro.length > 0 && !setorFiltro.includes(r.setor)) return false;
       return true;
     });
     return mesesOptions.map((mes) => {
