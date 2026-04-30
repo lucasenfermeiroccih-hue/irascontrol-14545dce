@@ -433,10 +433,11 @@ export default function DashboardISC() {
     rows.push(["Dashboard ISC — Exportação CSV"]);
     rows.push(["Gerado em", new Date().toLocaleString("pt-BR")]);
     rows.push(["Filtros aplicados"]);
-    rows.push(["Mês", mesFiltro]);
-    rows.push(["Ano", anoFiltro]);
-    rows.push(["Setor/Clínica", setorFiltro]);
-    rows.push(["Profissional", profFiltro]);
+    const fmtArr = (a: string[]) => a.length === 0 ? "Todos" : a.join(", ");
+    rows.push(["Mês", fmtArr(mesFiltro)]);
+    rows.push(["Ano", fmtArr(anoFiltro)]);
+    rows.push(["Setor/Clínica", fmtArr(setorFiltro)]);
+    rows.push(["Profissional", fmtArr(profFiltro)]);
     rows.push(["Período inicial", periodoInicio || "—"]);
     rows.push(["Período final", periodoFim || "—"]);
     rows.push([]);
