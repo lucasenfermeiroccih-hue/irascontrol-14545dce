@@ -139,21 +139,21 @@ export default function AntibiogramHistory({ onEdit, refreshKey }: Props) {
 
   const filtered = useMemo(() => {
     return records.filter(r => {
-      if (anoFiltro !== "Todos" && !r.collection_date?.startsWith(anoFiltro)) return false;
-      if (mesFiltro !== "Todos") {
-        const monthIdx = meses.indexOf(mesFiltro);
+      if (anoFiltro.length > 0 && !anoFiltro.some(a => r.collection_date?.startsWith(a))) return false;
+      if (mesFiltro.length > 0) {
         const recMonth = r.collection_date ? new Date(r.collection_date + "T00:00:00").getMonth() : -1;
-        if (monthIdx !== recMonth) return false;
+        const allowed = mesFiltro.map(m => meses.indexOf(m));
+        if (!allowed.includes(recMonth)) return false;
       }
-      if (organismoFiltro !== "Todos" && r.organism !== organismoFiltro) return false;
+      if (organismoFiltro.length > 0 && !organismoFiltro.includes(r.organism || "")) return false;
       return true;
     });
   }, [records, mesFiltro, anoFiltro, organismoFiltro]);
 
   const clearFilters = () => {
-    setMesFiltro("Todos");
-    setAnoFiltro("Todos");
-    setOrganismoFiltro("Todos");
+    setMesFiltro([]);
+    setAnoFiltro([]);
+    setOrganismoFiltro([]);
   };
 
   return (
