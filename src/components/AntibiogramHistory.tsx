@@ -167,7 +167,7 @@ export default function AntibiogramHistory({ onEdit, refreshKey }: Props) {
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">
               <History className="h-4 w-4 text-primary" />
-              Histórico de Antibiogramas
+              Histórico de Exames/Culturas
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
