@@ -566,42 +566,39 @@ export default function DashboardISC() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <Label>Mês</Label>
-              <Select value={mesFiltro} onValueChange={setMesFiltro}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {mesesFiltro.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                label="Mês"
+                selected={mesFiltro}
+                onChange={setMesFiltro}
+                options={mesesFiltro.filter(m => m !== "Todos").map(m => ({ value: m, label: m }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Ano</Label>
-              <Select value={anoFiltro} onValueChange={setAnoFiltro}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {anos.map((a) => (<SelectItem key={a} value={a}>{a}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                label="Ano"
+                selected={anoFiltro}
+                onChange={setAnoFiltro}
+                options={anos.map(a => ({ value: a, label: a }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Setor / Clínica</Label>
-              <Select value={setorFiltro} onValueChange={setSetorFiltro}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {clinicas.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                label="Setor / Clínica"
+                selected={setorFiltro}
+                onChange={setSetorFiltro}
+                options={clinicas.map(c => ({ value: c, label: c }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Profissional</Label>
-              <Select value={profFiltro} onValueChange={setProfFiltro}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  {profissionais.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
-                </SelectContent>
-              </Select>
+              <MultiSelectFilter
+                label="Profissional"
+                selected={profFiltro}
+                onChange={setProfFiltro}
+                options={profissionais.map(p => ({ value: p, label: p }))}
+              />
             </div>
           </div>
 
