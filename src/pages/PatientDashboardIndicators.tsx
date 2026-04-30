@@ -39,6 +39,19 @@ interface PatientRow {
   discharge_date: string | null;
   status: string;
   discharge_type: string | null;
+  clinical_data: any;
+}
+
+// Calcula dias de sobreposição entre [insertion, removal] e [start, end] (mês selecionado)
+function overlapDays(insertion?: string, removal?: string, start?: Date, end?: Date) {
+  if (!insertion || !start || !end) return 0;
+  const ins = new Date(insertion);
+  const rem = removal ? new Date(removal) : new Date();
+  if (isNaN(ins.getTime()) || isNaN(rem.getTime())) return 0;
+  const from = ins > start ? ins : start;
+  const to = rem < end ? rem : end;
+  if (from > to) return 0;
+  return Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
 }
 
 const PatientDashboardIndicators = () => {
