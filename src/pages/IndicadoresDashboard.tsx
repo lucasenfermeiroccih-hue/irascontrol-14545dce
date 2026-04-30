@@ -111,9 +111,9 @@ export default function IndicadoresDashboard() {
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mesFiltro, setMesFiltro] = useState("Todos");
-  const [anoFiltro, setAnoFiltro] = useState(String(new Date().getFullYear()));
-  const [setorFiltro, setSetorFiltro] = useState("Todos");
+  const [mesFiltro, setMesFiltro] = useState<string[]>([]);
+  const [anoFiltro, setAnoFiltro] = useState<string[]>([String(new Date().getFullYear())]);
+  const [setorFiltro, setSetorFiltro] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("infeccao");
   const [exporting, setExporting] = useState(false);
 
