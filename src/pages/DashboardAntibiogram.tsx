@@ -331,8 +331,11 @@ export default function DashboardAntibiogram() {
           >
             <Bot className="h-3.5 w-3.5 text-primary" /> Relatório IA
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5" /> PDF
+          <Button variant="outline" size="sm" onClick={handleExportPDFVisual} disabled={pdfVisualLoading} className="gap-1.5 text-xs">
+            {pdfVisualLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />} PDF Visual
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => handleExportPDFStructured(false)} disabled={pdfStructuredLoading} className="gap-1.5 text-xs">
+            {pdfStructuredLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-primary" />} PDF Relatório
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-1.5 text-xs">
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
