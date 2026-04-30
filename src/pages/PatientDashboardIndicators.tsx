@@ -70,22 +70,24 @@ const PatientDashboardIndicators = () => {
     if (!hospitalId || ctxLoading) { setLoading(false); return; }
     (async () => {
       setLoading(true);
-      const [pRes, dRes, rxRes] = await Promise.all([
-        supabase.from("patients").select("id, full_name, sector, specialty, admission_date, discharge_date, status, discharge_type").eq("hospital_id", hospitalId),
-        supabase.from("patient_devices").select("*").in("patient_id", []),
-        supabase.from("antimicrobial_prescriptions").select("id, start_date, patient_id").eq("hospital_id", hospitalId),
-      ]);
-      const pts = pRes.data || [];
-      setPatients(pts as PatientRow[]);
+      const pRes = await supabase
+        .from("patients")
+        .select("id, full_name, sector, specialty, admission_date, discharge_date, status, discharge_type, clinical_data")
+        .eq("hospital_id", hospitalId);
+      const pts = (pRes.data || []) as PatientRow[];
+      setPatients(pts);
 
-      // Load devices for all patients
+      // Manter compat: ainda lê devices/prescriptions das tabelas (caso existam)
       if (pts.length > 0) {
         const patIds = pts.map((p: any) => p.id);
-        const { data: devData } = await supabase.from("patient_devices").select("*").in("patient_id", patIds);
-        setDevices(devData || []);
+        const [devRes, rxRes] = await Promise.all([
+          supabase.from("patient_devices").select("*").in("patient_id", patIds),
+          supabase.from("antimicrobial_prescriptions").select("id, start_date, patient_id").eq("hospital_id", hospitalId),
+        ]);
+        setDevices(devRes.data || []);
+        setPrescriptions(rxRes.data || []);
       }
 
-      setPrescriptions(rxRes.data || []);
       setLoading(false);
     })();
   }, [hospitalId, ctxLoading]);
