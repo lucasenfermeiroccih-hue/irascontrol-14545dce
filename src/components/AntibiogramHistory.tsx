@@ -3,6 +3,7 @@ import { History, Pencil, Trash2, X, Loader2, ChevronDown, ChevronUp, Filter } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import MultiSelectFilter from "@/components/MultiSelectFilter";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
