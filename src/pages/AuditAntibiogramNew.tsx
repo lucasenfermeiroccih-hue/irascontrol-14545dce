@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Plus, Trash2, AlertTriangle, ShieldAlert, Loader2, HelpCircle } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, AlertTriangle, ShieldAlert, Loader2, HelpCircle, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import AntibiogramHistory, { type AntibiogramRecord } from "@/components/AntibiogramHistory";
