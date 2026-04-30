@@ -249,7 +249,7 @@ export default function DashboardAntibiogram() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-lg md:text-2xl font-bold font-heading">Dashboard Antibiograma</h1>
+            <h1 className="text-lg md:text-2xl font-bold font-heading">Dashboard Exames/Culturas</h1>
             <p className="text-xs md:text-sm text-muted-foreground">Perfil de sensibilidade microbiana</p>
           </div>
         </div>
