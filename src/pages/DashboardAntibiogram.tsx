@@ -196,7 +196,7 @@ export default function DashboardAntibiogram() {
         fenotiposDetectados: phenotypeDist.map(p => `${p.name}: ${p.value}`),
         filtros: { setor: filtroSetor, site: filtroSite, organismo: filtroOrg, mes: filtroMes, ano: filtroAno },
       };
-      const prompt = `Gere um relatório completo de antibiograma e perfil de sensibilidade microbiológica para o período: ${periodLabels[reportPeriod]}. Inclua: resumo executivo, análise de resistência por antibiótico, distribuição de microrganismos, fenótipos de resistência detectados, tendências temporais, alertas de surto, e recomendações clínicas. Dados:\n\n${JSON.stringify(summaryData, null, 2)}`;
+      const prompt = `Gere um relatório completo de exames/culturas e perfil de sensibilidade microbiológica para o período: ${periodLabels[reportPeriod]}. Inclua: resumo executivo, análise de resistência por antibiótico, distribuição de microrganismos, fenótipos de resistência detectados, tendências temporais, alertas de surto, e recomendações clínicas. Dados:\n\n${JSON.stringify(summaryData, null, 2)}`;
       const result = await sendToAgent("micro-report", "dashboard-report", prompt);
       setReportResult(result);
     } catch (error: any) {
