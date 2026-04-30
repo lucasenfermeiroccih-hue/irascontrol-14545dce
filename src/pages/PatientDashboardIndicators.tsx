@@ -291,6 +291,21 @@ const PatientDashboardIndicators = () => {
 
       {patients.length > 0 && (
         <>
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-4 px-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <ArrowUpFromLine className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Número de Novas Admissões</p>
+                  <p className="text-xs text-muted-foreground/80">{MONTHS[Number(month)]} {year}{unit !== "all" ? ` · ${unit}` : ""}</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-primary font-heading">{indicators.totalAdmitted}</p>
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
             <KpiCard icon={Users} label="Internações" value={indicators.totalAdmitted} color="text-primary" />
             <KpiCard icon={BedDouble} label="Paciente-Dia" value={indicators.totalPatientDays} color="text-primary" />
