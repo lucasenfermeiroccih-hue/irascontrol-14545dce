@@ -463,12 +463,18 @@ const PatientDashboardIndicators = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card className="lg:col-span-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Stethoscope className="h-4 w-4 text-primary" />
-                  Internações por Especialidade — {month.length === 0 ? "Todos os meses" : month.length === 1 ? MONTHS[Number(month[0])] : `${month.length} meses`} {year.length === 0 ? "" : year.join(", ")}
+            <Card ref={chartRefs.specialty} className="lg:col-span-2">
+              <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+                <CardTitle className="text-base flex items-center gap-2 min-w-0">
+                  <Stethoscope className="h-4 w-4 text-primary shrink-0" />
+                  <span className="truncate">Internações por Especialidade — {month.length === 0 ? "Todos os meses" : month.length === 1 ? MONTHS[Number(month[0])] : `${month.length} meses`} {year.length === 0 ? "" : year.join(", ")}</span>
                 </CardTitle>
+                <ChartActions
+                  chartRef={chartRefs.specialty}
+                  chartTitle="Internações por Especialidade"
+                  metaValue={metas.specialty}
+                  onMetaChange={v => setMeta("specialty", v)}
+                />
               </CardHeader>
               <CardContent>
                 {indicators.specialtyData.every(s => s.internacoes === 0) ? (
@@ -486,6 +492,9 @@ const PatientDashboardIndicators = () => {
                           return item?.fullName || label;
                         }}
                       />
+                      {metas.specialty !== undefined && (
+                        <ReferenceLine y={metas.specialty} stroke="hsl(168 66% 34%)" strokeDasharray="6 3" strokeWidth={2} label={{ value: `Meta: ${metas.specialty}`, position: "right", fontSize: 10, fill: "hsl(168 66% 34%)" }} />
+                      )}
                       <Bar dataKey="internacoes" name="Internações" radius={[4, 4, 0, 0]}>
                         {indicators.specialtyData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -497,27 +506,48 @@ const PatientDashboardIndicators = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Desfechos do Período
+            <Card ref={chartRefs.outcomes}>
+              <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+                <CardTitle className="text-base flex items-center gap-2 min-w-0">
+                  <Activity className="h-4 w-4 text-primary shrink-0" />
+                  <span className="truncate">Desfechos do Período</span>
                 </CardTitle>
+                <ChartActions chartRef={chartRefs.outcomes} chartTitle="Desfechos do Período" />
               </CardHeader>
               <CardContent>
                 {indicators.outcomeData.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-12">Sem dados de desfechos.</p>
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie data={indicators.outcomeData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
-                        {indicators.outcomeData.map((entry, index) => (
-                          <Cell key={`pie-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                        <Pie
+                          data={indicators.outcomeData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius="40%"
+                          outerRadius="70%"
+                          paddingAngle={3}
+                          dataKey="value"
+                          label={({ value, percent }) => `${value} (${((percent || 0) * 100).toFixed(0)}%)`}
+                          labelLine={false}
+                        >
+                          {indicators.outcomeData.map((entry, index) => (
+                            <Cell key={`pie-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(v: number, n: string) => [v, n]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-1">
+                      {indicators.outcomeData.map((entry, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-xs">
+                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
+                          <span className="text-muted-foreground">{entry.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
