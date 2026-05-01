@@ -127,12 +127,14 @@ const PatientDashboardIndicators = () => {
       // Manter compat: ainda lê devices/prescriptions das tabelas (caso existam)
       if (pts.length > 0) {
         const patIds = pts.map((p: any) => p.id);
-        const [devRes, rxRes] = await Promise.all([
+        const [devRes, rxRes, labRes] = await Promise.all([
           supabase.from("patient_devices").select("*").in("patient_id", patIds),
-          supabase.from("antimicrobial_prescriptions").select("id, start_date, patient_id").eq("hospital_id", hospitalId),
+          supabase.from("antimicrobial_prescriptions").select("id, start_date, patient_id, drug_name").eq("hospital_id", hospitalId),
+          supabase.from("lab_results").select("id, patient_id, organism, collection_date, result_date").eq("hospital_id", hospitalId),
         ]);
         setDevices(devRes.data || []);
         setPrescriptions(rxRes.data || []);
+        setLabResults(labRes.data || []);
       }
 
       setLoading(false);
