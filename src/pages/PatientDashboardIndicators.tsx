@@ -55,15 +55,20 @@ function parseLocalDate(s?: string | null): Date | null {
 }
 
 // Calcula dias de sobreposição entre [insertion, removal] e [start, end] (mês selecionado)
+// Conta dias civis distintos dentro do mês vigente.
 function overlapDays(insertion?: string, removal?: string, start?: Date, end?: Date) {
   if (!insertion || !start || !end) return 0;
   const ins = parseLocalDate(insertion);
   const rem = removal ? parseLocalDate(removal) : new Date();
   if (!ins || !rem || isNaN(ins.getTime()) || isNaN(rem.getTime())) return 0;
-  const from = ins > start ? ins : start;
-  const to = rem < end ? rem : end;
+  const insStart = new Date(ins.getFullYear(), ins.getMonth(), ins.getDate(), 0, 0, 0, 0);
+  const remEnd = new Date(rem.getFullYear(), rem.getMonth(), rem.getDate(), 23, 59, 59, 999);
+  const from = insStart > start ? insStart : start;
+  const to = remEnd < end ? remEnd : end;
   if (from > to) return 0;
-  return Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
+  const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const toDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.max(0, Math.floor((toDay.getTime() - fromDay.getTime()) / 86400000) + 1);
 }
 
 const PatientDashboardIndicators = () => {
@@ -116,11 +121,12 @@ const PatientDashboardIndicators = () => {
   );
 
   const indicators = useMemo(() => {
-    const selectedMonths = month.length === 0 ? null : month.map(Number);
-    const selectedYears = year.length === 0 ? null : year.map(Number);
+    // Se nada selecionado, default = mês/ano atual (evita somar tudo indevidamente)
+    const selectedMonths = month.length === 0 ? [currentMonth] : month.map(Number);
+    const selectedYears = year.length === 0 ? [currentYear] : year.map(Number);
     const matchPeriod = (d: Date) =>
-      (!selectedMonths || selectedMonths.includes(d.getMonth())) &&
-      (!selectedYears || selectedYears.includes(d.getFullYear()));
+      selectedMonths.includes(d.getMonth()) &&
+      selectedYears.includes(d.getFullYear());
     const patientIdSet = new Set(filteredPatients.map(p => p.id));
     const filteredDevices = devices.filter(d => patientIdSet.has(d.patient_id));
     const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
@@ -156,13 +162,15 @@ const PatientDashboardIndicators = () => {
       return !!d && matchPeriod(d);
     }).length;
 
-    // Construir lista de períodos (mês/ano) a iterar. Se vazio, usar o ano/mês atual.
-    const yearsToUse = selectedYears && selectedYears.length > 0 ? selectedYears : [currentYear];
-    const monthsToUse = selectedMonths && selectedMonths.length > 0 ? selectedMonths : [...Array(12).keys()];
+    // Períodos = exatamente os meses/anos selecionados (cada combinação vira um intervalo)
     const periods: Array<{ start: Date; end: Date }> = [];
-    yearsToUse.forEach(y => {
-      monthsToUse.forEach(m => {
-        periods.push({ start: new Date(y, m, 1), end: new Date(y, m + 1, 0) });
+    selectedYears.forEach(y => {
+      selectedMonths.forEach(m => {
+        // end = último dia do mês às 23:59:59.999 para incluir o dia inteiro
+        periods.push({
+          start: new Date(y, m, 1, 0, 0, 0, 0),
+          end: new Date(y, m + 1, 0, 23, 59, 59, 999),
+        });
       });
     });
 
@@ -171,11 +179,18 @@ const PatientDashboardIndicators = () => {
       const admDate = parseLocalDate(p.admission_date);
       if (!admDate) return;
       const disDate = parseLocalDate(p.discharge_date) || new Date();
+      // Normaliza para fim do dia para garantir contagem inclusiva
+      const disEnd = new Date(disDate.getFullYear(), disDate.getMonth(), disDate.getDate(), 23, 59, 59, 999);
+      const admStart = new Date(admDate.getFullYear(), admDate.getMonth(), admDate.getDate(), 0, 0, 0, 0);
       periods.forEach(({ start, end }) => {
-        const from = admDate > start ? admDate : start;
-        const to = disDate < end ? disDate : end;
+        const from = admStart > start ? admStart : start;
+        const to = disEnd < end ? disEnd : end;
         if (from > to) return;
-        totalPatientDays += Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
+        // Conta dias civis distintos no intervalo (desmembrando por dia do mês vigente)
+        const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+        const toDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+        const days = Math.floor((toDay.getTime() - fromDay.getTime()) / 86400000) + 1;
+        totalPatientDays += Math.max(0, days);
       });
     });
 
