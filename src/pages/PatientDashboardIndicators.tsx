@@ -578,23 +578,50 @@ const PatientDashboardIndicators = () => {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-2 px-3 font-medium">Especialidade</th>
-                      <th className="text-center py-2 px-3 font-medium">Internações</th>
-                      <th className="text-center py-2 px-3 font-medium">% do Total</th>
+                      <th className="text-center py-2 px-3 font-medium">
+                        <button
+                          onClick={() => toggleSpecSort("internacoes")}
+                          className="inline-flex items-center gap-1 hover:text-primary mx-auto"
+                        >
+                          Internações
+                          {specSortKey === "internacoes"
+                            ? (specSortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                            : <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                        </button>
+                      </th>
+                      <th className="text-center py-2 px-3 font-medium">
+                        <button
+                          onClick={() => toggleSpecSort("percent")}
+                          className="inline-flex items-center gap-1 hover:text-primary mx-auto"
+                        >
+                          % do Total
+                          {specSortKey === "percent"
+                            ? (specSortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)
+                            : <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {indicators.specialtyData.map((s, i) => (
-                      <tr key={s.fullName} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="py-2 px-3 flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: COLORS[i] }} />
-                          {s.fullName}
-                        </td>
-                        <td className="text-center py-2 px-3 font-semibold">{s.internacoes}</td>
-                        <td className="text-center py-2 px-3 text-muted-foreground">
-                          {indicators.totalAdmitted > 0 ? ((s.internacoes / indicators.totalAdmitted) * 100).toFixed(1) : "0.0"}%
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const rows = indicators.specialtyData.map((s, i) => ({ ...s, _color: COLORS[i % COLORS.length] }));
+                      if (specSortKey) {
+                        const dir = specSortDir === "asc" ? 1 : -1;
+                        rows.sort((a, b) => (a.internacoes - b.internacoes) * dir);
+                      }
+                      return rows.map((s) => (
+                        <tr key={s.fullName} className="border-b last:border-0 hover:bg-muted/50">
+                          <td className="py-2 px-3 flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: s._color }} />
+                            {s.fullName}
+                          </td>
+                          <td className="text-center py-2 px-3 font-semibold">{s.internacoes}</td>
+                          <td className="text-center py-2 px-3 text-muted-foreground">
+                            {indicators.totalAdmitted > 0 ? ((s.internacoes / indicators.totalAdmitted) * 100).toFixed(1) : "0.0"}%
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                     <tr className="bg-muted/30 font-semibold">
                       <td className="py-2 px-3">Total</td>
                       <td className="text-center py-2 px-3">{indicators.totalAdmitted}</td>
