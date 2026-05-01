@@ -157,13 +157,15 @@ const PatientDashboardIndicators = () => {
       return !!d && matchPeriod(d);
     }).length;
 
-    // Construir lista de períodos (mês/ano) a iterar. Se vazio, usar o ano/mês atual.
-    const yearsToUse = selectedYears && selectedYears.length > 0 ? selectedYears : [currentYear];
-    const monthsToUse = selectedMonths && selectedMonths.length > 0 ? selectedMonths : [...Array(12).keys()];
+    // Períodos = exatamente os meses/anos selecionados (cada combinação vira um intervalo)
     const periods: Array<{ start: Date; end: Date }> = [];
-    yearsToUse.forEach(y => {
-      monthsToUse.forEach(m => {
-        periods.push({ start: new Date(y, m, 1), end: new Date(y, m + 1, 0) });
+    selectedYears.forEach(y => {
+      selectedMonths.forEach(m => {
+        // end = último dia do mês às 23:59:59.999 para incluir o dia inteiro
+        periods.push({
+          start: new Date(y, m, 1, 0, 0, 0, 0),
+          end: new Date(y, m + 1, 0, 23, 59, 59, 999),
+        });
       });
     });
 
