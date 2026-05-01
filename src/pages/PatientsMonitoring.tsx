@@ -17,7 +17,8 @@ import DashboardFilters from "@/components/DashboardFilters";
 import {
   Stethoscope, Search, Users, AlertTriangle, Activity, Thermometer,
   Plus, Pencil, LogOut, Clock, Save, Eye, FileText, ShieldAlert, Syringe,
-  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull, RefreshCw
+  ClipboardList, ChevronLeft, CheckCircle2, Trash2, LogIn, Skull, RefreshCw,
+  ArrowUp, ArrowDown, ArrowUpDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientMonitoring, PatientRecord } from "@/hooks/usePatientMonitoring";
@@ -132,6 +133,17 @@ export default function PatientsMonitoring() {
   const [filterAno, setFilterAno] = useState<string[]>([]);
   const [filterSetor, setFilterSetor] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  type SortKey = "prontuario" | "leito" | "unidade" | "diasInt" | "diasCti";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
   const [newPatientOpen, setNewPatientOpen] = useState(false);
   const [dischargeOpen, setDischargeOpen] = useState(false);
   const [dischargeConfirmOpen, setDischargeConfirmOpen] = useState(false);
@@ -269,10 +281,31 @@ export default function PatientsMonitoring() {
     }
     return true;
   });
-  const filtered = filteredForKpis.filter(p => {
+  const filteredUnsorted = filteredForKpis.filter(p => {
     if (filterStatus.length > 0 && !filterStatus.includes(p.status)) return false;
     return true;
   });
+  const filtered = (() => {
+    if (!sortKey) return filteredUnsorted;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const arr = [...filteredUnsorted];
+    arr.sort((a, b) => {
+      let va: any, vb: any;
+      if (sortKey === "diasInt") {
+        va = daysFromDate(a.dataInternacaoHospitalar);
+        vb = daysFromDate(b.dataInternacaoHospitalar);
+      } else if (sortKey === "diasCti") {
+        va = a.dataInternacaoCTI ? daysFromDate(a.dataInternacaoCTI) : -1;
+        vb = b.dataInternacaoCTI ? daysFromDate(b.dataInternacaoCTI) : -1;
+      } else {
+        va = String((a as any)[sortKey] ?? "");
+        vb = String((b as any)[sortKey] ?? "");
+        return va.localeCompare(vb, "pt-BR", { numeric: true }) * dir;
+      }
+      return (va - vb) * dir;
+    });
+    return arr;
+  })();
   const activeCount = filteredForKpis.filter(p => p.status === "active").length;
   const totalCount = filteredForKpis.length;
   const deceasedCount = filteredForKpis.filter(p => p.status === "deceased").length;
@@ -1536,11 +1569,31 @@ export default function PatientsMonitoring() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Paciente</TableHead>
-                  <TableHead>Prontuário</TableHead>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>Leito</TableHead>
-                  <TableHead>Dias Int.</TableHead>
-                  <TableHead>Dias CTI</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("prontuario")} className="flex items-center gap-1 hover:text-primary font-medium">
+                      Prontuário <SortIcon active={sortKey === "prontuario"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("unidade")} className="flex items-center gap-1 hover:text-primary font-medium">
+                      Setor <SortIcon active={sortKey === "unidade"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("leito")} className="flex items-center gap-1 hover:text-primary font-medium">
+                      Leito <SortIcon active={sortKey === "leito"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("diasInt")} className="flex items-center gap-1 hover:text-primary font-medium">
+                      Dias Int. <SortIcon active={sortKey === "diasInt"} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("diasCti")} className="flex items-center gap-1 hover:text-primary font-medium">
+                      Dias CTI <SortIcon active={sortKey === "diasCti"} dir={sortDir} />
+                    </button>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -2050,6 +2103,11 @@ export default function PatientsMonitoring() {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────
+function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
+  if (!active) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
+  return dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+}
+
 function Field({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
     <div className={className}>
