@@ -36,6 +36,7 @@ interface PatientRow {
   sector: string | null;
   specialty: string | null;
   admission_date: string;
+  icu_admission_date: string | null;
   discharge_date: string | null;
   status: string;
   discharge_type: string | null;
@@ -94,6 +95,10 @@ function countDistinctCivilDaysInPeriods(startDate?: string | null, endDate?: st
   return occupiedDays.size;
 }
 
+function getPatientPeriodStart(patient: PatientRow) {
+  return patient.icu_admission_date || patient.admission_date;
+}
+
 const PatientDashboardIndicators = () => {
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const currentYear = new Date().getFullYear();
@@ -112,7 +117,7 @@ const PatientDashboardIndicators = () => {
       setLoading(true);
       const pRes = await supabase
         .from("patients")
-        .select("id, full_name, sector, specialty, admission_date, discharge_date, status, discharge_type, clinical_data")
+        .select("id, full_name, sector, specialty, admission_date, icu_admission_date, discharge_date, status, discharge_type, clinical_data")
         .eq("hospital_id", hospitalId);
       const pts = (pRes.data || []) as PatientRow[];
       setPatients(pts);
@@ -155,7 +160,7 @@ const PatientDashboardIndicators = () => {
     const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
 
     const admittedInMonth = filteredPatients.filter(p => {
-      const d = parseLocalDate(p.admission_date);
+      const d = parseLocalDate(getPatientPeriodStart(p));
       return !!d && matchPeriod(d);
     });
 
@@ -198,7 +203,7 @@ const PatientDashboardIndicators = () => {
     });
 
     const totalPatientDays = filteredPatients.reduce(
-      (total, patient) => total + countDistinctCivilDaysInPeriods(patient.admission_date, patient.discharge_date, periods),
+      (total, patient) => total + countDistinctCivilDaysInPeriods(getPatientPeriodStart(patient), patient.discharge_date, periods),
       0,
     );
 
