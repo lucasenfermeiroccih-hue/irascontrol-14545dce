@@ -723,7 +723,7 @@ function DensityCard({ title, deviceDays, patientDays, icon: Icon, color }: {
   );
 }
 
-function TopRankCard({ title, icon: Icon, iconColor, data, barColor, emptyText, valueLabel }: {
+function TopRankCard({ title, icon: Icon, iconColor, data, barColor, emptyText, valueLabel, chartRef, metaValue, onMetaChange }: {
   title: string;
   icon: any;
   iconColor: string;
@@ -731,26 +731,72 @@ function TopRankCard({ title, icon: Icon, iconColor, data, barColor, emptyText, 
   barColor: string;
   emptyText: string;
   valueLabel: string;
+  chartRef?: React.RefObject<HTMLDivElement>;
+  metaValue?: number;
+  onMetaChange?: (v: number | undefined) => void;
 }) {
-  const chartHeight = Math.max(220, data.length * 26);
+  const chartHeight = Math.max(240, data.length * 28);
+  // Quebra labels longos em até 2 linhas para não sobrepor as barras
+  const renderYTick = (props: any) => {
+    const { x, y, payload } = props;
+    const text = String(payload.value || "");
+    const max = 18;
+    const lines: string[] = [];
+    if (text.length <= max) lines.push(text);
+    else {
+      const words = text.split(" ");
+      let cur = "";
+      for (const w of words) {
+        if ((cur + " " + w).trim().length > max && cur) {
+          lines.push(cur);
+          cur = w;
+        } else {
+          cur = (cur + " " + w).trim();
+        }
+        if (lines.length === 1 && cur.length > max) break;
+      }
+      if (cur && lines.length < 2) lines.push(cur.length > max ? cur.slice(0, max - 1) + "…" : cur);
+      else if (cur && lines.length >= 2) lines[1] = (lines[1] + " " + cur).slice(0, max - 1) + "…";
+    }
+    return (
+      <g transform={`translate(${x},${y})`}>
+        {lines.map((ln, i) => (
+          <text key={i} x={-4} y={i * 11 - (lines.length - 1) * 5} textAnchor="end" fontSize={10} fill="hsl(var(--muted-foreground))">
+            {ln}
+          </text>
+        ))}
+      </g>
+    );
+  };
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColor}`} />
-          {title}
+    <Card ref={chartRef}>
+      <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+        <CardTitle className="text-base flex items-center gap-2 min-w-0">
+          <Icon className={`h-4 w-4 shrink-0 ${iconColor}`} />
+          <span className="truncate">{title}</span>
         </CardTitle>
+        {chartRef && (
+          <ChartActions
+            chartRef={chartRef}
+            chartTitle={title}
+            metaValue={metaValue}
+            onMetaChange={onMetaChange}
+          />
+        )}
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-12">{emptyText}</p>
         ) : (
           <ResponsiveContainer width="100%" height={chartHeight}>
-            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} interval={0} />
+              <YAxis type="category" dataKey="name" tick={renderYTick} width={120} interval={0} />
               <Tooltip formatter={(v: number) => [v, valueLabel]} />
+              {metaValue !== undefined && (
+                <ReferenceLine x={metaValue} stroke="hsl(168 66% 34%)" strokeDasharray="6 3" strokeWidth={2} label={{ value: `Meta: ${metaValue}`, position: "top", fontSize: 10, fill: "hsl(168 66% 34%)" }} />
+              )}
               <Bar dataKey="value" name={valueLabel} fill={barColor} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
