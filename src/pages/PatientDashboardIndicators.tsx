@@ -517,38 +517,60 @@ const PatientDashboardIndicators = () => {
               <CardContent>
                 {indicators.outcomeData.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-12">Sem dados de desfechos.</p>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height={260}>
-                      <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                        <Pie
-                          data={indicators.outcomeData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius="40%"
-                          outerRadius="70%"
-                          paddingAngle={3}
-                          dataKey="value"
-                          label={({ value, percent }) => `${value} (${((percent || 0) * 100).toFixed(0)}%)`}
-                          labelLine={false}
-                        >
-                          {indicators.outcomeData.map((entry, index) => (
-                            <Cell key={`pie-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(v: number, n: string) => [v, n]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-1">
-                      {indicators.outcomeData.map((entry, i) => (
-                        <div key={i} className="flex items-center gap-1.5 text-xs">
-                          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
-                          <span className="text-muted-foreground">{entry.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
+                ) : (() => {
+                  const total = indicators.outcomeData.reduce((s: number, d: any) => s + (d.value || 0), 0) || 1;
+                  return (
+                    <>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                          <Pie
+                            data={indicators.outcomeData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="45%"
+                            outerRadius="80%"
+                            paddingAngle={2}
+                            dataKey="value"
+                            labelLine={false}
+                            label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }: any) => {
+                              if (!percent || percent < 0.06) return null;
+                              const RAD = Math.PI / 180;
+                              const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+                              const x = cx + r * Math.cos(-midAngle * RAD);
+                              const y = cy + r * Math.sin(-midAngle * RAD);
+                              return (
+                                <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+                                  {value}
+                                </text>
+                              );
+                            }}
+                          >
+                            {indicators.outcomeData.map((entry: any, index: number) => (
+                              <Cell key={`pie-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v: number, n: string) => [`${v} (${((Number(v) / total) * 100).toFixed(1)}%)`, n]} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="grid grid-cols-1 gap-1.5 mt-2 px-1">
+                        {indicators.outcomeData.map((entry: any, i: number) => {
+                          const pct = ((entry.value / total) * 100).toFixed(1);
+                          return (
+                            <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="inline-block w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />
+                                <span className="text-foreground truncate">{entry.name}</span>
+                              </div>
+                              <span className="text-muted-foreground tabular-nums shrink-0">
+                                {entry.value} <span className="opacity-70">({pct}%)</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
