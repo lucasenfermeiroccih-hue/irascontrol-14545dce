@@ -172,13 +172,13 @@ export default function PatientsMonitoring() {
   const [criteriosSelecionados, setCriteriosSelecionados] = useState<string[]>([]);
   const [justificativa, setJustificativa] = useState("");
   const [ocorrencia, setOcorrencia] = useState({ unidadeSetor: "", leito: "", dataSintomas: "", dataSuspeita: "", dataNotificacao: "", origemNotificacao: "" });
-  const [dispInvasivos, setDispInvasivos] = useState({
-    cvcInsercao: "", cvcRetirada: "", cvcTroca: "Não", cvcNovaInsercao: "", cvcNovaRetirada: "",
-    cvpInsercao: "", cvpRetirada: "", cvpTroca: "Não", cvpNovaInsercao: "", cvpNovaRetirada: "",
-    svuInsercao: "", svuRetirada: "", svuTroca: "Não", svuNovaInsercao: "", svuNovaRetirada: "",
-    vmInsercao: "", vmRetirada: "", vmTroca: "Não", vmNovaInsercao: "", vmNovaRetirada: "",
-    tqtInsercao: "", tqtRetirada: "", tqtTroca: "Não", tqtNovaInsercao: "", tqtNovaRetirada: "",
-    hemoInsercao: "", hemoRetirada: "", hemoTroca: "Não", hemoNovaInsercao: "", hemoNovaRetirada: "",
+  const [dispInvasivos, setDispInvasivos] = useState<any>({
+    cvcInsercao: "", cvcRetirada: "", cvcTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    cvpInsercao: "", cvpRetirada: "", cvpTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    svuInsercao: "", svuRetirada: "", svuTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    vmInsercao: "", vmRetirada: "", vmTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    tqtInsercao: "", tqtRetirada: "", tqtTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    hemoInsercao: "", hemoRetirada: "", hemoTrocas: [] as Array<{ insercao: string; retirada: string }>,
   });
   const [labPanel, setLabPanel] = useState<LabEntry[]>([]);
   const [newLabOpen, setNewLabOpen] = useState(false);
@@ -352,13 +352,22 @@ export default function PatientsMonitoring() {
       // Restore persisted tab data from clinical_data
       const cd = (pat as any)._clinicalData || {};
       setDispositivos(cd.dispositivos || { cvc: "", cvp: "Não", cateterArterial: "Não", cateterHemodialise: "", ventilacao: "Não", cateterVesical: "Não", sonda: "Não", drenos: "Não", feridaOp: "Não", tqt: "Não", vni: "Não" });
-      setDispInvasivos(cd.dispInvasivos || {
-        cvcInsercao: "", cvcRetirada: "", cvcTroca: "Não", cvcNovaInsercao: "", cvcNovaRetirada: "",
-        cvpInsercao: "", cvpRetirada: "", cvpTroca: "Não", cvpNovaInsercao: "", cvpNovaRetirada: "",
-        svuInsercao: "", svuRetirada: "", svuTroca: "Não", svuNovaInsercao: "", svuNovaRetirada: "",
-        vmInsercao: "", vmRetirada: "", vmTroca: "Não", vmNovaInsercao: "", vmNovaRetirada: "",
-        tqtInsercao: "", tqtRetirada: "", tqtTroca: "Não", tqtNovaInsercao: "", tqtNovaRetirada: "",
-        hemoInsercao: "", hemoRetirada: "", hemoTroca: "Não", hemoNovaInsercao: "", hemoNovaRetirada: "",
+      // Migrate legacy single-swap shape into trocas[] for backward compatibility
+      const rawDi = cd.dispInvasivos || {};
+      const migrateKey = (k: string) => {
+        const trocas = Array.isArray(rawDi[`${k}Trocas`]) ? rawDi[`${k}Trocas`] : [];
+        if (trocas.length === 0 && (rawDi[`${k}NovaInsercao`] || rawDi[`${k}NovaRetirada`])) {
+          trocas.push({ insercao: rawDi[`${k}NovaInsercao`] || "", retirada: rawDi[`${k}NovaRetirada`] || "" });
+        }
+        return trocas;
+      };
+      setDispInvasivos({
+        cvcInsercao: rawDi.cvcInsercao || "", cvcRetirada: rawDi.cvcRetirada || "", cvcTrocas: migrateKey("cvc"),
+        cvpInsercao: rawDi.cvpInsercao || "", cvpRetirada: rawDi.cvpRetirada || "", cvpTrocas: migrateKey("cvp"),
+        svuInsercao: rawDi.svuInsercao || "", svuRetirada: rawDi.svuRetirada || "", svuTrocas: migrateKey("svu"),
+        vmInsercao: rawDi.vmInsercao || "", vmRetirada: rawDi.vmRetirada || "", vmTrocas: migrateKey("vm"),
+        tqtInsercao: rawDi.tqtInsercao || "", tqtRetirada: rawDi.tqtRetirada || "", tqtTrocas: migrateKey("tqt"),
+        hemoInsercao: rawDi.hemoInsercao || "", hemoRetirada: rawDi.hemoRetirada || "", hemoTrocas: migrateKey("hemo"),
       });
       setAntibioticos(cd.antibioticos || []);
       setEvolucao(cd.evolucao || { evolucaoInternacao: "", colonizacoes: "", antibioticoPrevio: "", culturasPreviaCTI: "", resultadoCulturasCTI: "", antibioticosCTI: "", dispositivosInvasivos: "", examesImagem: "", condutasDiarias: "" });
@@ -399,18 +408,20 @@ export default function PatientsMonitoring() {
     if (ok) toast.success("Dados salvos com sucesso!");
   };
 
-  const calcTotalDays = (ins: string, ret: string, novaIns: string, novaRet: string) => {
+  const calcTotalDays = (ins: string, ret: string, trocas: Array<{ insercao: string; retirada: string }>) => {
     if (!ins) return null;
-    const first = calcDiasUso(ins, ret);
-    const second = novaIns ? calcDiasUso(novaIns, novaRet) : 0;
-    return first + second;
+    let total = calcDiasUso(ins, ret);
+    (trocas || []).forEach(t => {
+      if (t.insercao) total += calcDiasUso(t.insercao, t.retirada);
+    });
+    return total;
   };
-  const cvcDays = calcTotalDays(dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, dispInvasivos.cvcNovaInsercao, dispInvasivos.cvcNovaRetirada);
-  const cvpDays = calcTotalDays(dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, dispInvasivos.cvpNovaInsercao, dispInvasivos.cvpNovaRetirada);
-  const svuDays = calcTotalDays(dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, dispInvasivos.svuNovaInsercao, dispInvasivos.svuNovaRetirada);
-  const vmDays = calcTotalDays(dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, dispInvasivos.vmNovaInsercao, dispInvasivos.vmNovaRetirada);
-  const tqtDays = calcTotalDays(dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, dispInvasivos.tqtNovaInsercao, dispInvasivos.tqtNovaRetirada);
-  const hemoDays = calcTotalDays(dispInvasivos.hemoInsercao, dispInvasivos.hemoRetirada, dispInvasivos.hemoNovaInsercao, dispInvasivos.hemoNovaRetirada);
+  const cvcDays = calcTotalDays(dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, dispInvasivos.cvcTrocas);
+  const cvpDays = calcTotalDays(dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, dispInvasivos.cvpTrocas);
+  const svuDays = calcTotalDays(dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, dispInvasivos.svuTrocas);
+  const vmDays = calcTotalDays(dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, dispInvasivos.vmTrocas);
+  const tqtDays = calcTotalDays(dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, dispInvasivos.tqtTrocas);
+  const hemoDays = calcTotalDays(dispInvasivos.hemoInsercao, dispInvasivos.hemoRetirada, dispInvasivos.hemoTrocas);
 
   // ─── PATIENT DETAIL VIEW (full page with tabs) ─────────────
   if (selected) {
@@ -774,48 +785,82 @@ export default function PatientsMonitoring() {
                 <CardContent>
                   <div className="space-y-4">
                     {([
-                      ["CVC", dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, cvcDays, "cvcInsercao", "cvcRetirada", "cvcTroca", "cvcNovaInsercao", "cvcNovaRetirada", dispInvasivos.cvcTroca, dispInvasivos.cvcNovaInsercao, dispInvasivos.cvcNovaRetirada],
-                      ["CVP (Cateter Venoso Periférico)", dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, cvpDays, "cvpInsercao", "cvpRetirada", "cvpTroca", "cvpNovaInsercao", "cvpNovaRetirada", dispInvasivos.cvpTroca, dispInvasivos.cvpNovaInsercao, dispInvasivos.cvpNovaRetirada],
-                      ["SVD", dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, svuDays, "svuInsercao", "svuRetirada", "svuTroca", "svuNovaInsercao", "svuNovaRetirada", dispInvasivos.svuTroca, dispInvasivos.svuNovaInsercao, dispInvasivos.svuNovaRetirada],
-                      ["VM", dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, vmDays, "vmInsercao", "vmRetirada", "vmTroca", "vmNovaInsercao", "vmNovaRetirada", dispInvasivos.vmTroca, dispInvasivos.vmNovaInsercao, dispInvasivos.vmNovaRetirada],
-                      ["TQT", dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, tqtDays, "tqtInsercao", "tqtRetirada", "tqtTroca", "tqtNovaInsercao", "tqtNovaRetirada", dispInvasivos.tqtTroca, dispInvasivos.tqtNovaInsercao, dispInvasivos.tqtNovaRetirada],
-                      ["Cateter de Hemodiálise", dispInvasivos.hemoInsercao, dispInvasivos.hemoRetirada, hemoDays, "hemoInsercao", "hemoRetirada", "hemoTroca", "hemoNovaInsercao", "hemoNovaRetirada", dispInvasivos.hemoTroca, dispInvasivos.hemoNovaInsercao, dispInvasivos.hemoNovaRetirada],
-                    ] as const).map(([label, insVal, retVal, days, insKey, retKey, trocaKey, novaInsKey, novaRetKey, trocaVal, novaInsVal, novaRetVal]) => (
-                      <div key={label} className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-                          <div className="space-y-2"><Label className="font-medium">{label} — Inserção</Label><Input disabled={readOnly} type="date" value={insVal} onChange={e => setDispInvasivos(p => ({ ...p, [insKey]: e.target.value }))} /></div>
-                          <div className="space-y-2"><Label>{label} — Retirada</Label><Input disabled={readOnly} type="date" value={retVal} onChange={e => setDispInvasivos(p => ({ ...p, [retKey]: e.target.value }))} /></div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Permanência: <strong className="text-foreground">{days != null ? `${days} dias` : "—"}</strong></span>
+                      ["CVC", "cvc", dispInvasivos.cvcInsercao, dispInvasivos.cvcRetirada, dispInvasivos.cvcTrocas, cvcDays],
+                      ["CVP (Cateter Venoso Periférico)", "cvp", dispInvasivos.cvpInsercao, dispInvasivos.cvpRetirada, dispInvasivos.cvpTrocas, cvpDays],
+                      ["SVD", "svu", dispInvasivos.svuInsercao, dispInvasivos.svuRetirada, dispInvasivos.svuTrocas, svuDays],
+                      ["VM", "vm", dispInvasivos.vmInsercao, dispInvasivos.vmRetirada, dispInvasivos.vmTrocas, vmDays],
+                      ["TQT", "tqt", dispInvasivos.tqtInsercao, dispInvasivos.tqtRetirada, dispInvasivos.tqtTrocas, tqtDays],
+                      ["Cateter de Hemodiálise", "hemo", dispInvasivos.hemoInsercao, dispInvasivos.hemoRetirada, dispInvasivos.hemoTrocas, hemoDays],
+                    ] as const).map(([label, prefix, insVal, retVal, trocas, days]) => {
+                      const insKey = `${prefix}Insercao`;
+                      const retKey = `${prefix}Retirada`;
+                      const trocasKey = `${prefix}Trocas`;
+                      const trocasArr = (trocas || []) as Array<{ insercao: string; retirada: string }>;
+                      const updateTroca = (idx: number, field: "insercao" | "retirada", value: string) => {
+                        setDispInvasivos((p: any) => {
+                          const next = [...(p[trocasKey] || [])];
+                          next[idx] = { ...next[idx], [field]: value };
+                          return { ...p, [trocasKey]: next };
+                        });
+                      };
+                      const removeTroca = (idx: number) => {
+                        setDispInvasivos((p: any) => ({ ...p, [trocasKey]: (p[trocasKey] || []).filter((_: any, i: number) => i !== idx) }));
+                      };
+                      const addTroca = () => {
+                        setDispInvasivos((p: any) => ({ ...p, [trocasKey]: [...(p[trocasKey] || []), { insercao: "", retirada: "" }] }));
+                      };
+                      return (
+                        <div key={label} className="space-y-3 p-3 rounded-lg border bg-muted/30">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                            <div className="space-y-2"><Label className="font-medium">{label} — Inserção</Label><Input disabled={readOnly} type="date" value={insVal} onChange={e => setDispInvasivos((p: any) => ({ ...p, [insKey]: e.target.value }))} /></div>
+                            <div className="space-y-2"><Label>{label} — Retirada</Label><Input disabled={readOnly} type="date" value={retVal} onChange={e => setDispInvasivos((p: any) => ({ ...p, [retKey]: e.target.value }))} /></div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">Permanência total: <strong className="text-foreground">{days != null ? `${days} dias` : "—"}</strong></span>
+                            </div>
+                          </div>
+
+                          {trocasArr.map((t, idx) => (
+                            <div key={idx} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 pt-2 border-t items-end">
+                              <div className="space-y-2"><Label>Nova Inserção #{idx + 1}</Label><Input disabled={readOnly} type="date" value={t.insercao} onChange={e => updateTroca(idx, "insercao", e.target.value)} /></div>
+                              <div className="space-y-2"><Label>Nova Retirada #{idx + 1}</Label><Input disabled={readOnly} type="date" value={t.retirada} onChange={e => updateTroca(idx, "retirada", e.target.value)} /></div>
+                              {!readOnly && (
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => removeTroca(idx)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+
+                          <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+                            <Label className="text-sm font-medium">Realizado troca de dispositivo?</Label>
+                            <RadioGroup
+                              disabled={readOnly}
+                              value={trocasArr.length > 0 ? "Sim" : "Não"}
+                              onValueChange={v => {
+                                if (v === "Sim" && trocasArr.length === 0) addTroca();
+                                if (v === "Não") setDispInvasivos((p: any) => ({ ...p, [trocasKey]: [] }));
+                              }}
+                              className="flex gap-4"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="Sim" id={`${prefix}-troca-sim`} />
+                                <Label htmlFor={`${prefix}-troca-sim`} className="cursor-pointer">Sim</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="Não" id={`${prefix}-troca-nao`} />
+                                <Label htmlFor={`${prefix}-troca-nao`} className="cursor-pointer">Não</Label>
+                              </div>
+                            </RadioGroup>
+                            {trocasArr.length > 0 && !readOnly && (
+                              <Button variant="outline" size="sm" onClick={addTroca} className="gap-1.5 ml-auto">
+                                <Plus className="h-4 w-4" />Adicionar nova troca
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
-                          <Label className="text-sm font-medium">Realizado troca de dispositivo?</Label>
-                          <RadioGroup
-                            disabled={readOnly}
-                            value={trocaVal || "Não"}
-                            onValueChange={v => setDispInvasivos(p => ({ ...p, [trocaKey]: v }))}
-                            className="flex gap-4"
-                          >
-                            <div className="flex items-center gap-2">
-                              <RadioGroupItem value="Sim" id={`${trocaKey}-sim`} />
-                              <Label htmlFor={`${trocaKey}-sim`} className="cursor-pointer">Sim</Label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <RadioGroupItem value="Não" id={`${trocaKey}-nao`} />
-                              <Label htmlFor={`${trocaKey}-nao`} className="cursor-pointer">Não</Label>
-                            </div>
-                          </RadioGroup>
-                        </div>
-                        {trocaVal === "Sim" && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                            <div className="space-y-2"><Label>Nova Inserção</Label><Input disabled={readOnly} type="date" value={novaInsVal} onChange={e => setDispInvasivos(p => ({ ...p, [novaInsKey]: e.target.value }))} /></div>
-                            <div className="space-y-2"><Label>Nova Retirada</Label><Input disabled={readOnly} type="date" value={novaRetVal} onChange={e => setDispInvasivos(p => ({ ...p, [novaRetKey]: e.target.value }))} /></div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
