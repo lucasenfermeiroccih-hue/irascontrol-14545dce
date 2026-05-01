@@ -1061,10 +1061,9 @@ export default function PatientsMonitoring() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="font-medium">Nome do Antibiótico *</Label>
-                      <Select value={newAtb.nome} onValueChange={v => setNewAtb(p => ({ ...p, nome: v }))}>
-                        <SelectTrigger><SelectValue placeholder="Selecione o antibiótico..." /></SelectTrigger>
-                        <SelectContent className="max-h-60">
-                          {[
+                      <ComboboxSearch
+                        options={[
+                          ...[
                             "Penicilina G","Penicilina benzatina","Oxacilina","Nafcilina","Ampicilina","Amoxicilina",
                             "Piperacilina","Piperacilina/tazobactam","Cefazolina","Cefuroxima","Ceftriaxona","Cefotaxima",
                             "Ceftazidima","Cefepime","Ceftarolina","Ceftolozano/tazobactam","Ceftazidima/avibactam",
@@ -1077,12 +1076,14 @@ export default function PatientsMonitoring() {
                             "Doxiciclina","Minociclina","Tigeciclina","Eravaciclina",
                             "Sulfametoxazol-trimetoprim","Sulfadiazina","Metronidazol","Tinidazol",
                             "Cloranfenicol","Fosfomicina","Nitrofurantoína","Rifampicina","Rifabutina",
-                            "Mupirocina","Polimixina B","Colistina","Fidaxomicina","Bacitracina","Outros"
-                          ].map(atb => (
-                            <SelectItem key={atb} value={atb}>{atb}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            "Mupirocina","Polimixina B","Colistina","Fidaxomicina","Bacitracina","Fluconazol"
+                          ].sort((a, b) => a.localeCompare(b, "pt-BR")),
+                          "Outros"
+                        ]}
+                        value={newAtb.nome}
+                        onValueChange={v => setNewAtb(p => ({ ...p, nome: v }))}
+                        placeholder="Selecione o antibiótico..."
+                      />
                     </div>
                     {newAtb.nome === "Outros" && (
                       <div className="space-y-2">
