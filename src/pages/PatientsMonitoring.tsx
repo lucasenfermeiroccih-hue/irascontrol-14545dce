@@ -818,6 +818,13 @@ export default function PatientsMonitoring() {
                   <DeviceSelect label="Ferida Operatória" disabled={readOnly} value={dispositivos.feridaOp} onChange={v => setDispositivos(p => ({ ...p, feridaOp: v }))} options={["Sim", "Não"]} />
                   <DeviceSelect label="TQT (Traqueostomia)" disabled={readOnly} value={dispositivos.tqt} onChange={v => setDispositivos(p => ({ ...p, tqt: v }))} options={["Sim", "Não"]} />
                   <DeviceSelect label="VNI (Ventilação Não Invasiva)" disabled={readOnly} value={dispositivos.vni} onChange={v => setDispositivos(p => ({ ...p, vni: v }))} options={["Sim", "Não"]} />
+                  {selected?.unidade === "UTI Neonatal" && (
+                    <>
+                      <DeviceSelect label="Cateter de PICC" disabled={readOnly} value={dispositivos.picc} onChange={v => setDispositivos(p => ({ ...p, picc: v }))} options={["Sim", "Não"]} />
+                      <DeviceSelect label="Cateter Umbilical Venoso – CUV" disabled={readOnly} value={dispositivos.cuv} onChange={v => setDispositivos(p => ({ ...p, cuv: v }))} options={["Sim", "Não"]} />
+                      <DeviceSelect label="Cateter Umbilical Arterial – CVA" disabled={readOnly} value={dispositivos.cva} onChange={v => setDispositivos(p => ({ ...p, cva: v }))} options={["Sim", "Não"]} />
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
