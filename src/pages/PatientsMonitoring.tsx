@@ -688,7 +688,7 @@ export default function PatientsMonitoring() {
                   ["swabRetal", "Swab retal", "swabRetalObs"],
                   ["swabNasal", "Swab nasal", "swabNasalObs"],
                   ...(selected?.unidade === "UTI Neonatal" ? [["liquor", "Liquor", "liquorObs"]] : []),
-                ] as Array<readonly [string, string, string]>).map(([key, label, obsKey]) => (
+                ] as unknown as Array<readonly [string, string, string]>).map(([key, label, obsKey]) => (
                   <div key={key} className="p-4 rounded-lg border bg-muted/30">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                       <div className="space-y-2">
