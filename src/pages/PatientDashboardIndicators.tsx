@@ -42,12 +42,24 @@ interface PatientRow {
   clinical_data: any;
 }
 
+// Parse "YYYY-MM-DD" (ou ISO) como data LOCAL, evitando deslocamento de fuso (UTC)
+function parseLocalDate(s?: string | null): Date | null {
+  if (!s) return null;
+  const datePart = String(s).slice(0, 10);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+  if (!m) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
 // Calcula dias de sobreposição entre [insertion, removal] e [start, end] (mês selecionado)
 function overlapDays(insertion?: string, removal?: string, start?: Date, end?: Date) {
   if (!insertion || !start || !end) return 0;
-  const ins = new Date(insertion);
-  const rem = removal ? new Date(removal) : new Date();
-  if (isNaN(ins.getTime()) || isNaN(rem.getTime())) return 0;
+  const ins = parseLocalDate(insertion);
+  const rem = removal ? parseLocalDate(removal) : new Date();
+  if (!ins || !rem || isNaN(ins.getTime()) || isNaN(rem.getTime())) return 0;
   const from = ins > start ? ins : start;
   const to = rem < end ? rem : end;
   if (from > to) return 0;
@@ -111,8 +123,8 @@ const PatientDashboardIndicators = () => {
     const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
 
     const admittedInMonth = filteredPatients.filter(p => {
-      if (!p.admission_date) return false;
-      const d = new Date(p.admission_date);
+      const d = parseLocalDate(p.admission_date);
+      if (!d) return false;
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
@@ -131,29 +143,31 @@ const PatientDashboardIndicators = () => {
 
     const deaths = filteredPatients.filter(p => {
       if (p.status !== "deceased" && p.discharge_type !== "Óbito") return false;
-      const d = p.discharge_date ? new Date(p.discharge_date) : null;
-      return d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const d = parseLocalDate(p.discharge_date);
+      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
     const discharges = filteredPatients.filter(p => {
       if (p.discharge_type === "Óbito" || p.status === "deceased") return false;
       if (p.status !== "discharged" && p.discharge_type !== "Alta") return false;
-      const d = p.discharge_date ? new Date(p.discharge_date) : null;
-      return d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const d = parseLocalDate(p.discharge_date);
+      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
-    const startOfMonth = new Date(Date.UTC(selectedYear, selectedMonth, 1));
-    const endOfMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0));
+    // Limites do mês em horário LOCAL (consistente com parseLocalDate)
+    const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+    const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
 
     let totalPatientDays = 0;
     filteredPatients.forEach(p => {
-      if (!p.admission_date) return;
-      const admDate = new Date(p.admission_date);
-      const disDate = p.discharge_date ? new Date(p.discharge_date) : new Date();
+      const admDate = parseLocalDate(p.admission_date);
+      if (!admDate) return;
+      const disDate = parseLocalDate(p.discharge_date) || new Date();
       const from = admDate > startOfMonth ? admDate : startOfMonth;
       const to = disDate < endOfMonth ? disDate : endOfMonth;
+      if (from > to) return;
       const days = Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
-      if (from <= to) totalPatientDays += days;
+      totalPatientDays += days;
     });
 
     // Dispositivos: tenta primeiro tabela patient_devices; se vazio, soma de clinical_data.dispInvasivos
@@ -185,9 +199,8 @@ const PatientDashboardIndicators = () => {
 
     // Antibióticos: tabela antimicrobial_prescriptions + clinical_data.antibioticos[]
     const abFromTable = filteredPrescriptions.filter(rx => {
-      if (!rx.start_date) return false;
-      const d = new Date(rx.start_date);
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const d = parseLocalDate(rx.start_date);
+      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
     let abFromClinical = 0;
@@ -195,17 +208,16 @@ const PatientDashboardIndicators = () => {
       const atbs = p.clinical_data?.antibioticos;
       if (!Array.isArray(atbs)) return;
       atbs.forEach((a: any) => {
-        if (!a?.dataInicio) return;
-        const d = new Date(a.dataInicio);
-        if (d.getMonth() === selectedMonth && d.getFullYear() === selectedYear) abFromClinical++;
+        const d = parseLocalDate(a?.dataInicio);
+        if (d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear) abFromClinical++;
       });
     });
     const abCount = abFromTable + abFromClinical;
 
     const extubationsTable = filteredDevices.filter(d => {
-      if (d.device_type !== "vm" || !d.removal_date) return false;
-      const rd = new Date(d.removal_date);
-      return rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear;
+      if (d.device_type !== "vm") return false;
+      const rd = parseLocalDate(d.removal_date);
+      return !!rd && rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear;
     }).length;
 
     let extubationsClinical = 0;
@@ -213,9 +225,8 @@ const PatientDashboardIndicators = () => {
       const di = p.clinical_data?.dispInvasivos;
       if (!di) return;
       [di.vmRetirada, di.vmNovaRetirada].forEach((dt: string) => {
-        if (!dt) return;
-        const rd = new Date(dt);
-        if (rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear) extubationsClinical++;
+        const rd = parseLocalDate(dt);
+        if (rd && rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear) extubationsClinical++;
       });
     });
     const extubations = extubationsTable + extubationsClinical;
