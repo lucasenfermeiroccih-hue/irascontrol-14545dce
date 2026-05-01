@@ -192,6 +192,9 @@ export default function PatientsMonitoring() {
     vmInsercao: "", vmRetirada: "", vmTrocas: [] as Array<{ insercao: string; retirada: string }>,
     tqtInsercao: "", tqtRetirada: "", tqtTrocas: [] as Array<{ insercao: string; retirada: string }>,
     hemoInsercao: "", hemoRetirada: "", hemoTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    piccInsercao: "", piccRetirada: "", piccTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    cuvInsercao: "", cuvRetirada: "", cuvTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    cvaInsercao: "", cvaRetirada: "", cvaTrocas: [] as Array<{ insercao: string; retirada: string }>,
   });
   const [labPanel, setLabPanel] = useState<LabEntry[]>([]);
   const [newLabOpen, setNewLabOpen] = useState(false);
