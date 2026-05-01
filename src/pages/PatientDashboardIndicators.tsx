@@ -313,7 +313,8 @@ const PatientDashboardIndicators = () => {
             selected={month}
             onChange={setMonth}
             options={MONTHS.map((m, i) => ({ value: String(i), label: m }))}
-            className="w-[160px]"
+            className="w-[200px]"
+            showNav
           />
           <MultiSelectFilter
             label="Ano"
