@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, BedDouble, Skull, HeartPulse, Syringe,
   Activity, ArrowUpFromLine, Stethoscope, Wind, Cable, Droplets, Loader2,
-  Pill, Microscope
+  Pill, Microscope, FileText
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import MultiSelectFilter from "@/components/MultiSelectFilter";
 import {
@@ -332,19 +334,13 @@ const PatientDashboardIndicators = () => {
           <h1 className="text-xl md:text-2xl font-bold">Dashboard de Indicadores Operacionais</h1>
           <p className="text-muted-foreground">Dados do Monitoramento de Pacientes — internações, desfechos, dispositivos e antimicrobianos</p>
         </div>
-        <div className="flex gap-2">
-          <DashboardAIInsights generateInsights={() => {
-            const ins: string[] = [];
-            ins.push(`📊 ${indicators.totalAdmitted} pacientes admitidos no período selecionado.`);
-            ins.push(`💀 ${indicators.deaths} óbitos e ${indicators.discharges} altas registradas.`);
-            ins.push(`🛏️ Total de ${indicators.totalPatientDays} paciente-dia.`);
-            if (indicators.cvcDays > 0) ins.push(`💉 CVC: ${indicators.cvcDays} dias-dispositivo.`);
-            if (indicators.svuDays > 0) ins.push(`🔧 SVD: ${indicators.svuDays} dias-dispositivo.`);
-            if (indicators.vmDays > 0) ins.push(`🌬️ VM: ${indicators.vmDays} dias-dispositivo.`);
-            if (indicators.abCount > 0) ins.push(`💊 ${indicators.abCount} antimicrobianos utilizados no período.`);
-            if (indicators.extubations > 0) ins.push(`✅ ${indicators.extubations} extubações realizadas com sucesso.`);
-            return ins;
-          }} />
+        <div className="flex gap-2 flex-wrap">
+          <PdfReportButton
+            indicators={indicators}
+            month={month}
+            year={year}
+            unit={unit}
+          />
           <MultiSelectFilter
             label="Unidade"
             placeholder="Todas as unidades"
@@ -511,6 +507,37 @@ const PatientDashboardIndicators = () => {
             />
           </div>
 
+          <Card className="border-primary/20">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Insights Inteligentes (IA)
+              </CardTitle>
+              <DashboardAIInsights
+                pageTitle="Dashboard de Indicadores Operacionais"
+                generateInsights={() => {
+                  const ins: string[] = [];
+                  ins.push(`📊 ${indicators.totalAdmitted} pacientes admitidos no período selecionado.`);
+                  ins.push(`💀 ${indicators.deaths} óbitos e ${indicators.discharges} altas registradas.`);
+                  ins.push(`🛏️ Total de ${indicators.totalPatientDays} paciente-dia.`);
+                  if (indicators.cvcDays > 0) ins.push(`💉 CVC: ${indicators.cvcDays} dias-dispositivo.`);
+                  if (indicators.svuDays > 0) ins.push(`🔧 SVD: ${indicators.svuDays} dias-dispositivo.`);
+                  if (indicators.vmDays > 0) ins.push(`🌬️ VM: ${indicators.vmDays} dias-dispositivo.`);
+                  if (indicators.abCount > 0) ins.push(`💊 ${indicators.abCount} antimicrobianos utilizados no período.`);
+                  if (indicators.extubations > 0) ins.push(`✅ ${indicators.extubations} extubações realizadas com sucesso.`);
+                  if (indicators.topAntibiotics[0]) ins.push(`🥇 Antibiótico mais usado: ${indicators.topAntibiotics[0].name} (${indicators.topAntibiotics[0].value}x).`);
+                  if (indicators.topOrganisms[0]) ins.push(`🦠 Microrganismo mais isolado: ${indicators.topOrganisms[0].name} (${indicators.topOrganisms[0].value}x).`);
+                  return ins;
+                }}
+              />
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Clique em <strong>Insights IA</strong> para gerar análise inteligente do período. Use o botão <strong>Relatório PDF</strong> no topo para baixar um documento técnico completo gerado pela IA.
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Detalhamento por Especialidade</CardTitle>
@@ -624,6 +651,85 @@ function TopRankCard({ title, icon: Icon, iconColor, data, barColor, emptyText, 
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function PdfReportButton({ indicators, month, year, unit }: {
+  indicators: any;
+  month: string[];
+  year: string[];
+  unit: string[];
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const monthsNames = month.length === 0 ? [] : month.map((m) => MONTHS[Number(m)]);
+      const yearsNum = year.length === 0 ? [] : year.map((y) => Number(y));
+
+      const payload = {
+        pageTitle: "Dashboard de Indicadores Operacionais",
+        filters: { months: monthsNames, years: yearsNum, units: unit },
+        metrics: {
+          totalAdmitted: indicators.totalAdmitted,
+          totalPatientDays: indicators.totalPatientDays,
+          deaths: indicators.deaths,
+          discharges: indicators.discharges,
+          cvcDays: indicators.cvcDays,
+          svuDays: indicators.svuDays,
+          vmDays: indicators.vmDays,
+          abCount: indicators.abCount,
+          extubations: indicators.extubations,
+        },
+        specialtyData: indicators.specialtyData.map((s: any) => ({
+          fullName: s.fullName,
+          internacoes: s.internacoes,
+        })),
+        topAntibiotics: indicators.topAntibiotics,
+        topOrganisms: indicators.topOrganisms,
+      };
+
+      toast.info("Gerando relatório com IA...");
+      const { data, error } = await supabase.functions.invoke("dashboard-pdf-report", {
+        body: payload,
+      });
+
+      if (error) throw error;
+      if (!data?.pdfBase64) throw new Error("Resposta inválida");
+
+      // Decode base64 to blob and download
+      const binary = atob(data.pdfBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-indicadores-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Relatório PDF gerado!");
+    } catch (err: any) {
+      console.error("PDF error:", err);
+      const msg = err?.context?.statusCode === 429 || err?.message?.includes("429")
+        ? "Limite de requisições. Tente novamente em alguns minutos."
+        : err?.context?.statusCode === 402 || err?.message?.includes("402")
+        ? "Créditos de IA esgotados."
+        : err?.message || "Erro ao gerar PDF";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="default" onClick={handleGenerate} disabled={loading} className="gap-2">
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+      Relatório PDF
+    </Button>
   );
 }
 
