@@ -54,21 +54,44 @@ function parseLocalDate(s?: string | null): Date | null {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
 }
 
-// Calcula dias de sobreposição entre [insertion, removal] e [start, end] (mês selecionado)
-// Conta dias civis distintos dentro do mês vigente.
-function overlapDays(insertion?: string, removal?: string, start?: Date, end?: Date) {
-  if (!insertion || !start || !end) return 0;
-  const ins = parseLocalDate(insertion);
-  const rem = removal ? parseLocalDate(removal) : new Date();
-  if (!ins || !rem || isNaN(ins.getTime()) || isNaN(rem.getTime())) return 0;
-  const insStart = new Date(ins.getFullYear(), ins.getMonth(), ins.getDate(), 0, 0, 0, 0);
-  const remEnd = new Date(rem.getFullYear(), rem.getMonth(), rem.getDate(), 23, 59, 59, 999);
-  const from = insStart > start ? insStart : start;
-  const to = remEnd < end ? remEnd : end;
-  if (from > to) return 0;
-  const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const toDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-  return Math.max(0, Math.floor((toDay.getTime() - fromDay.getTime()) / 86400000) + 1);
+function startOfCivilDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+}
+
+function endOfCivilDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
+function dayKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function countDistinctCivilDaysInPeriods(startDate?: string | null, endDate?: string | null, periods?: Array<{ start: Date; end: Date }>) {
+  if (!startDate || !periods || periods.length === 0) return 0;
+  const start = parseLocalDate(startDate);
+  const end = endDate ? parseLocalDate(endDate) : new Date();
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+
+  const occupiedDays = new Set<string>();
+
+  periods.forEach(({ start: periodStart, end: periodEnd }) => {
+    const from = startOfCivilDay(start > periodStart ? start : periodStart);
+    const to = endOfCivilDay(end < periodEnd ? end : periodEnd);
+    if (from > to) return;
+
+    const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const lastDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+
+    while (cursor <= lastDay) {
+      occupiedDays.add(dayKey(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+
+  return occupiedDays.size;
 }
 
 const PatientDashboardIndicators = () => {
@@ -122,8 +145,8 @@ const PatientDashboardIndicators = () => {
 
   const indicators = useMemo(() => {
     // Se nada selecionado, default = mês/ano atual (evita somar tudo indevidamente)
-    const selectedMonths = month.length === 0 ? [currentMonth] : month.map(Number);
-    const selectedYears = year.length === 0 ? [currentYear] : year.map(Number);
+    const selectedMonths = month.length === 0 ? [currentMonth] : Array.from(new Set(month.map(Number))).sort((a, b) => a - b);
+    const selectedYears = year.length === 0 ? [currentYear] : Array.from(new Set(year.map(Number))).sort((a, b) => a - b);
     const matchPeriod = (d: Date) =>
       selectedMonths.includes(d.getMonth()) &&
       selectedYears.includes(d.getFullYear());
@@ -174,33 +197,16 @@ const PatientDashboardIndicators = () => {
       });
     });
 
-    let totalPatientDays = 0;
-    filteredPatients.forEach(p => {
-      const admDate = parseLocalDate(p.admission_date);
-      if (!admDate) return;
-      const disDate = parseLocalDate(p.discharge_date) || new Date();
-      // Normaliza para fim do dia para garantir contagem inclusiva
-      const disEnd = new Date(disDate.getFullYear(), disDate.getMonth(), disDate.getDate(), 23, 59, 59, 999);
-      const admStart = new Date(admDate.getFullYear(), admDate.getMonth(), admDate.getDate(), 0, 0, 0, 0);
-      periods.forEach(({ start, end }) => {
-        const from = admStart > start ? admStart : start;
-        const to = disEnd < end ? disEnd : end;
-        if (from > to) return;
-        // Conta dias civis distintos no intervalo (desmembrando por dia do mês vigente)
-        const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-        const toDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-        const days = Math.floor((toDay.getTime() - fromDay.getTime()) / 86400000) + 1;
-        totalPatientDays += Math.max(0, days);
-      });
-    });
+    const totalPatientDays = filteredPatients.reduce(
+      (total, patient) => total + countDistinctCivilDaysInPeriods(patient.admission_date, patient.discharge_date, periods),
+      0,
+    );
 
     // Dispositivos: tenta primeiro tabela patient_devices; se vazio, soma de clinical_data.dispInvasivos
     const calcDeviceDaysFromTable = (type: string) => {
       let total = 0;
       filteredDevices.filter(d => d.device_type === type).forEach(dev => {
-        periods.forEach(({ start, end }) => {
-          total += overlapDays(dev.insertion_date, dev.removal_date, start, end);
-        });
+          total += countDistinctCivilDaysInPeriods(dev.insertion_date, dev.removal_date, periods);
       });
       return total;
     };
@@ -210,10 +216,8 @@ const PatientDashboardIndicators = () => {
       filteredPatients.forEach(p => {
         const di = p.clinical_data?.dispInvasivos;
         if (!di) return;
-        periods.forEach(({ start, end }) => {
-          total += overlapDays(di[insKey], di[remKey], start, end);
-          total += overlapDays(di[novaInsKey], di[novaRemKey], start, end);
-        });
+        total += countDistinctCivilDaysInPeriods(di[insKey], di[remKey], periods);
+        total += countDistinctCivilDaysInPeriods(di[novaInsKey], di[novaRemKey], periods);
       });
       return total;
     };
