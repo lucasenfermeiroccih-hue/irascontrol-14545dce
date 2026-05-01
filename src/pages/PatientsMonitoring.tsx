@@ -182,6 +182,7 @@ export default function PatientsMonitoring() {
   });
   const [labPanel, setLabPanel] = useState<LabEntry[]>([]);
   const [newLabOpen, setNewLabOpen] = useState(false);
+  const [editingLabIndex, setEditingLabIndex] = useState<number | null>(null);
   const [newLab, setNewLab] = useState({ exame: "", data: "", microrganismo: "", sensibilidade: "", mdr: false });
   const [responsavel, setResponsavel] = useState("");
   const [antibioticos, setAntibioticos] = useState<AntibioticEntry[]>([]);
@@ -659,7 +660,7 @@ export default function PatientsMonitoring() {
                     <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Syringe className="h-4 w-4 text-primary" />Painel Laboratorial
                     </h4>
-                    <Button variant="outline" size="sm" onClick={() => { setNewLab({ exame: "", data: new Date().toISOString().slice(0, 10).split("-").reverse().join("/"), microrganismo: "", sensibilidade: "", mdr: false }); setNewLabOpen(true); }} className="gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => { setEditingLabIndex(null); setNewLab({ exame: "", data: new Date().toISOString().slice(0, 10).split("-").reverse().join("/"), microrganismo: "", sensibilidade: "", mdr: false }); setNewLabOpen(true); }} className="gap-1.5">
                       <Plus className="h-4 w-4" />Cadastrar Exame
                     </Button>
                   </div>
@@ -689,10 +690,16 @@ export default function PatientsMonitoring() {
                             </td>
                             <td className="p-3">
                               {!readOnly && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                  onClick={() => { setLabPanel(prev => prev.filter((_, idx) => idx !== i)); toast.success("Exame removido do painel"); }}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                    onClick={() => { setEditingLabIndex(i); setNewLab({ ...lab }); setNewLabOpen(true); }}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                    onClick={() => { setLabPanel(prev => prev.filter((_, idx) => idx !== i)); toast.success("Exame removido do painel"); }}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               )}
                             </td>
                           </tr>
@@ -1314,7 +1321,7 @@ export default function PatientsMonitoring() {
         {/* ─── NEW LAB EXAM MODAL ──────────────────────────── */}
         <Dialog open={newLabOpen} onOpenChange={setNewLabOpen}>
           <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Cadastrar Exame Laboratorial</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingLabIndex !== null ? "Editar" : "Cadastrar"} Exame Laboratorial</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="font-medium">Tipo de Exame *</Label>
@@ -1349,14 +1356,20 @@ export default function PatientsMonitoring() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setNewLabOpen(false)}>Cancelar</Button>
+              <Button variant="outline" onClick={() => { setNewLabOpen(false); setEditingLabIndex(null); }}>Cancelar</Button>
               <Button onClick={() => {
                 if (!newLab.exame) { toast.error("Selecione o tipo de exame"); return; }
                 if (!newLab.microrganismo.trim()) { toast.error("Informe o microrganismo"); return; }
-                setLabPanel(prev => [...prev, { ...newLab }]);
+                if (editingLabIndex !== null) {
+                  setLabPanel(prev => prev.map((l, idx) => idx === editingLabIndex ? { ...newLab } : l));
+                  toast.success("Exame atualizado!");
+                } else {
+                  setLabPanel(prev => [...prev, { ...newLab }]);
+                  toast.success("Exame cadastrado no painel laboratorial!");
+                }
                 setNewLabOpen(false);
-                toast.success("Exame cadastrado no painel laboratorial!");
-              }}>Cadastrar</Button>
+                setEditingLabIndex(null);
+              }}>{editingLabIndex !== null ? "Salvar" : "Cadastrar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
