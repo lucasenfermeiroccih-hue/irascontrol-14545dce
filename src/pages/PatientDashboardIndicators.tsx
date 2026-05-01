@@ -123,8 +123,8 @@ const PatientDashboardIndicators = () => {
     const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
 
     const admittedInMonth = filteredPatients.filter(p => {
-      if (!p.admission_date) return false;
-      const d = new Date(p.admission_date);
+      const d = parseLocalDate(p.admission_date);
+      if (!d) return false;
       return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     });
 
@@ -143,29 +143,31 @@ const PatientDashboardIndicators = () => {
 
     const deaths = filteredPatients.filter(p => {
       if (p.status !== "deceased" && p.discharge_type !== "Óbito") return false;
-      const d = p.discharge_date ? new Date(p.discharge_date) : null;
-      return d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const d = parseLocalDate(p.discharge_date);
+      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
     const discharges = filteredPatients.filter(p => {
       if (p.discharge_type === "Óbito" || p.status === "deceased") return false;
       if (p.status !== "discharged" && p.discharge_type !== "Alta") return false;
-      const d = p.discharge_date ? new Date(p.discharge_date) : null;
-      return d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      const d = parseLocalDate(p.discharge_date);
+      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
     }).length;
 
-    const startOfMonth = new Date(Date.UTC(selectedYear, selectedMonth, 1));
-    const endOfMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0));
+    // Limites do mês em horário LOCAL (consistente com parseLocalDate)
+    const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+    const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
 
     let totalPatientDays = 0;
     filteredPatients.forEach(p => {
-      if (!p.admission_date) return;
-      const admDate = new Date(p.admission_date);
-      const disDate = p.discharge_date ? new Date(p.discharge_date) : new Date();
+      const admDate = parseLocalDate(p.admission_date);
+      if (!admDate) return;
+      const disDate = parseLocalDate(p.discharge_date) || new Date();
       const from = admDate > startOfMonth ? admDate : startOfMonth;
       const to = disDate < endOfMonth ? disDate : endOfMonth;
+      if (from > to) return;
       const days = Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
-      if (from <= to) totalPatientDays += days;
+      totalPatientDays += days;
     });
 
     // Dispositivos: tenta primeiro tabela patient_devices; se vazio, soma de clinical_data.dispInvasivos
