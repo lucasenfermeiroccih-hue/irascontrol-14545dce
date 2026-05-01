@@ -127,8 +127,7 @@ const PatientDashboardIndicators = () => {
 
     const admittedInMonth = filteredPatients.filter(p => {
       const d = parseLocalDate(p.admission_date);
-      if (!d) return false;
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      return !!d && matchPeriod(d);
     });
 
     const bySpecialty: Record<string, number> = {};
@@ -147,37 +146,46 @@ const PatientDashboardIndicators = () => {
     const deaths = filteredPatients.filter(p => {
       if (p.status !== "deceased" && p.discharge_type !== "Óbito") return false;
       const d = parseLocalDate(p.discharge_date);
-      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      return !!d && matchPeriod(d);
     }).length;
 
     const discharges = filteredPatients.filter(p => {
       if (p.discharge_type === "Óbito" || p.status === "deceased") return false;
       if (p.status !== "discharged" && p.discharge_type !== "Alta") return false;
       const d = parseLocalDate(p.discharge_date);
-      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      return !!d && matchPeriod(d);
     }).length;
 
-    // Limites do mês em horário LOCAL (consistente com parseLocalDate)
-    const startOfMonth = new Date(selectedYear, selectedMonth, 1);
-    const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
+    // Construir lista de períodos (mês/ano) a iterar. Se vazio, usar o ano/mês atual.
+    const yearsToUse = selectedYears && selectedYears.length > 0 ? selectedYears : [currentYear];
+    const monthsToUse = selectedMonths && selectedMonths.length > 0 ? selectedMonths : [...Array(12).keys()];
+    const periods: Array<{ start: Date; end: Date }> = [];
+    yearsToUse.forEach(y => {
+      monthsToUse.forEach(m => {
+        periods.push({ start: new Date(y, m, 1), end: new Date(y, m + 1, 0) });
+      });
+    });
 
     let totalPatientDays = 0;
     filteredPatients.forEach(p => {
       const admDate = parseLocalDate(p.admission_date);
       if (!admDate) return;
       const disDate = parseLocalDate(p.discharge_date) || new Date();
-      const from = admDate > startOfMonth ? admDate : startOfMonth;
-      const to = disDate < endOfMonth ? disDate : endOfMonth;
-      if (from > to) return;
-      const days = Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
-      totalPatientDays += days;
+      periods.forEach(({ start, end }) => {
+        const from = admDate > start ? admDate : start;
+        const to = disDate < end ? disDate : end;
+        if (from > to) return;
+        totalPatientDays += Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
+      });
     });
 
     // Dispositivos: tenta primeiro tabela patient_devices; se vazio, soma de clinical_data.dispInvasivos
     const calcDeviceDaysFromTable = (type: string) => {
       let total = 0;
       filteredDevices.filter(d => d.device_type === type).forEach(dev => {
-        total += overlapDays(dev.insertion_date, dev.removal_date, startOfMonth, endOfMonth);
+        periods.forEach(({ start, end }) => {
+          total += overlapDays(dev.insertion_date, dev.removal_date, start, end);
+        });
       });
       return total;
     };
@@ -187,8 +195,10 @@ const PatientDashboardIndicators = () => {
       filteredPatients.forEach(p => {
         const di = p.clinical_data?.dispInvasivos;
         if (!di) return;
-        total += overlapDays(di[insKey], di[remKey], startOfMonth, endOfMonth);
-        total += overlapDays(di[novaInsKey], di[novaRemKey], startOfMonth, endOfMonth);
+        periods.forEach(({ start, end }) => {
+          total += overlapDays(di[insKey], di[remKey], start, end);
+          total += overlapDays(di[novaInsKey], di[novaRemKey], start, end);
+        });
       });
       return total;
     };
@@ -203,7 +213,7 @@ const PatientDashboardIndicators = () => {
     // Antibióticos: tabela antimicrobial_prescriptions + clinical_data.antibioticos[]
     const abFromTable = filteredPrescriptions.filter(rx => {
       const d = parseLocalDate(rx.start_date);
-      return !!d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+      return !!d && matchPeriod(d);
     }).length;
 
     let abFromClinical = 0;
@@ -212,7 +222,7 @@ const PatientDashboardIndicators = () => {
       if (!Array.isArray(atbs)) return;
       atbs.forEach((a: any) => {
         const d = parseLocalDate(a?.dataInicio);
-        if (d && d.getMonth() === selectedMonth && d.getFullYear() === selectedYear) abFromClinical++;
+        if (d && matchPeriod(d)) abFromClinical++;
       });
     });
     const abCount = abFromTable + abFromClinical;
@@ -220,7 +230,7 @@ const PatientDashboardIndicators = () => {
     const extubationsTable = filteredDevices.filter(d => {
       if (d.device_type !== "vm") return false;
       const rd = parseLocalDate(d.removal_date);
-      return !!rd && rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear;
+      return !!rd && matchPeriod(rd);
     }).length;
 
     let extubationsClinical = 0;
@@ -229,7 +239,7 @@ const PatientDashboardIndicators = () => {
       if (!di) return;
       [di.vmRetirada, di.vmNovaRetirada].forEach((dt: string) => {
         const rd = parseLocalDate(dt);
-        if (rd && rd.getMonth() === selectedMonth && rd.getFullYear() === selectedYear) extubationsClinical++;
+        if (rd && matchPeriod(rd)) extubationsClinical++;
       });
     });
     const extubations = extubationsTable + extubationsClinical;
@@ -241,7 +251,7 @@ const PatientDashboardIndicators = () => {
     ].filter(d => d.value > 0);
 
     return { specialtyData, deaths, discharges, totalPatientDays, cvcDays, svuDays, vmDays, abCount, extubations, totalAdmitted: admittedInMonth.length, outcomeData };
-  }, [filteredPatients, devices, prescriptions, month, year]);
+  }, [filteredPatients, devices, prescriptions, month, year, currentYear]);
 
   if (loading || ctxLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
