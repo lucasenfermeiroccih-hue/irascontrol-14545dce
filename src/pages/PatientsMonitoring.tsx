@@ -172,13 +172,13 @@ export default function PatientsMonitoring() {
   const [criteriosSelecionados, setCriteriosSelecionados] = useState<string[]>([]);
   const [justificativa, setJustificativa] = useState("");
   const [ocorrencia, setOcorrencia] = useState({ unidadeSetor: "", leito: "", dataSintomas: "", dataSuspeita: "", dataNotificacao: "", origemNotificacao: "" });
-  const [dispInvasivos, setDispInvasivos] = useState({
-    cvcInsercao: "", cvcRetirada: "", cvcTroca: "Não", cvcNovaInsercao: "", cvcNovaRetirada: "",
-    cvpInsercao: "", cvpRetirada: "", cvpTroca: "Não", cvpNovaInsercao: "", cvpNovaRetirada: "",
-    svuInsercao: "", svuRetirada: "", svuTroca: "Não", svuNovaInsercao: "", svuNovaRetirada: "",
-    vmInsercao: "", vmRetirada: "", vmTroca: "Não", vmNovaInsercao: "", vmNovaRetirada: "",
-    tqtInsercao: "", tqtRetirada: "", tqtTroca: "Não", tqtNovaInsercao: "", tqtNovaRetirada: "",
-    hemoInsercao: "", hemoRetirada: "", hemoTroca: "Não", hemoNovaInsercao: "", hemoNovaRetirada: "",
+  const [dispInvasivos, setDispInvasivos] = useState<any>({
+    cvcInsercao: "", cvcRetirada: "", cvcTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    cvpInsercao: "", cvpRetirada: "", cvpTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    svuInsercao: "", svuRetirada: "", svuTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    vmInsercao: "", vmRetirada: "", vmTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    tqtInsercao: "", tqtRetirada: "", tqtTrocas: [] as Array<{ insercao: string; retirada: string }>,
+    hemoInsercao: "", hemoRetirada: "", hemoTrocas: [] as Array<{ insercao: string; retirada: string }>,
   });
   const [labPanel, setLabPanel] = useState<LabEntry[]>([]);
   const [newLabOpen, setNewLabOpen] = useState(false);
