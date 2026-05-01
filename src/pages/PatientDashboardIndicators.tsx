@@ -116,11 +116,12 @@ const PatientDashboardIndicators = () => {
   );
 
   const indicators = useMemo(() => {
-    const selectedMonths = month.length === 0 ? null : month.map(Number);
-    const selectedYears = year.length === 0 ? null : year.map(Number);
+    // Se nada selecionado, default = mês/ano atual (evita somar tudo indevidamente)
+    const selectedMonths = month.length === 0 ? [currentMonth] : month.map(Number);
+    const selectedYears = year.length === 0 ? [currentYear] : year.map(Number);
     const matchPeriod = (d: Date) =>
-      (!selectedMonths || selectedMonths.includes(d.getMonth())) &&
-      (!selectedYears || selectedYears.includes(d.getFullYear()));
+      selectedMonths.includes(d.getMonth()) &&
+      selectedYears.includes(d.getFullYear());
     const patientIdSet = new Set(filteredPatients.map(p => p.id));
     const filteredDevices = devices.filter(d => patientIdSet.has(d.patient_id));
     const filteredPrescriptions = prescriptions.filter(rx => patientIdSet.has(rx.patient_id));
