@@ -490,6 +490,27 @@ const PatientDashboardIndicators = () => {
             <DensityCard title="Densidade VM" deviceDays={indicators.vmDays} patientDays={indicators.totalPatientDays} icon={Wind} color="text-blue-600" />
           </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TopRankCard
+              title="Top 15 Antibióticos Mais Utilizados"
+              icon={Pill}
+              iconColor="text-orange-600"
+              data={indicators.topAntibiotics}
+              barColor="hsl(20, 70%, 50%)"
+              emptyText="Nenhum antibiótico registrado no período."
+              valueLabel="Prescrições"
+            />
+            <TopRankCard
+              title="Top 15 Microrganismos (Painel Laboratorial)"
+              icon={Microscope}
+              iconColor="text-purple-600"
+              data={indicators.topOrganisms}
+              barColor="hsl(270, 50%, 55%)"
+              emptyText="Nenhum microrganismo isolado no período."
+              valueLabel="Isolados"
+            />
+          </div>
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Detalhamento por Especialidade</CardTitle>
