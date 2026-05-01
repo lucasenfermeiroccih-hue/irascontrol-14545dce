@@ -110,6 +110,7 @@ const PatientDashboardIndicators = () => {
   const [patients, setPatients] = useState<PatientRow[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [labResults, setLabResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
