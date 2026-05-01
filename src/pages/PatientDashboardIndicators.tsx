@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, BedDouble, Skull, HeartPulse, Syringe,
   Activity, ArrowUpFromLine, Stethoscope, Wind, Cable, Droplets, Loader2,
-  Pill, Microscope
+  Pill, Microscope, FileText
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import MultiSelectFilter from "@/components/MultiSelectFilter";
 import {
