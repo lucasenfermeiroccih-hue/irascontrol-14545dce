@@ -174,11 +174,18 @@ const PatientDashboardIndicators = () => {
       const admDate = parseLocalDate(p.admission_date);
       if (!admDate) return;
       const disDate = parseLocalDate(p.discharge_date) || new Date();
+      // Normaliza para fim do dia para garantir contagem inclusiva
+      const disEnd = new Date(disDate.getFullYear(), disDate.getMonth(), disDate.getDate(), 23, 59, 59, 999);
+      const admStart = new Date(admDate.getFullYear(), admDate.getMonth(), admDate.getDate(), 0, 0, 0, 0);
       periods.forEach(({ start, end }) => {
-        const from = admDate > start ? admDate : start;
-        const to = disDate < end ? disDate : end;
+        const from = admStart > start ? admStart : start;
+        const to = disEnd < end ? disEnd : end;
         if (from > to) return;
-        totalPatientDays += Math.max(0, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
+        // Conta dias civis distintos no intervalo (desmembrando por dia do mês vigente)
+        const fromDay = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+        const toDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+        const days = Math.floor((toDay.getTime() - fromDay.getTime()) / 86400000) + 1;
+        totalPatientDays += Math.max(0, days);
       });
     });
 
