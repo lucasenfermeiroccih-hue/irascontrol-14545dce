@@ -114,6 +114,13 @@ const PatientDashboardIndicators = () => {
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [labResults, setLabResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  type SpecSortKey = "internacoes" | "percent";
+  const [specSortKey, setSpecSortKey] = useState<SpecSortKey | null>(null);
+  const [specSortDir, setSpecSortDir] = useState<"asc" | "desc">("desc");
+  const toggleSpecSort = (k: SpecSortKey) => {
+    if (specSortKey === k) setSpecSortDir(d => (d === "asc" ? "desc" : "asc"));
+    else { setSpecSortKey(k); setSpecSortDir("desc"); }
+  };
 
   useEffect(() => {
     if (!hospitalId || ctxLoading) { setLoading(false); return; }
