@@ -660,7 +660,7 @@ export default function PatientsMonitoring() {
                     <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Syringe className="h-4 w-4 text-primary" />Painel Laboratorial
                     </h4>
-                    <Button variant="outline" size="sm" onClick={() => { setNewLab({ exame: "", data: new Date().toISOString().slice(0, 10).split("-").reverse().join("/"), microrganismo: "", sensibilidade: "", mdr: false }); setNewLabOpen(true); }} className="gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => { setEditingLabIndex(null); setNewLab({ exame: "", data: new Date().toISOString().slice(0, 10).split("-").reverse().join("/"), microrganismo: "", sensibilidade: "", mdr: false }); setNewLabOpen(true); }} className="gap-1.5">
                       <Plus className="h-4 w-4" />Cadastrar Exame
                     </Button>
                   </div>
