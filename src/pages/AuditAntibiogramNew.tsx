@@ -196,7 +196,12 @@ export default function AuditAntibiogramNew() {
       toast.error("Informe o local anatômico da amostra.");
       return;
     }
-    if (esbl === "sim") {
+    const isSwab = (sampleCategory || "").toLowerCase().startsWith("swab")
+      || (sampleMaterial || "").toLowerCase().startsWith("swab");
+    // Quando é swab + ESBL=Sim, o antibiograma é opcional (rastreio fenotípico)
+    const antibiogramOptional = isSwab && esbl === "sim";
+
+    if (esbl === "sim" && !antibiogramOptional) {
       // ESBL marked yes — require evidence (at least one 3rd gen cephalosporin tested as R or I)
       const hasEsblEvidence = results.some(r =>
         ["Ceftazidima", "Ceftriaxona", "Cefepima", "Aztreonam"].includes(r.antibiotic) &&
@@ -211,7 +216,7 @@ export default function AuditAntibiogramNew() {
       toast.error("Carbapenemase = Sim exige selecionar o tipo (KPC, NDM, etc.).");
       return;
     }
-    if (results.length === 0) {
+    if (results.length === 0 && !antibiogramOptional) {
       toast.error("Adicione pelo menos um antimicrobiano.");
       return;
     }
@@ -219,7 +224,10 @@ export default function AuditAntibiogramNew() {
     for (const r of results) {
       // Skip the empty "Outros" placeholder row entirely (no method/MIC/SIR and no name)
       if (r.isCustom && !r.antibiotic.trim() && !r.method && !r.micValue && !r.sir) continue;
+      // Quando o antibiograma é opcional (swab + ESBL), ignora linhas em branco
+      if (antibiogramOptional && !r.antibiotic.trim() && !r.method && !r.micValue && !r.sir) continue;
       if (!r.antibiotic.trim()) {
+        if (antibiogramOptional) continue;
         toast.error(r.isCustom
           ? "Descreva o antimicrobiano selecionado como 'Outros'."
           : "Selecione o antimicrobiano em todas as linhas (ou remova-as).");
