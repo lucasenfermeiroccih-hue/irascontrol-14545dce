@@ -757,7 +757,7 @@ function TopRankCard({ title, icon: Icon, iconColor, data, barColor, emptyText, 
   metaValue?: number;
   onMetaChange?: (v: number | undefined) => void;
 }) {
-  const chartHeight = Math.max(240, data.length * 28);
+  const chartHeight = Math.max(280, data.length * 36);
   // Quebra labels longos em até 2 linhas para não sobrepor as barras
   const renderYTick = (props: any) => {
     const { x, y, payload } = props;
