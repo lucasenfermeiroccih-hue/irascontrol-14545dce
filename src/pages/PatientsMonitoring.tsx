@@ -479,7 +479,7 @@ export default function PatientsMonitoring() {
               <Stethoscope className="h-5 w-5 text-primary shrink-0" />
               <span className="font-bold text-foreground text-sm sm:text-lg truncate">{selected.nome}</span>
               <Badge variant={selected.status === "active" ? "default" : "secondary"} className="shrink-0 text-[10px] sm:text-xs">
-                {selected.status === "active" ? "Internado" : selected.status === "discharged" ? "Alta" : selected.status}
+                {statusLabels[selected.status] || selected.status}
               </Badge>
             </div>
             <div className="flex gap-2 shrink-0">
