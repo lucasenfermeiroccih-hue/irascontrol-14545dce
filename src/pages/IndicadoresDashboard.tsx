@@ -603,7 +603,8 @@ export default function IndicadoresDashboard() {
               </Card>
             </div>
           )}
-          {renderYearComparisonChart("Infecções por Dispositivo (CVC+SVD+VM)", "infeccoesDispositivo", "")}
+          {renderYearComparisonChart("Taxa de Infecção Hospitalar", "taxaInfeccao", "‰")}
+          {renderYearComparisonChart("Taxa de Letalidade", "taxaLetalidade", "%")}
           </div>
         </TabsContent>
 
@@ -684,9 +685,7 @@ export default function IndicadoresDashboard() {
               </Card>
             </div>
           )}
-          {renderYearComparisonChart("Taxa de Infecção CVC", "taxaInfCVC", "‰")}
-          {renderYearComparisonChart("Taxa de Infecção PAV (VM)", "taxaInfVM", "‰")}
-          {renderYearComparisonChart("Taxa de Infecção SVD", "taxaInfSVD", "‰")}
+          {renderYearComparisonChart("Infecções por Dispositivo (CVC+SVD+VM)", "infeccoesDispositivo", "")}
           </div>
         </TabsContent>
 
@@ -746,8 +745,9 @@ export default function IndicadoresDashboard() {
               </Card>
             </div>
           )}
-          {renderYearComparisonChart("Tempo de Permanência", "tempoPermanencia", "dias")}
-          {renderYearComparisonChart("Taxa de Uso de Antibióticos", "taxaUsoAtb", "%")}
+          {renderYearComparisonChart("Taxa de Infecção CVC", "taxaInfCVC", "‰")}
+          {renderYearComparisonChart("Taxa de Infecção PAV (VM)", "taxaInfVM", "‰")}
+          {renderYearComparisonChart("Taxa de Infecção SVD", "taxaInfSVD", "‰")}
           </div>
         </TabsContent>
 
