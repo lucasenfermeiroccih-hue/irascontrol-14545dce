@@ -479,7 +479,7 @@ export default function PatientsMonitoring() {
               <Stethoscope className="h-5 w-5 text-primary shrink-0" />
               <span className="font-bold text-foreground text-sm sm:text-lg truncate">{selected.nome}</span>
               <Badge variant={selected.status === "active" ? "default" : "secondary"} className="shrink-0 text-[10px] sm:text-xs">
-                {selected.status === "active" ? "Internado" : selected.status === "discharged" ? "Alta" : selected.status}
+                {statusLabels[selected.status] || selected.status}
               </Badge>
             </div>
             <div className="flex gap-2 shrink-0">
@@ -1652,7 +1652,7 @@ export default function PatientsMonitoring() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={p.status === "active" ? "default" : "secondary"}>
-                          {p.status === "active" ? "Internado" : p.status === "discharged" ? "Alta" : p.status}
+                          {statusLabels[p.status] || p.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -1704,7 +1704,7 @@ export default function PatientsMonitoring() {
                       <p className="text-[10px] text-muted-foreground">{p.prontuario}</p>
                     </div>
                     <Badge variant={p.status === "active" ? "default" : "secondary"} className="text-[10px] shrink-0">
-                      {p.status === "active" ? "Internado" : "Alta"}
+                      {statusLabels[p.status] || p.status}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
@@ -2026,7 +2026,7 @@ export default function PatientsMonitoring() {
                   <Stethoscope className="h-5 w-5 text-primary" />
                   {viewPatient.nome}
                   <Badge variant={viewPatient.status === "active" ? "default" : "secondary"}>
-                    {viewPatient.status === "active" ? "Internado" : "Alta"}
+                    {statusLabels[viewPatient.status] || viewPatient.status}
                   </Badge>
                 </DialogTitle>
               </DialogHeader>
