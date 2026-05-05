@@ -503,14 +503,14 @@ export default function DashboardAntibiogram() {
           <ChartActions chartRef={chartRefs.sirAntibiotico} chartTitle="Perfil de Sensibilidade por Antibiótico" metaValue={metas.sirAntibiotico} onMetaChange={(v) => setMeta("sirAntibiotico", v)} metaUnit="testes" />
         </CardHeader>
         <CardContent className="p-2 md:p-6 pt-2" ref={chartRefs.sirAntibiotico}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={sirByAntibiotic}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" tick={{ fontSize: 8 }} angle={-35} textAnchor="end" height={60} />
-              <YAxis tick={{ fontSize: 10 }} width={30} />
+          <ResponsiveContainer width="100%" height={Math.max(320, sirByAntibiotic.length * 28)}>
+            <BarChart data={sirByAntibiotic} layout="vertical" margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={130} interval={0} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              {metas.sirAntibiotico !== undefined && <ReferenceLine y={metas.sirAntibiotico} stroke="hsl(0,72%,51%)" strokeDasharray="4 4" label={{ value: `Meta: ${metas.sirAntibiotico}`, fontSize: 10, fill: "hsl(0,72%,51%)" }} />}
+              {metas.sirAntibiotico !== undefined && <ReferenceLine x={metas.sirAntibiotico} stroke="hsl(0,72%,51%)" strokeDasharray="4 4" label={{ value: `Meta: ${metas.sirAntibiotico}`, fontSize: 10, fill: "hsl(0,72%,51%)" }} />}
               <Bar dataKey="S" name="Sensível" stackId="a" fill={SIR_COLORS.S} />
               <Bar dataKey="I" name="Intermediário" stackId="a" fill={SIR_COLORS.I} />
               <Bar dataKey="R" name="Resistente" stackId="a" fill={SIR_COLORS.R} />
