@@ -14,6 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_plan_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          plan_id: string
+          responsible_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          plan_id: string
+          responsible_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          plan_id?: string
+          responsible_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plan_tasks_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans_5w2h"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_plans_5w2h: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          hospital_id: string | null
+          how: string | null
+          how_much: number | null
+          id: string
+          linked_audit_id: string | null
+          linked_infection_case_id: string | null
+          linked_kanban_card_id: string | null
+          priority: string | null
+          responsible_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          what: string | null
+          when_date: string | null
+          where_field: string | null
+          who: string | null
+          why: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          hospital_id?: string | null
+          how?: string | null
+          how_much?: number | null
+          id?: string
+          linked_audit_id?: string | null
+          linked_infection_case_id?: string | null
+          linked_kanban_card_id?: string | null
+          priority?: string | null
+          responsible_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          what?: string | null
+          when_date?: string | null
+          where_field?: string | null
+          who?: string | null
+          why?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          hospital_id?: string | null
+          how?: string | null
+          how_much?: number | null
+          id?: string
+          linked_audit_id?: string | null
+          linked_infection_case_id?: string | null
+          linked_kanban_card_id?: string | null
+          priority?: string | null
+          responsible_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          what?: string | null
+          when_date?: string | null
+          where_field?: string | null
+          who?: string | null
+          why?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_plans_5w2h_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_5w2h_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_plans_5w2h_linked_kanban_card_id_fkey"
+            columns: ["linked_kanban_card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_chat_messages: {
         Row: {
           content: string
@@ -1106,6 +1241,255 @@ export type Database = {
             columns: ["hospital_id"]
             isOneToOne: false
             referencedRelation: "hospitals_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_boards: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          hospital_id: string | null
+          id: string
+          name: string
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          hospital_id?: string | null
+          id?: string
+          name: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          hospital_id?: string | null
+          id?: string
+          name?: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_boards_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_boards_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_card_comments: {
+        Row: {
+          card_id: string
+          comment: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          card_id: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          card_id?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_card_history: {
+        Row: {
+          card_id: string
+          from_column: string | null
+          id: string
+          moved_at: string | null
+          moved_by: string | null
+          to_column: string | null
+        }
+        Insert: {
+          card_id: string
+          from_column?: string | null
+          id?: string
+          moved_at?: string | null
+          moved_by?: string | null
+          to_column?: string | null
+        }
+        Update: {
+          card_id?: string
+          from_column?: string | null
+          id?: string
+          moved_at?: string | null
+          moved_by?: string | null
+          to_column?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_card_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_cards: {
+        Row: {
+          assigned_to: string | null
+          board_id: string
+          column_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          hospital_id: string | null
+          id: string
+          linked_5w2h_id: string | null
+          linked_audit_id: string | null
+          linked_infection_case_id: string | null
+          position: number
+          priority: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          board_id: string
+          column_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          hospital_id?: string | null
+          id?: string
+          linked_5w2h_id?: string | null
+          linked_audit_id?: string | null
+          linked_infection_case_id?: string | null
+          position?: number
+          priority?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          board_id?: string
+          column_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          hospital_id?: string | null
+          id?: string
+          linked_5w2h_id?: string | null
+          linked_audit_id?: string | null
+          linked_infection_case_id?: string | null
+          position?: number
+          priority?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_kanban_cards_5w2h"
+            columns: ["linked_5w2h_id"]
+            isOneToOne: false
+            referencedRelation: "action_plans_5w2h"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_cards_hospital_id_fkey"
+            columns: ["hospital_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_columns: {
+        Row: {
+          board_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          position: number
+          title: string
+          wip_limit: number | null
+        }
+        Insert: {
+          board_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          position?: number
+          title: string
+          wip_limit?: number | null
+        }
+        Update: {
+          board_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          position?: number
+          title?: string
+          wip_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "kanban_boards"
             referencedColumns: ["id"]
           },
         ]
