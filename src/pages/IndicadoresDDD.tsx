@@ -290,22 +290,33 @@ export default function IndicadoresDDD() {
   const handleExportPdf = (reg: DDDRecordFromDB) => {
     if (!hospitalId) { toast.error("Hospital não identificado."); return; }
     const linhasComDados = (reg.ddd_record_lines || []).filter(l => l.quantidade > 0);
+    const totalDDD = linhasComDados.reduce((s, l) => s + (Number(l.indicador) || 0), 0);
+    const uniqueDrugs = new Set(linhasComDados.map(l => l.nome)).size;
     exportPdf({
-      type: "audits",
+      type: "ddd",
       hospitalId,
       data: {
-        kpis: {
-          avgCompliance: 0,
-          totalAudits: linhasComDados.length,
-          nonCompliant: 0,
+        header: {
+          profissional: reg.profissional,
+          periodo: `${reg.mes_vigilancia}/${reg.ano_vigilancia}`,
+          dataVigilancia: reg.data_vigilancia,
+          compiladoUtis: reg.compilado_utis,
         },
-        audits: linhasComDados.map(l => ({
-          type: l.nome,
-          sector: `${reg.mes_vigilancia}/${reg.ano_vigilancia}`,
-          date: reg.data_vigilancia,
-          compliance: l.indicador ?? 0,
-          compliant: l.quantidade,
-          total: l.quantidade,
+        kpis: {
+          totalDDD: Math.round(totalDDD * 100) / 100,
+          totalRecords: linhasComDados.length,
+          uniqueDrugs,
+        },
+        lines: linhasComDados.map(l => ({
+          nome: l.nome,
+          apresentacao: l.apresentacao,
+          mg_por_unidade: l.mg_por_unidade,
+          quantidade: l.quantidade,
+          total_mg: l.total_mg,
+          total_g: l.total_g,
+          ddd_padrao: l.ddd_padrao,
+          valor_ab: l.valor_ab ?? 0,
+          indicador: l.indicador ?? 0,
         })),
       },
       filenamePrefix: `ddd-${reg.mes_vigilancia}-${reg.ano_vigilancia}`,
