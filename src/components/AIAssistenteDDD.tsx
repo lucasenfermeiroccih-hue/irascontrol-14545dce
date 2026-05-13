@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, FileText, AlertTriangle, Loader2, Copy, Check } from "lucide-react";
 import { DDDRegistroMensal } from "@/data/antimicrobianos-ddd";
 import { generateAIReport, generateAIInsights, generateAIAlerts, AIAnalysisInput } from "@/lib/ddd-ai-engine";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Props {
@@ -12,6 +13,27 @@ interface Props {
   all: DDDRegistroMensal[];
   filtroMes: string;
   filtroAno: string;
+}
+
+function buildDDDSummary(filtered: DDDRegistroMensal[], filtroMes: string, filtroAno: string) {
+  const byAtm: Record<string, number> = {};
+  const byUnit: Record<string, number> = {};
+  let totalIndicador = 0;
+  filtered.forEach(d => {
+    byAtm[d.antimicrobiano] = (byAtm[d.antimicrobiano] || 0) + d.totalG;
+    byUnit[d.unidade] = (byUnit[d.unidade] || 0) + d.indicadorConsumo;
+    totalIndicador += d.indicadorConsumo;
+  });
+  return {
+    periodo: `${filtroMes !== "all" ? filtroMes : "Todos os meses"} / ${filtroAno !== "all" ? filtroAno : "Todos os anos"}`,
+    total_registros: filtered.length,
+    total_indicador: Math.round(totalIndicador * 100) / 100,
+    media_indicador: filtered.length ? Math.round((totalIndicador / filtered.length) * 100) / 100 : 0,
+    top_antimicrobianos: Object.entries(byAtm).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([nome, g]) => ({ nome, total_g: Math.round(g * 100) / 100 })),
+    consumo_por_unidade: Object.entries(byUnit).sort((a, b) => b[1] - a[1]).map(([unidade, indicador]) => ({ unidade, indicador: Math.round(indicador * 100) / 100 })),
+    registros_criticos: filtered.filter(d => d.indicadorConsumo > 50).length,
+    registros_altos: filtered.filter(d => d.indicadorConsumo > 30 && d.indicadorConsumo <= 50).length,
+  };
 }
 
 export default function AIAssistenteDDD({ filtered, all, filtroMes, filtroAno }: Props) {
@@ -22,22 +44,43 @@ export default function AIAssistenteDDD({ filtered, all, filtroMes, filtroAno }:
 
   const input: AIAnalysisInput = { filtered, all, filtroMes, filtroAno };
 
-  const generate = useCallback((type: "relatorio" | "insights" | "alertas") => {
+  const generate = useCallback(async (type: "relatorio" | "insights" | "alertas") => {
     setLoading(true);
     setActiveTab(type);
 
-    // Simula latência de processamento
-    setTimeout(() => {
-      let result: string;
-      switch (type) {
-        case "relatorio": result = generateAIReport(input); break;
-        case "insights": result = generateAIInsights(input); break;
-        case "alertas": result = generateAIAlerts(input); break;
+    const typeLabel = { relatorio: "Gere um relatório completo", insights: "Gere insights analíticos", alertas: "Gere alertas priorizados" }[type];
+    const dddSummary = buildDDDSummary(filtered, filtroMes, filtroAno);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: {
+          agent_id: "ddd-analyst",
+          input: `${typeLabel} sobre os dados de consumo de antimicrobianos (DDD) do período. Tipo de saída solicitado: ${type}.`,
+          context: { ddd_summary: dddSummary },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.output) {
+        setOutput(prev => ({ ...prev, [type]: data.output }));
+        setLoading(false);
+        return;
       }
-      setOutput(prev => ({ ...prev, [type]: result }));
-      setLoading(false);
-    }, 800 + Math.random() * 700);
-  }, [input]);
+    } catch (err) {
+      console.warn("Edge function falhou, usando análise local:", err);
+      toast.warning("Usando análise local — IA indisponível no momento.");
+    }
+
+    // Fallback: template local
+    let result: string;
+    switch (type) {
+      case "relatorio": result = generateAIReport(input); break;
+      case "insights": result = generateAIInsights(input); break;
+      case "alertas": result = generateAIAlerts(input); break;
+    }
+    setOutput(prev => ({ ...prev, [type]: result }));
+    setLoading(false);
+  }, [filtered, filtroMes, filtroAno, input]);
 
   const handleCopy = useCallback(() => {
     const text = output[activeTab];

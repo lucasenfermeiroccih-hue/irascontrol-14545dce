@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { useISCDashboard } from "@/hooks/useISCDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
 import { generateSmartInsights, generateStructuredReport, type SmartInsight } from "@/lib/isc-report-engine";
+import { supabase } from "@/integrations/supabase/client";
 import ChartActions from "@/components/ChartActions";
 import { ReferenceLine } from "recharts";
 import { FileSpreadsheet } from "lucide-react";
@@ -323,10 +324,49 @@ export default function DashboardISC() {
     return generateSmartInsights(reportInput);
   }, [hasData, filtered, reportInput]);
 
-  const generateReport = () => {
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const generateReport = useCallback(async () => {
     if (!hasData) return;
+    setReportLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: {
+          agent_id: "isc-analyst",
+          input: aiPrompt
+            ? `Gere um relatório estruturado de ISC. Observação adicional do usuário: "${aiPrompt}"`
+            : "Gere um relatório estruturado e completo de ISC para este período.",
+          context: {
+            isc_summary: {
+              total_cirurgias: reportInput.totalCirurgias,
+              total_contatos: reportInput.totalContatos,
+              taxa_resposta: reportInput.taxaResposta,
+              total_reinternacoes: reportInput.totalReinternacoes,
+              total_isc: reportInput.totalISC,
+              taxa_isc: reportInput.taxaISC,
+              clinicas: reportInput.clinicas,
+              tendencia: reportInput.tendencia,
+            },
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.output) {
+        setAiReport(data.output);
+        setReportLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn("Edge function falhou, usando relatório local:", err);
+      toast.warning("Usando relatório local — IA indisponível no momento.");
+    }
+
+    // Fallback: template local
     setAiReport(generateStructuredReport({ ...reportInput, promptExtra: aiPrompt || undefined }));
-  };
+    setReportLoading(false);
+  }, [hasData, reportInput, aiPrompt]);
 
   const insightBg = (type: string) =>
     type === "success" ? "bg-green-50 border-green-200 text-green-800"
