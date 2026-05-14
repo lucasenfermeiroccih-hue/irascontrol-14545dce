@@ -2,7 +2,8 @@ import {
   LayoutDashboard, ClipboardCheck, Activity, Shield, Bell,
   FileText, Settings, Users, Microscope, Pill, HandMetal,
   MonitorCheck, Building2, ShoppingBag, Stethoscope, FlaskConical,
-  BarChart3, FolderOpen, TrendingUp, Sparkles, Tag, ArrowLeftRight, Droplets
+  BarChart3, FolderOpen, TrendingUp, Sparkles, Tag, ArrowLeftRight, Droplets,
+  ExternalLink, KanbanSquare
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -117,6 +118,20 @@ const userOnlySection = {
   ],
 };
 
+const CCIH_5W2H_URL = "https://5w2h.ekaban.irascontrol.com";
+
+async function openCCIH5W2H() {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return;
+  const hospitalId = localStorage.getItem("selected_hospital_id") ?? "";
+  const params = new URLSearchParams({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    hospital_id: hospitalId,
+  });
+  window.open(`${CCIH_5W2H_URL}/?${params.toString()}`, "_blank");
+}
+
 export function AppSidebar() {
   const { state, isMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
@@ -179,6 +194,27 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {/* Módulo externo: CCIH 5W2H */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Qualidade</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={openCCIH5W2H} className="cursor-pointer hover:bg-sidebar-accent/50 w-full">
+                  <ExternalLink className="mr-2 h-4 w-4 shrink-0 text-sidebar-primary" />
+                  {!collapsed && <span>Planos 5W2H</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={openCCIH5W2H} className="cursor-pointer hover:bg-sidebar-accent/50 w-full">
+                  <KanbanSquare className="mr-2 h-4 w-4 shrink-0 text-sidebar-primary" />
+                  {!collapsed && <span>Kanban CCIH</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-3 space-y-2">
         {multiHospital && (
