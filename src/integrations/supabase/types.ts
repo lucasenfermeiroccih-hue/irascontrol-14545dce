@@ -149,6 +149,54 @@ export type Database = {
           },
         ]
       }
+      actions: {
+        Row: {
+          created_at: string
+          how: string
+          how_much: string | null
+          id: string
+          infection_type: string
+          status: string
+          updated_at: string
+          user_id: string
+          what: string
+          when_date: string
+          where_sector: string
+          who: string
+          why: string
+        }
+        Insert: {
+          created_at?: string
+          how: string
+          how_much?: string | null
+          id?: string
+          infection_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          what: string
+          when_date: string
+          where_sector: string
+          who: string
+          why: string
+        }
+        Update: {
+          created_at?: string
+          how?: string
+          how_much?: string | null
+          id?: string
+          infection_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          what?: string
+          when_date?: string
+          where_sector?: string
+          who?: string
+          why?: string
+        }
+        Relationships: []
+      }
       agent_chat_messages: {
         Row: {
           content: string
@@ -477,6 +525,27 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          notify_email: boolean
+          notify_push: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          notify_email?: boolean
+          notify_push?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          notify_email?: boolean
+          notify_push?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_items: {
         Row: {
           audit_id: string
@@ -606,6 +675,74 @@ export type Database = {
             columns: ["case_id"]
             isOneToOne: false
             referencedRelation: "infection_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ccih_kanban_columns: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ccih_kanban_tasks: {
+        Row: {
+          column_id: string
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          recurrence: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          recurrence?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          recurrence?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ccih_kanban_tasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "ccih_kanban_columns"
             referencedColumns: ["id"]
           },
         ]
@@ -1143,6 +1280,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      iras_series: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          rate: number
+          sector: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          rate: number
+          sector: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          rate?: number
+          sector?: string
+        }
+        Relationships: []
       }
       isc_record_indicators: {
         Row: {
