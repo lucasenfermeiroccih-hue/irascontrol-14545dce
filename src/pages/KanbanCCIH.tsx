@@ -28,12 +28,13 @@ interface Tarefa {
   description: string | null;
   assigned_to: string;
   assigned_by: string | null;
-  recurrence: "daily" | "weekly" | "monthly";
+  recurrence: "daily" | "weekly" | "monthly" | "none";
   status: "in_progress" | "completed";
   priority: "low" | "normal" | "high";
   last_completed_at: string | null;
   created_at: string;
   assigned_to_name?: string;
+  source?: "ccih" | "guardiao";
 }
 
 interface HospitalUser {
@@ -48,18 +49,21 @@ const RECURRENCE_LABELS = {
   daily: "Diária",
   weekly: "Semanal",
   monthly: "Mensal",
+  none: "Sem recorrência",
 };
 
 const RECURRENCE_ICONS = {
   daily: <Calendar className="h-3 w-3" />,
   weekly: <CalendarDays className="h-3 w-3" />,
   monthly: <CalendarRange className="h-3 w-3" />,
+  none: <ListTodo className="h-3 w-3" />,
 };
 
 const RECURRENCE_COLORS = {
   daily: "bg-blue-100 text-blue-700 border-blue-200",
   weekly: "bg-purple-100 text-purple-700 border-purple-200",
   monthly: "bg-amber-100 text-amber-700 border-amber-200",
+  none: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 const PRIORITY_COLORS = {
@@ -125,11 +129,20 @@ function TarefaCard({
       } ${PRIORITY_COLORS[tarefa.priority]}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className={`text-sm font-medium leading-snug ${done ? "line-through text-muted-foreground" : ""}`}>
-          {tarefa.title}
-        </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+            {tarefa.source === "guardiao" && (
+              <Badge className="text-[10px] py-0 px-1.5 bg-indigo-100 text-indigo-700 border border-indigo-200 font-semibold">
+                Guardião
+              </Badge>
+            )}
+            <p className={`text-sm font-medium leading-snug ${done ? "line-through text-muted-foreground" : ""}`}>
+              {tarefa.title}
+            </p>
+          </div>
+        </div>
         <div className="flex gap-1 shrink-0">
-          {isAdmin && (
+          {isAdmin && tarefa.source !== "guardiao" && (
             <>
               <button
                 onClick={() => onEdit(tarefa)}
@@ -242,36 +255,51 @@ export default function KanbanCCIH() {
   const loadTarefas = useCallback(async () => {
     if (!hospitalId || !userId) return;
 
-    let query = (supabase.from("kanban_ccih_tarefas" as any).select("*") as any)
+    // ── Tarefas CCIH (tabela local) ─────────────────────────────────────────
+    let ccihQuery = (supabase.from("kanban_ccih_tarefas" as any).select("*") as any)
       .eq("hospital_id", hospitalId);
-
-    if (!isAdmin) {
-      query = query.eq("assigned_to", userId);
-    }
-
-    const { data, error } = await query.order("created_at", { ascending: true });
+    if (!isAdmin) ccihQuery = ccihQuery.eq("assigned_to", userId);
+    const { data: ccihData, error } = await ccihQuery.order("created_at", { ascending: true });
     if (error) { toast.error("Erro ao carregar tarefas"); return; }
 
-    // Auto-reset tasks that passed their recurrence period
-    const toReset = (data as Tarefa[]).filter(shouldReset).map((t) => t.id);
+    // Auto-reset CCIH tasks
+    const toReset = (ccihData as Tarefa[]).filter(shouldReset).map((t) => t.id);
     if (toReset.length > 0) {
-      await (supabase
-        .from("kanban_ccih_tarefas" as any)
-        .update({ status: "in_progress" })
-        .in("id", toReset) as any);
+      await (supabase.from("kanban_ccih_tarefas" as any).update({ status: "in_progress" }).in("id", toReset) as any);
     }
+    const enrichedCcih: Tarefa[] = (ccihData as Tarefa[]).map((t) => ({
+      ...t,
+      status: toReset.includes(t.id) ? "in_progress" : t.status,
+      assigned_to_name: hospitalUsers.find((u) => u.user_id === t.assigned_to)?.full_name || "",
+      source: "ccih" as const,
+    }));
 
-    // Enrich with user names
-    const enriched = (data as Tarefa[]).map((t) => {
-      const user = hospitalUsers.find((u) => u.user_id === t.assigned_to);
-      return {
-        ...t,
-        status: toReset.includes(t.id) ? "in_progress" : t.status,
-        assigned_to_name: user?.full_name || "",
-      };
-    });
+    // ── Tarefas Guardião Hospitalar (kanban_tasks) ──────────────────────────
+    let guardQuery = (supabase
+      .from("kanban_tasks" as any)
+      .select("*, profiles(full_name)") as any)
+      .eq("hospital_id", hospitalId);
+    if (!isAdmin) guardQuery = guardQuery.eq("assigned_to", userId);
+    const { data: guardData } = await guardQuery.order("created_at", { ascending: true });
 
-    setTarefas(enriched as Tarefa[]);
+    const enrichedGuard: Tarefa[] = ((guardData || []) as any[]).map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description ?? null,
+      assigned_to: t.assigned_to ?? "",
+      assigned_by: t.assigned_by ?? null,
+      recurrence: (t.recurrence ?? "none") as Tarefa["recurrence"],
+      status: t.status ?? "in_progress",
+      priority: (t.priority ?? "normal") as Tarefa["priority"],
+      last_completed_at: t.last_completed_at ?? null,
+      created_at: t.created_at,
+      assigned_to_name: (t as any).profiles?.full_name
+        || hospitalUsers.find((u) => u.user_id === t.assigned_to)?.full_name
+        || "",
+      source: "guardiao" as const,
+    }));
+
+    setTarefas([...enrichedCcih, ...enrichedGuard]);
   }, [hospitalId, userId, isAdmin, hospitalUsers]);
 
   useEffect(() => {
@@ -292,8 +320,10 @@ export default function KanbanCCIH() {
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleComplete = async (id: string) => {
+    const tarefa = tarefas.find((t) => t.id === id);
+    const table = tarefa?.source === "guardiao" ? "kanban_tasks" : "kanban_ccih_tarefas";
     await (supabase
-      .from("kanban_ccih_tarefas" as any)
+      .from(table as any)
       .update({ status: "completed", last_completed_at: new Date().toISOString() })
       .eq("id", id) as any);
     setTarefas((prev) =>
@@ -305,8 +335,10 @@ export default function KanbanCCIH() {
   };
 
   const handleReopen = async (id: string) => {
+    const tarefa = tarefas.find((t) => t.id === id);
+    const table = tarefa?.source === "guardiao" ? "kanban_tasks" : "kanban_ccih_tarefas";
     await (supabase
-      .from("kanban_ccih_tarefas" as any)
+      .from(table as any)
       .update({ status: "in_progress" })
       .eq("id", id) as any);
     setTarefas((prev) =>
@@ -364,12 +396,13 @@ export default function KanbanCCIH() {
   };
 
   const openEdit = (tarefa: Tarefa) => {
+    if (tarefa.source === "guardiao") return;
     setEditingTarefa(tarefa);
     setForm({
       title: tarefa.title,
       description: tarefa.description || "",
       assigned_to: tarefa.assigned_to,
-      recurrence: tarefa.recurrence,
+      recurrence: (tarefa.recurrence === "none" ? "daily" : tarefa.recurrence) as "daily" | "weekly" | "monthly",
       priority: tarefa.priority,
     });
     setShowDialog(true);
@@ -386,7 +419,7 @@ export default function KanbanCCIH() {
   const myTarefas = isAdmin ? tarefas : tarefas.filter((t) => t.assigned_to === userId);
 
   const filtered = myTarefas.filter(
-    (t) => recurrenceFilter === "all" || t.recurrence === recurrenceFilter
+    (t) => recurrenceFilter === "all" || (t.recurrence !== "none" && t.recurrence === recurrenceFilter)
   );
 
   const inProgress = filtered.filter((t) => t.status === "in_progress");
@@ -553,6 +586,7 @@ export default function KanbanCCIH() {
                   <TableRow>
                     <TableHead>Tarefa</TableHead>
                     <TableHead>Usuário</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Recorrência</TableHead>
                     <TableHead>Prioridade</TableHead>
                     <TableHead>Status</TableHead>
@@ -562,7 +596,7 @@ export default function KanbanCCIH() {
                 <TableBody>
                   {tarefas.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
                         Nenhuma tarefa cadastrada. Clique em "Nova Tarefa" para começar.
                       </TableCell>
                     </TableRow>
@@ -582,6 +616,13 @@ export default function KanbanCCIH() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        {t.source === "guardiao" ? (
+                          <Badge className="text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200">Guardião</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-gray-600">IrasControl</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline" className={`text-xs gap-1 ${RECURRENCE_COLORS[t.recurrence]}`}>
                           {RECURRENCE_ICONS[t.recurrence]}
                           {RECURRENCE_LABELS[t.recurrence]}
@@ -599,18 +640,25 @@ export default function KanbanCCIH() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <button
-                            onClick={() => openEdit(t)}
-                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(t.id)}
-                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {t.source !== "guardiao" && (
+                            <>
+                              <button
+                                onClick={() => openEdit(t)}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteId(t.id)}
+                                className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
+                          {t.source === "guardiao" && (
+                            <span className="text-xs text-muted-foreground italic px-1.5">Gerir no Guardião</span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
