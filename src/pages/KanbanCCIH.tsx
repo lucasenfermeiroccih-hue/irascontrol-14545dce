@@ -648,7 +648,7 @@ export default function KanbanCCIH() {
             </div>
             <div className="space-y-1.5">
               <Label>Atribuir para *</Label>
-              <Select value={form.assigned_to} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}>
+              <Select value={form.assigned_to || undefined} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um usuário..." />
                 </SelectTrigger>
