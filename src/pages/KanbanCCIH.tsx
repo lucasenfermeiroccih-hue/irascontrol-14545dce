@@ -16,6 +16,7 @@ import {
   KanbanSquare, Plus, CheckCircle2, Clock, RotateCcw, Trash2,
   Pencil, Loader2, Calendar, CalendarDays, CalendarRange,
   ListTodo, Users, ChevronRight, AlertCircle, User,
+  ArrowUp, ArrowDown, ArrowUpDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
