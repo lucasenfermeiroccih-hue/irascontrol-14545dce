@@ -30,7 +30,7 @@ interface Tarefa {
   assigned_to: string;
   assigned_to_ids: string[];
   assigned_by: string | null;
-  recurrence: "daily" | "weekly" | "monthly" | "none";
+  recurrence: "daily" | "weekly" | "monthly" | "none" | "once";
   status: "in_progress" | "completed";
   priority: "low" | "normal" | "high";
   last_completed_at: string | null;
@@ -51,6 +51,7 @@ const RECURRENCE_LABELS = {
   daily: "Diária",
   weekly: "Semanal",
   monthly: "Mensal",
+  once: "Única vez",
   none: "Sem recorrência",
 };
 
@@ -58,6 +59,7 @@ const RECURRENCE_ICONS = {
   daily: <Calendar className="h-3 w-3" />,
   weekly: <CalendarDays className="h-3 w-3" />,
   monthly: <CalendarRange className="h-3 w-3" />,
+  once: <ChevronRight className="h-3 w-3" />,
   none: <ListTodo className="h-3 w-3" />,
 };
 
@@ -65,6 +67,7 @@ const RECURRENCE_COLORS = {
   daily: "bg-blue-100 text-blue-700 border-blue-200",
   weekly: "bg-purple-100 text-purple-700 border-purple-200",
   monthly: "bg-amber-100 text-amber-700 border-amber-200",
+  once: "bg-green-100 text-green-700 border-green-200",
   none: "bg-gray-100 text-gray-600 border-gray-200",
 };
 
@@ -95,6 +98,7 @@ function lastWeekday(from = new Date()): Date {
 function shouldReset(tarefa: Tarefa): boolean {
   if (!tarefa.last_completed_at) return false;
   if (tarefa.status === "in_progress") return false;
+  if (tarefa.recurrence === "once" || tarefa.recurrence === "none") return false;
 
   const last = new Date(tarefa.last_completed_at);
   const now = new Date();
@@ -232,7 +236,7 @@ export default function KanbanCCIH() {
   const [hospitalUsers, setHospitalUsers] = useState<HospitalUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"kanban" | "manage">("kanban");
-  const [recurrenceFilter, setRecurrenceFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
+  const [recurrenceFilter, setRecurrenceFilter] = useState<"all" | "daily" | "weekly" | "monthly" | "once">("all");
   const [showDialog, setShowDialog] = useState(false);
   const [editingTarefa, setEditingTarefa] = useState<Tarefa | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -242,7 +246,7 @@ export default function KanbanCCIH() {
     title: "",
     description: "",
     assigned_to_ids: [] as string[],
-    recurrence: "daily" as "daily" | "weekly" | "monthly",
+    recurrence: "daily" as "daily" | "weekly" | "monthly" | "once",
     priority: "normal" as "low" | "normal" | "high",
   };
   const [form, setForm] = useState(emptyForm);
@@ -447,7 +451,7 @@ export default function KanbanCCIH() {
       title: tarefa.title,
       description: tarefa.description || "",
       assigned_to_ids: ids,
-      recurrence: (tarefa.recurrence === "none" ? "daily" : tarefa.recurrence) as "daily" | "weekly" | "monthly",
+      recurrence: (tarefa.recurrence === "none" ? "daily" : tarefa.recurrence) as "daily" | "weekly" | "monthly" | "once",
       priority: tarefa.priority,
     });
     setShowDialog(true);
@@ -483,6 +487,7 @@ export default function KanbanCCIH() {
     daily: myTarefas.filter((t) => t.recurrence === "daily").length,
     weekly: myTarefas.filter((t) => t.recurrence === "weekly").length,
     monthly: myTarefas.filter((t) => t.recurrence === "monthly").length,
+    once: myTarefas.filter((t) => t.recurrence === "once").length,
     done: myTarefas.filter((t) => t.status === "completed").length,
     total: myTarefas.length,
   };
@@ -540,10 +545,11 @@ export default function KanbanCCIH() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard icon={<Calendar className="h-4 w-4 text-blue-600" />} label="Diárias" value={stats.daily} color="text-blue-600" />
         <StatCard icon={<CalendarDays className="h-4 w-4 text-purple-600" />} label="Semanais" value={stats.weekly} color="text-purple-600" />
         <StatCard icon={<CalendarRange className="h-4 w-4 text-amber-600" />} label="Mensais" value={stats.monthly} color="text-amber-600" />
+        <StatCard icon={<ChevronRight className="h-4 w-4 text-green-600" />} label="Única vez" value={stats.once} color="text-green-600" />
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
           label="Concluídas"
@@ -567,6 +573,9 @@ export default function KanbanCCIH() {
               </TabsTrigger>
               <TabsTrigger value="monthly" className="text-xs px-3 gap-1">
                 <CalendarRange className="h-3 w-3" /> Mensais
+              </TabsTrigger>
+              <TabsTrigger value="once" className="text-xs px-3 gap-1">
+                <ChevronRight className="h-3 w-3" /> Única vez
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -837,6 +846,7 @@ export default function KanbanCCIH() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="once">Única vez</SelectItem>
                     <SelectItem value="daily">Diária</SelectItem>
                     <SelectItem value="weekly">Semanal</SelectItem>
                     <SelectItem value="monthly">Mensal</SelectItem>
@@ -861,6 +871,7 @@ export default function KanbanCCIH() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <span>
+                  {form.recurrence === "once" && "Essa tarefa ocorre uma única vez e não será reiniciada automaticamente após concluída."}
                   {form.recurrence === "daily" && "Essa tarefa voltará para 'Em Andamento' automaticamente todo dia."}
                   {form.recurrence === "weekly" && "Essa tarefa voltará para 'Em Andamento' toda segunda-feira."}
                   {form.recurrence === "monthly" && "Essa tarefa voltará para 'Em Andamento' no primeiro dia de cada mês."}
