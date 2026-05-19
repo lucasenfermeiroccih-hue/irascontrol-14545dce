@@ -531,12 +531,12 @@ export default function DashboardAntibiogram() {
             <ChartActions chartRef={chartRefs.tendenciaMensal} chartTitle="Tendência Mensal de Resistência" metaValue={metas.tendenciaMensal} onMetaChange={(v) => setMeta("tendenciaMensal", v)} metaUnit="%" />
           </CardHeader>
           <CardContent className="p-2 md:p-6 pt-2" ref={chartRefs.tendenciaMensal}>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={monthlyTrend}>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={monthlyTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 9 }} />
-                <YAxis unit="%" tick={{ fontSize: 10 }} width={35} />
-                <Tooltip formatter={(v: number) => `${v}%`} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis unit="%" tick={{ fontSize: 10 }} width={42} domain={[0, 100]} />
+                <Tooltip formatter={(v: number) => [`${v}%`, "Resistência"]} />
                 {metas.tendenciaMensal !== undefined && <ReferenceLine y={metas.tendenciaMensal} stroke="hsl(0,72%,51%)" strokeDasharray="4 4" label={{ value: `Meta: ${metas.tendenciaMensal}%`, fontSize: 10, fill: "hsl(0,72%,51%)" }} />}
                 <Line type="monotone" dataKey="taxaResistencia" name="Resistência" stroke="hsl(0,72%,51%)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
