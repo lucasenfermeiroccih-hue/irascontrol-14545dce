@@ -455,16 +455,20 @@ export default function DashboardAntibiogram() {
             <ChartActions chartRef={chartRefs.setor} chartTitle="Distribuição por Setor" metaValue={metas.setor} onMetaChange={(v) => setMeta("setor", v)} metaUnit="exames" />
           </CardHeader>
           <CardContent className="p-2 md:p-6 pt-2" ref={chartRefs.setor}>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={sectorData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis type="number" tick={{ fontSize: 10 }} />
-                <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 9 }} />
-                <Tooltip />
-                {metas.setor !== undefined && <ReferenceLine x={metas.setor} stroke="hsl(0,72%,51%)" strokeDasharray="4 4" label={{ value: `Meta: ${metas.setor}`, fontSize: 10, fill: "hsl(0,72%,51%)" }} />}
-                <Bar dataKey="value" fill="hsl(168,66%,34%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {sectorData.length === 0 ? (
+              <p className="text-center text-muted-foreground py-10 text-sm">Sem dados de setor</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(220, sectorData.length * 32 + 40)}>
+                <BarChart data={sectorData} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} interval={0} />
+                  <Tooltip formatter={(v: number) => [`${v} exames`, "Exames"]} />
+                  {metas.setor !== undefined && <ReferenceLine x={metas.setor} stroke="hsl(0,72%,51%)" strokeDasharray="4 4" label={{ value: `Meta: ${metas.setor}`, fontSize: 10, fill: "hsl(0,72%,51%)" }} />}
+                  <Bar dataKey="value" name="Exames" fill="hsl(168,66%,34%)" radius={[0, 4, 4, 0]} barSize={18} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
         <Card>
