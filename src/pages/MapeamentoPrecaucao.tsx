@@ -570,7 +570,7 @@ export default function MapeamentoPrecaucao() {
           {/* form */}
           {showForm && (
             <div className="np" style={{ ...card, marginBottom:16 }}>
-              <h3 style={{ margin:"0 0 14px", fontSize:14, fontWeight:500, color:"var(--color-text-primary)" }}>Cadastrar Paciente em Isolamento</h3>
+              <h3 style={{ margin:"0 0 14px", fontSize:14, fontWeight:500, color:"var(--color-text-primary)" }}>{editingId ? "Editar Paciente em Isolamento" : "Cadastrar Paciente em Isolamento"}</h3>
               <form onSubmit={onSubmit}>
                 <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:10, marginBottom:10 }}>
                   {[
