@@ -102,6 +102,7 @@ export default function MapeamentoPrecaucao() {
   const [events,     setEvents]    = useState<Event[]>([]);
   const [loading,    setLoading]   = useState(false);
   const [showForm,   setShowForm]  = useState(false);
+  const [editingId,  setEditingId] = useState<string | null>(null);
   const [form,       setForm]      = useState({ nome:"", prontuario:"", setor:"", leito:"", dataColeta:"", material:"", organismo:"" });
   const [fStatus,    setFStatus]   = useState("Internado");
   const [search,     setSearch]    = useState("");
