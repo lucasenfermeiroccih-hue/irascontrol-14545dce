@@ -3,7 +3,7 @@ import {
   FileText, Settings, Users, Microscope, Pill, HandMetal,
   MonitorCheck, Building2, ShoppingBag, Stethoscope, FlaskConical,
   BarChart3, FolderOpen, TrendingUp, Sparkles, Tag, ArrowLeftRight, Droplets,
-  ExternalLink, KanbanSquare
+  ExternalLink, KanbanSquare, Package, ClipboardList, Puzzle
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -134,6 +134,11 @@ async function openCCIH5W2H() {
   window.open(`${CCIH_5W2H_URL}/?${params.toString()}`, "_blank");
 }
 
+interface InstalledTool { tool_id: string; name: string; route: string; icon_name: string; }
+const SIDEBAR_ICON_MAP: Record<string, React.ElementType> = {
+  ClipboardList, Shield, Package, Puzzle, BarChart3, FileText, Microscope,
+};
+
 export function AppSidebar() {
   const { state, isMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
@@ -143,6 +148,7 @@ export function AppSidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [hospitalName, setHospitalName] = useState("");
   const [multiHospital, setMultiHospital] = useState(false);
+  const [installedTools, setInstalledTools] = useState<InstalledTool[]>([]);
 
   useEffect(() => {
     if (!isReady || !user) return;
@@ -156,11 +162,24 @@ export function AppSidebar() {
       setIsAdmin(!!isSuperAdmin || !!isHospitalAdmin);
       setMultiHospital((memberships || []).length > 1);
 
-      // Load current hospital name
       const selectedId = getSelectedHospitalId(user.id);
       if (selectedId) {
         const { data: hosp } = await supabase.from("hospitals").select("name").eq("id", selectedId).maybeSingle();
         if (hosp) setHospitalName(hosp.name);
+
+        const { data: installs } = await supabase
+          .from("hospital_tool_installations")
+          .select("tool_id, marketplace_tools(name, route, icon_name)")
+          .eq("hospital_id", selectedId)
+          .eq("is_active", true);
+        if (installs) {
+          setInstalledTools(installs.map((i: any) => ({
+            tool_id: i.tool_id,
+            name: i.marketplace_tools?.name ?? i.tool_id,
+            route: i.marketplace_tools?.route ?? `/tools/${i.tool_id}`,
+            icon_name: i.marketplace_tools?.icon_name ?? "Package",
+          })));
+        }
       }
     };
     check();
@@ -222,6 +241,30 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Ferramentas instaladas */}
+        {installedTools.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Ferramentas</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {installedTools.map(tool => {
+                  const Icon = SIDEBAR_ICON_MAP[tool.icon_name] ?? Package;
+                  return (
+                    <SidebarMenuItem key={tool.tool_id}>
+                      <SidebarMenuButton asChild isActive={location.pathname.startsWith(tool.route)}>
+                        <NavLink to={tool.route} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                          <Icon className="mr-2 h-4 w-4 shrink-0" />
+                          {!collapsed && <span className="truncate">{tool.name}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* IA */}
         {iaSection && renderSection(iaSection)}
