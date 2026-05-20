@@ -183,8 +183,8 @@ export default function MapeamentoPrecaucao() {
 
   const applySort = (list: Patient[]) =>
     [...list].sort((a, b) => {
-      let va: string = (a as Record<string,string>)[sortKey] || "";
-      let vb: string = (b as Record<string,string>)[sortKey] || "";
+      let va: string = (a as unknown as Record<string,string>)[sortKey] || "";
+      let vb: string = (b as unknown as Record<string,string>)[sortKey] || "";
       if (sortKey === "leito")      { va = va.padStart(6,"0"); vb = vb.padStart(6,"0"); }
       if (sortKey === "dataColeta") { va = va || "0000-00-00"; vb = vb || "0000-00-00"; }
       const cmp = va.localeCompare(vb, "pt-BR", { numeric: sortKey === "leito" });
