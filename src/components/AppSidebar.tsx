@@ -43,6 +43,7 @@ const publicSections = [
       { title: "Dispensers", url: "/audits/dispenser/new", icon: FlaskConical },
       { title: "Infraestrutura CTI", url: "/audits/infrastructure/cti/new", icon: Building2 },
       { title: "Exames/Culturas", url: "/audits/antimicrobial-sensitivity/new", icon: Microscope },
+      { title: "Auditoria por Setor", url: "/audits/sector/new", icon: ClipboardList },
     ],
   },
   {

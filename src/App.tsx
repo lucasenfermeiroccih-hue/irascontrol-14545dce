@@ -53,6 +53,7 @@ import AuditHandHygieneConsumptionNew from "./pages/AuditHandHygieneConsumptionN
 import HygieneConsumptionDashboard from "./pages/HygieneConsumptionDashboard.tsx";
 import PatientDashboardIndicators from "./pages/PatientDashboardIndicators.tsx";
 import KanbanCCIH from "./pages/KanbanCCIH.tsx";
+import AuditSectorNew from "./pages/AuditSectorNew.tsx";
 import { AppLayout } from "./components/AppLayout.tsx";
 import { RequireSuperAdmin } from "./components/RequireSuperAdmin.tsx";
 import { RequireAdmin } from "./components/RequireAdmin.tsx";
@@ -127,6 +128,7 @@ const App = () => (
               <Route path="/audits/hand-hygiene/consumption/new" element={<AuditHandHygieneConsumptionNew />} />
               <Route path="/hygiene/consumption-dashboard" element={<HygieneConsumptionDashboard />} />
               <Route path="/kanban-ccih" element={<KanbanCCIH />} />
+              <Route path="/audits/sector/new" element={<AuditSectorNew />} />
             </Route>
           </Route>
 
