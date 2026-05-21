@@ -43,7 +43,6 @@ const publicSections = [
       { title: "Dispensers", url: "/audits/dispenser/new", icon: FlaskConical },
       { title: "Infraestrutura CTI", url: "/audits/infrastructure/cti/new", icon: Building2 },
       { title: "Exames/Culturas", url: "/audits/antimicrobial-sensitivity/new", icon: Microscope },
-      { title: "Auditoria por Setor", url: "/audits/sector/new", icon: ClipboardList },
     ],
   },
   {
@@ -127,10 +126,12 @@ async function openCCIH5W2H() {
   const { data } = await supabase.auth.getSession();
   if (!data.session) return;
   const hospitalId = getSelectedHospitalId(data.session.user.id) ?? "";
-  // Usa hash fragment (#) em vez de query params (?):
-  // o hash nunca é enviado ao servidor — evita interferência do SSR do Cloudflare.
-  const hash = `access_token=${encodeURIComponent(data.session.access_token)}&refresh_token=${encodeURIComponent(data.session.refresh_token)}&hospital_id=${encodeURIComponent(hospitalId)}`;
-  window.open(`${CCIH_5W2H_URL}/#${hash}`, "_blank");
+  const params = new URLSearchParams({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    hospital_id: hospitalId,
+  });
+  window.open(`${CCIH_5W2H_URL}/#${params.toString()}`, "_blank");
 }
 
 interface InstalledTool { tool_id: string; name: string; route: string; icon_name: string; }
