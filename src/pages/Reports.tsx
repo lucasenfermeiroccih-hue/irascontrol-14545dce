@@ -109,6 +109,17 @@ const Reports = () => {
   const [aiInsights, setAiInsights] = useState<string[]>([]);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
+  const [metas, setMetas] = useState<Record<string, number | undefined>>({});
+  const setMeta = (key: string, val: number | undefined) => setMetas(prev => ({ ...prev, [key]: val }));
+  const chartRefs = {
+    distribution: useRef<HTMLDivElement>(null),
+    trend: useRef<HTMLDivElement>(null),
+    mdr: useRef<HTMLDivElement>(null),
+    examType: useRef<HTMLDivElement>(null),
+    resistant: useRef<HTMLDivElement>(null),
+    cases: useRef<HTMLDivElement>(null),
+  };
+
   const currentYear = new Date().getFullYear();
   const ANOS = [String(currentYear), String(currentYear - 1), String(currentYear - 2)];
 
