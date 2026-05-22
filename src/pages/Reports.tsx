@@ -218,11 +218,11 @@ const Reports = () => {
       .map(([mes, v]) => ({ mes, total: v.total, mdr: v.mdr, pct: v.total > 0 ? Math.round((v.mdr / v.total) * 100) : 0 }));
   }, [filtered]);
 
-  // Distribution by exam type
+  // Distribution by exam type (top 10)
   const examTypeData = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach(r => { if (r.sample_type) map[r.sample_type] = (map[r.sample_type] || 0) + 1; });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
   // Resistant organisms (MDR only)
