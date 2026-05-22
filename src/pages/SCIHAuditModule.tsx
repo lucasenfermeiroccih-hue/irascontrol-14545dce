@@ -777,7 +777,7 @@ export default function SCIHAuditModule() {
                 <div key={fld as string} style={{ marginBottom:10 }}>
                   <label className="scih-label">{lbl}</label>
                   <input className="scih-input" placeholder={ph as string}
-                    value={(planForm as Record<string,string>)[fld as string]}
+                    value={(planForm as unknown as Record<string,string>)[fld as string]}
                     onChange={e => setPlanForm(f => ({ ...f, [fld as string]: e.target.value }))} />
                 </div>
               ))}
