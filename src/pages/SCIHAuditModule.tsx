@@ -250,7 +250,7 @@ export default function SCIHAuditModule() {
     await supabase
       .from("scih_module_data" as never)
       .upsert(
-        { hospital_id: hospitalId, data: newData as unknown as Json, updated_at: new Date().toISOString() },
+        { hospital_id: hospitalId, data: newData as unknown as Json, updated_at: new Date().toISOString() } as never,
         { onConflict: "hospital_id" }
       );
   }, [hospitalId]);
