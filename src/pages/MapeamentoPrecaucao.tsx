@@ -128,6 +128,11 @@ export default function MapeamentoPrecaucao() {
   const [sortDir,    setSortDir]   = useState<"asc"|"desc">("asc");
   const [evtFilter,  setEvtFilter] = useState("Todos");
   const [orgDetail,  setOrgDetail] = useState<null | (typeof orgManagement)[0]>(null);
+  const [fSetor,     setFSetor]    = useState("Todos");
+  const [fLeito,     setFLeito]    = useState("");
+  const [fDataColeta,setFDataColeta]= useState("");
+  const [fOrganismo, setFOrganismo]= useState("Todos");
+  const [fPrecaucao, setFPrecaucao]= useState("Todos");
 
   const { hospitalId } = useHospitalContext();
 
