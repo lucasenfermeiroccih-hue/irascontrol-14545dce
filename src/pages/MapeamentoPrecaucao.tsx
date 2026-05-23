@@ -372,6 +372,18 @@ export default function MapeamentoPrecaucao() {
     setStModal(null);
   };
 
+  const deletePatient = async (id: string) => {
+    const pat = patients.find(p => p.id === id);
+    if (!pat) return;
+    if (!window.confirm(`Excluir paciente "${pat.nome}"? Esta ação não pode ser desfeita.`)) return;
+    await Promise.all([
+      supabase.from("precautions").delete().eq("patient_id", id),
+      supabase.from("lab_results").delete().eq("patient_id", id),
+    ]);
+    await supabase.from("patients").delete().eq("id", id);
+    setPatients(prev => prev.filter(p => p.id !== id));
+  };
+
   const runAI = async () => {
     setAiLoading(true); setAiText(""); setAiModal(true);
     const lines = internados.map(p => {
