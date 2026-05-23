@@ -128,6 +128,11 @@ export default function MapeamentoPrecaucao() {
   const [sortDir,    setSortDir]   = useState<"asc"|"desc">("asc");
   const [evtFilter,  setEvtFilter] = useState("Todos");
   const [orgDetail,  setOrgDetail] = useState<null | (typeof orgManagement)[0]>(null);
+  const [fSetor,     setFSetor]    = useState("Todos");
+  const [fLeito,     setFLeito]    = useState("");
+  const [fDataColeta,setFDataColeta]= useState("");
+  const [fOrganismo, setFOrganismo]= useState("Todos");
+  const [fPrecaucao, setFPrecaucao]= useState("Todos");
 
   const { hospitalId } = useHospitalContext();
 
@@ -207,6 +212,11 @@ export default function MapeamentoPrecaucao() {
 
   const displayed = applySort(patients.filter(p =>
     p.status === fStatus &&
+    (fSetor === "Todos" || p.setor === fSetor) &&
+    (fLeito === "" || p.leito.toLowerCase().includes(fLeito.toLowerCase())) &&
+    (fDataColeta === "" || p.dataColeta === fDataColeta) &&
+    (fOrganismo === "Todos" || (p.organismo || "").split(" | ").includes(fOrganismo)) &&
+    (fPrecaucao === "Todos" || p.precaucao === fPrecaucao) &&
     (search === "" ||
       p.nome.toLowerCase().includes(search.toLowerCase()) ||
       p.prontuario.includes(search) ||
@@ -360,6 +370,18 @@ export default function MapeamentoPrecaucao() {
       detail: `Status alterado para ${s} · ${pat?.setor} Leito ${pat?.leito}`,
     }, ...prev]);
     setStModal(null);
+  };
+
+  const deletePatient = async (id: string) => {
+    const pat = patients.find(p => p.id === id);
+    if (!pat) return;
+    if (!window.confirm(`Excluir paciente "${pat.nome}"? Esta ação não pode ser desfeita.`)) return;
+    await Promise.all([
+      supabase.from("precautions").delete().eq("patient_id", id),
+      supabase.from("lab_results").delete().eq("patient_id", id),
+    ]);
+    await supabase.from("patients").delete().eq("id", id);
+    setPatients(prev => prev.filter(p => p.id !== id));
   };
 
   const runAI = async () => {
@@ -525,11 +547,14 @@ export default function MapeamentoPrecaucao() {
           .ptbl th { background:#0F4C75; color:#fff; padding:6px 8px; text-align:left; }
           .ptbl td { padding:5px 8px; border-bottom:1px solid #E5E7EB; }
           .ptbl tr:nth-child(even) td { background:#F9FAFB; }
+          .page-break { page-break-before: always; }
+          .avoid-break { page-break-inside: avoid; }
         }
         @media screen { .po { display:none; } }
         * { box-sizing:border-box; }
         input,select { font-family:inherit; }
       `}</style>
+
 
       {/* ── HEADER ── */}
       <header className="np" style={{ background:"#0F4C75" }}>
@@ -694,6 +719,35 @@ export default function MapeamentoPrecaucao() {
               style={{ flex:1, padding:"6px 12px", borderRadius:8, border:"0.5px solid var(--color-border-secondary)", fontSize:12, background:"var(--color-background-primary)", color:"var(--color-text-primary)" }} />
           </div>
 
+          {/* filtros avançados */}
+          <div className="np" style={{ display:"grid", gridTemplateColumns:"repeat(6, minmax(0,1fr)) auto", gap:8, marginBottom:14 }}>
+            <select value={fSetor} onChange={e => setFSetor(e.target.value)} style={inpStyle}>
+              <option value="Todos">Setor: Todos</option>
+              {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <input value={fLeito} onChange={e => setFLeito(e.target.value)} placeholder="Leito" style={inpStyle} />
+            <input type="date" value={fDataColeta} onChange={e => setFDataColeta(e.target.value)} style={inpStyle} title="Data da Coleta" />
+            <select value={fStatus} onChange={e => setFStatus(e.target.value)} style={inpStyle}>
+              {Object.keys(SMETA).map(s => <option key={s} value={s}>Status: {s}</option>)}
+            </select>
+            <select value={fOrganismo} onChange={e => setFOrganismo(e.target.value)} style={inpStyle}>
+              <option value="Todos">Microrganismo: Todos</option>
+              {ORGANISMOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={fPrecaucao} onChange={e => setFPrecaucao(e.target.value)} style={inpStyle}>
+              <option value="Todos">Precaução: Todas</option>
+              {Object.keys(PMETA).map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={() => { setFSetor("Todos"); setFLeito(""); setFDataColeta(""); setFOrganismo("Todos"); setFPrecaucao("Todos"); setSearch(""); }}
+              style={{ padding:"7px 12px", border:"0.5px solid var(--color-border-secondary)", borderRadius:6, background:"var(--color-background-primary)", color:"var(--color-text-secondary)", fontSize:11, cursor:"pointer", fontFamily:"inherit" }}
+            >
+              Limpar
+            </button>
+          </div>
+
+
           {/* sort chips */}
           <div className="np" style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10 }}>
             <span style={{ fontSize:11, color:"var(--color-text-tertiary)", fontWeight:500, marginRight:2 }}>Ordenar por:</span>
@@ -765,6 +819,10 @@ export default function MapeamentoPrecaucao() {
                               Alterar
                             </button>
                           )}
+                          <button onClick={() => deletePatient(p.id)} title="Excluir paciente" style={{ width:28, height:28, display:"inline-flex", alignItems:"center", justifyContent:"center", border:"0.5px solid #FCA5A5", borderRadius:6, background:"transparent", color:"#B91C1C", cursor:"pointer", fontSize:14, fontFamily:"inherit" }}>
+                            🗑
+                          </button>
+
                         </div>
                       </td>
                       <td style={{ padding:"9px 14px", color:"var(--color-text-secondary)" }}>{p.setor}</td>
@@ -781,26 +839,64 @@ export default function MapeamentoPrecaucao() {
 
           {/* print view */}
           <div className="po" style={{ padding:20 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", borderBottom:"2px solid #0F4C75", paddingBottom:10, marginBottom:14 }}>
-              <div><div style={{ fontSize:17, fontWeight:600, color:"#0F4C75" }}>IRAS Control</div><div style={{ fontSize:11, color:"#6B7280" }}>Relatório de Mapeamento de Precauções e Isolamento — ANVISA</div></div>
-              <div style={{ textAlign:"right", fontSize:10, color:"#6B7280" }}>
-                <div>Data: {new Date().toLocaleDateString("pt-BR")}</div>
-                <div>Total em isolamento: {cntTotal}</div>
-              </div>
-            </div>
-            <table className="ptbl">
-              <thead><tr><th>Paciente</th><th>Prontuário</th><th>Setor</th><th>Leito</th><th>Data Coleta</th><th>Material</th><th>Microrganismo</th><th>Precaução</th></tr></thead>
-              <tbody>
-                {internadosSorted.map(p => {
-                  const org = ORGANISMOS.find(o => o.value === p.organismo);
-                  return (<tr key={p.id}><td>{p.nome}</td><td>{p.prontuario}</td><td>{p.setor}</td><td>{p.leito}</td><td>{fmt(p.dataColeta)}</td><td>{p.material || "—"}</td><td>{org?.label || p.organismo}</td><td>{p.precaucao}</td></tr>);
-                })}
-              </tbody>
-            </table>
-            <div style={{ marginTop:16, fontSize:9, color:"#9CA3AF", borderTop:"1px solid #E5E7EB", paddingTop:8 }}>
-              IRAS Control · Controle de Infecção Hospitalar · {new Date().toLocaleString("pt-BR")}
-            </div>
+            {(() => {
+              const grupos = internadosSorted.reduce<Record<string, Patient[]>>((acc, p) => {
+                const k = p.setor || "Sem setor";
+                (acc[k] = acc[k] || []).push(p);
+                return acc;
+              }, {});
+              const setoresOrd = Object.keys(grupos).sort((a,b) => a.localeCompare(b, "pt-BR"));
+              const renderTable = (rows: Patient[]) => (
+                <table className="ptbl">
+                  <thead><tr><th>Paciente</th><th>Prontuário</th><th>Setor</th><th>Leito</th><th>Data Coleta</th><th>Material</th><th>Microrganismo</th><th>Precaução</th></tr></thead>
+                  <tbody>
+                    {rows.map(p => {
+                      const org = ORGANISMOS.find(o => o.value === p.organismo);
+                      return (<tr key={p.id}><td>{p.nome}</td><td>{p.prontuario}</td><td>{p.setor}</td><td>{p.leito}</td><td>{fmt(p.dataColeta)}</td><td>{p.material || "—"}</td><td>{org?.label || p.organismo}</td><td>{p.precaucao}</td></tr>);
+                    })}
+                  </tbody>
+                </table>
+              );
+              return (
+                <>
+                  {setoresOrd.map((setor, idx) => (
+                    <section key={setor} className={idx > 0 ? "page-break avoid-break" : "avoid-break"}>
+                      <div style={{ display:"flex", justifyContent:"space-between", borderBottom:"2px solid #0F4C75", paddingBottom:10, marginBottom:14 }}>
+                        <div>
+                          <div style={{ fontSize:17, fontWeight:600, color:"#0F4C75" }}>IRAS Control</div>
+                          <div style={{ fontSize:11, color:"#6B7280" }}>Mapeamento de Precauções — Setor: <b>{setor}</b></div>
+                        </div>
+                        <div style={{ textAlign:"right", fontSize:10, color:"#6B7280" }}>
+                          <div>Data: {new Date().toLocaleDateString("pt-BR")}</div>
+                          <div>Pacientes no setor: {grupos[setor].length}</div>
+                        </div>
+                      </div>
+                      {renderTable(grupos[setor])}
+                    </section>
+                  ))}
+
+                  {/* Consolidado final */}
+                  <section className={setoresOrd.length > 0 ? "page-break" : ""}>
+                    <div style={{ display:"flex", justifyContent:"space-between", borderBottom:"2px solid #0F4C75", paddingBottom:10, marginBottom:14 }}>
+                      <div>
+                        <div style={{ fontSize:17, fontWeight:600, color:"#0F4C75" }}>IRAS Control</div>
+                        <div style={{ fontSize:11, color:"#6B7280" }}>Consolidado Geral — Todos os Setores · ANVISA</div>
+                      </div>
+                      <div style={{ textAlign:"right", fontSize:10, color:"#6B7280" }}>
+                        <div>Data: {new Date().toLocaleDateString("pt-BR")}</div>
+                        <div>Total em isolamento: {cntTotal}</div>
+                      </div>
+                    </div>
+                    {renderTable(internadosSorted)}
+                    <div style={{ marginTop:16, fontSize:9, color:"#9CA3AF", borderTop:"1px solid #E5E7EB", paddingTop:8 }}>
+                      IRAS Control · Controle de Infecção Hospitalar · {new Date().toLocaleString("pt-BR")}
+                    </div>
+                  </section>
+                </>
+              );
+            })()}
           </div>
+
         </main>
       )}
 
