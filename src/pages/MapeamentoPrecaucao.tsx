@@ -816,6 +816,10 @@ export default function MapeamentoPrecaucao() {
                               Alterar
                             </button>
                           )}
+                          <button onClick={() => deletePatient(p.id)} title="Excluir paciente" style={{ width:28, height:28, display:"inline-flex", alignItems:"center", justifyContent:"center", border:"0.5px solid #FCA5A5", borderRadius:6, background:"transparent", color:"#B91C1C", cursor:"pointer", fontSize:14, fontFamily:"inherit" }}>
+                            🗑
+                          </button>
+
                         </div>
                       </td>
                       <td style={{ padding:"9px 14px", color:"var(--color-text-secondary)" }}>{p.setor}</td>
