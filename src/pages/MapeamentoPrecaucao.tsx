@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { sendToAgent } from "@/lib/agent-service";
 import ChartActions from "@/components/ChartActions";
+import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 
 const ORGANISMOS = [
@@ -145,6 +146,7 @@ export default function MapeamentoPrecaucao() {
   const [fPrecaucao, setFPrecaucao]= useState("Todos");
 
   const { hospitalId } = useHospitalContext();
+  const { toast } = useToast();
 
   // Chart refs and metas for ChartActions
   const chartRefs = {
@@ -507,10 +509,26 @@ export default function MapeamentoPrecaucao() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nome || !form.prontuario || !form.setor || !form.leito || form.organismos.length === 0 || !hospitalId) return;
+
+    if (!hospitalId) {
+      toast({ title: "Erro", description: "Hospital não identificado. Recarregue a página.", variant: "destructive" });
+      return;
+    }
+    if (!form.nome || !form.prontuario) {
+      toast({ title: "Campos obrigatórios", description: "Preencha nome e prontuário do paciente.", variant: "destructive" });
+      return;
+    }
+    if (!form.setor || !form.leito) {
+      toast({ title: "Campos obrigatórios", description: "Preencha setor e leito do paciente.", variant: "destructive" });
+      return;
+    }
+    if (form.organismos.length === 0) {
+      toast({ title: "Selecione ao menos um microrganismo", description: "Clique nos chips de microrganismos para selecionar.", variant: "destructive" });
+      return;
+    }
+
     const precaucao = getMostRestrictivePrecaucao(form.organismos);
     const orgValue = form.organismos.join(" | ");
-    const org = { precaucao };
 
     if (editingId) {
       const pat = patients.find(p => p.id === editingId);
@@ -526,6 +544,15 @@ export default function MapeamentoPrecaucao() {
           precaution_type: precaucao,
           reason: orgValue,
         }).eq("id", pat.precaucaoId);
+      } else {
+        // Patient exists but lost precaution — recreate it
+        await supabase.from("precautions").insert({
+          patient_id: editingId,
+          precaution_type: precaucao,
+          is_active: true,
+          start_date: new Date().toISOString().split("T")[0],
+          reason: orgValue,
+        });
       }
 
       await (supabase as any).from("lab_results").update({
@@ -536,13 +563,13 @@ export default function MapeamentoPrecaucao() {
 
       await fetchData();
       resetForm();
+      toast({ title: "Paciente atualizado", description: `${form.nome} foi atualizado com sucesso.` });
       return;
     }
 
     let finalPatientId: string;
 
     if (existingPatientId) {
-      // Patient already exists in the system — just update location and add precaution
       await supabase.from("patients").update({
         sector: form.setor,
         bed: form.leito,
@@ -564,11 +591,14 @@ export default function MapeamentoPrecaucao() {
         .select()
         .single();
 
-      if (pErr || !newPatient) return;
+      if (pErr || !newPatient) {
+        toast({ title: "Erro ao cadastrar paciente", description: pErr?.message || "Tente novamente.", variant: "destructive" });
+        return;
+      }
       finalPatientId = newPatient.id;
     }
 
-    await Promise.all([
+    const [precRes] = await Promise.all([
       supabase.from("precautions").insert({
         patient_id: finalPatientId,
         precaution_type: precaucao,
@@ -586,6 +616,11 @@ export default function MapeamentoPrecaucao() {
       })] : []),
     ]);
 
+    if (precRes.error) {
+      toast({ title: "Erro ao salvar precaução", description: precRes.error.message, variant: "destructive" });
+      return;
+    }
+
     setEvents(prev => [{
       id: Date.now(),
       type: "Cadastro",
@@ -599,6 +634,7 @@ export default function MapeamentoPrecaucao() {
 
     await fetchData();
     resetForm();
+    toast({ title: "Paciente cadastrado", description: `${form.nome} adicionado ao mapeamento com precaução ${precaucao}.` });
   };
 
 
