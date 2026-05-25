@@ -45,11 +45,26 @@ export function useAuditDashboard(auditType: AuditType) {
 
       if (rows.length > 0) {
         const ids = rows.map(a => a.id);
-        const { data: itemData } = await supabase
-          .from("audit_items")
-          .select("id, audit_id, question, status, category, observation")
-          .in("audit_id", ids);
-        setItems(itemData || []);
+        // Batch the IN query and paginate to avoid Supabase's 1000-row default cap
+        const chunkSize = 200;
+        const all: AuditItemRow[] = [];
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          let from = 0;
+          const pageSize = 1000;
+          while (true) {
+            const { data: itemData, error } = await supabase
+              .from("audit_items")
+              .select("id, audit_id, question, status, category, observation")
+              .in("audit_id", chunk)
+              .range(from, from + pageSize - 1);
+            if (error || !itemData || itemData.length === 0) break;
+            all.push(...itemData);
+            if (itemData.length < pageSize) break;
+            from += pageSize;
+          }
+        }
+        setItems(all);
       }
       setLoading(false);
     };
