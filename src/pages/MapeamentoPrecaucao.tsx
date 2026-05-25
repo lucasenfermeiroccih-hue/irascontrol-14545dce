@@ -124,7 +124,7 @@ export default function MapeamentoPrecaucao() {
   const [loading,    setLoading]   = useState(false);
   const [showForm,         setShowForm]         = useState(false);
   const [editingId,        setEditingId]        = useState<string | null>(null);
-  const [form,             setForm]             = useState({ nome:"", prontuario:"", setor:"", leito:"", dataColeta:"", material:"", organismo:"", organismos:[] as string[] });
+  const [form,             setForm]             = useState({ nome:"", prontuario:"", setor:"", leito:"", dataColeta:"", material:"", organismo:"", organismos:[] as string[], materiais:[] as string[] });
   const [existingPatientId, setExistingPatientId] = useState<string | null>(null);
   const [patientQuery,     setPatientQuery]     = useState("");
   const [patientResults,   setPatientResults]   = useState<{id:string;full_name:string;medical_record:string;sector:string;bed:string}[]>([]);
@@ -454,7 +454,7 @@ export default function MapeamentoPrecaucao() {
   };
 
   const resetForm = () => {
-    setForm({ nome:"", prontuario:"", setor:"", leito:"", dataColeta:"", material:"", organismo:"", organismos:[] });
+    setForm({ nome:"", prontuario:"", setor:"", leito:"", dataColeta:"", material:"", organismo:"", organismos:[], materiais:[] });
     setEditingId(null);
     setExistingPatientId(null);
     setPatientQuery("");
@@ -494,13 +494,24 @@ export default function MapeamentoPrecaucao() {
     });
   };
 
+  const toggleMaterial = (value: string) => {
+    setForm(f => {
+      const list = f.materiais.includes(value)
+        ? f.materiais.filter(v => v !== value)
+        : [...f.materiais, value];
+      return { ...f, materiais: list, material: list.join(" | ") };
+    });
+  };
+
   const startEdit = (p: Patient) => {
     const stored = p.organismo || "";
     const organismos = stored ? stored.split(" | ").filter(v => ORGANISMOS.some(o => o.value === v)) : [];
+    const matStored = p.material || "";
+    const materiais = matStored ? matStored.split(" | ").filter(v => MATERIAIS.includes(v)) : [];
     setForm({
       nome: p.nome, prontuario: p.prontuario, setor: p.setor, leito: p.leito,
-      dataColeta: p.dataColeta || "", material: p.material || "",
-      organismo: stored, organismos,
+      dataColeta: p.dataColeta || "", material: matStored,
+      organismo: stored, organismos, materiais,
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -998,11 +1009,21 @@ export default function MapeamentoPrecaucao() {
                     <input type="date" name="dataColeta" value={form.dataColeta} onChange={onChange} style={inpStyle} />
                   </div>
                   <div>
-                    <label style={{ display:"block", fontSize:11, color:"var(--color-text-secondary)", marginBottom:3, fontWeight:500 }}>Material</label>
-                    <select name="material" value={form.material} onChange={onChange} style={inpStyle}>
-                      <option value="">Selecionar</option>
-                      {MATERIAIS.map(m => <option key={m}>{m}</option>)}
-                    </select>
+                    <label style={{ display:"block", fontSize:11, color:"var(--color-text-secondary)", marginBottom:3, fontWeight:500 }}>
+                      Material <span style={{ fontWeight:400, color:"var(--color-text-tertiary)" }}>(um ou mais)</span>
+                    </label>
+                    <div style={{ maxHeight:130, overflowY:"auto", border:"0.5px solid var(--color-border-secondary)", borderRadius:6, padding:"5px 8px", background:"var(--color-background-primary)" }}>
+                      {MATERIAIS.map(m => (
+                        <label key={m} style={{ display:"flex", alignItems:"center", gap:7, padding:"2px 2px", cursor:"pointer", fontSize:12, color:"var(--color-text-primary)", borderRadius:4, background: form.materiais.includes(m) ? "rgba(15,76,117,.08)" : "transparent" }}>
+                          <input type="checkbox" checked={form.materiais.includes(m)} onChange={() => toggleMaterial(m)}
+                            style={{ accentColor:"#0F4C75", width:13, height:13, cursor:"pointer" }} />
+                          <span>{m}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {form.materiais.length > 0 && (
+                      <div style={{ fontSize:10, color:"var(--color-text-tertiary)", marginTop:3 }}>{form.materiais.length} selecionado(s)</div>
+                    )}
                   </div>
                 </div>
                 <div style={{ marginBottom:14 }}>
