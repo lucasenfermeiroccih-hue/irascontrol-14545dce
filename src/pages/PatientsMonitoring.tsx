@@ -120,6 +120,8 @@ function calcAge(birth: string) {
   return Math.floor((Date.now() - new Date(birth).getTime()) / (365.25 * 86400000)) + " anos";
 }
 
+const emptyNewForm = { nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" };
+
 // ─── Component ────────────────────────────────────────────────
 export default function PatientsMonitoring() {
   const navigate = useNavigate();
@@ -153,6 +155,7 @@ export default function PatientsMonitoring() {
   const [viewMode, setViewMode] = useState<"edit" | "view">("edit");
   const [currentStep, setCurrentStep] = useState(0);
   const [editIdOpen, setEditIdOpen] = useState(false);
+  const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
   const [editIdForm, setEditIdForm] = useState<Omit<PatientRecord, "id" | "status">>({
     nome: "", unidade: "", leito: "", prontuario: "", dataInternacaoHospitalar: "",
     origem: "", dataInternacaoCTI: "", dataAlta: "", doencasBase: "", motivoInternacao: "",
@@ -163,7 +166,6 @@ export default function PatientsMonitoring() {
   const [viewPatientOpen, setViewPatientOpen] = useState(false);
   const [viewPatientId, setViewPatientId] = useState<string | null>(null);
 
-  const emptyNewForm = { nome: "", prontuario: "", unidade: "", leito: "", sexo: "", dataNascimento: "", infeccaoMaterna: "", irasTransplacentaria: "", pesoRN: "", diagnosticoRN: "", tipoParto: "", bolsaRotaH: "", bolsaRotaDias: "", apgar: "", idadeGestacional: "", dataInternacaoRN: "" };
   const [newForm, setNewForm] = useState(emptyNewForm);
   const [submittingNewPatient, setSubmittingNewPatient] = useState(false);
 
@@ -370,16 +372,18 @@ export default function PatientsMonitoring() {
     if (!patient) return;
     const { id, status, ...rest } = patient;
     setEditIdForm(rest);
-    setSelectedId(patientId);
+    setEditingPatientId(patientId);
     setEditIdOpen(true);
   };
 
   const saveEditId = async () => {
     if (!editIdForm.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    if (!selectedId) return;
-    const ok = await updatePatient(selectedId, editIdForm);
+    const targetId = editingPatientId || selectedId;
+    if (!targetId) return;
+    const ok = await updatePatient(targetId, editIdForm);
     if (ok) {
       setEditIdOpen(false);
+      setEditingPatientId(null);
       toast.success("Dados de identificação atualizados!");
     }
   };
@@ -398,7 +402,7 @@ export default function PatientsMonitoring() {
 
       // Restore persisted tab data from clinical_data
       const cd = (pat as any)._clinicalData || {};
-      setDispositivos(cd.dispositivos || { cvc: "", cvp: "Não", cateterArterial: "Não", cateterHemodialise: "", ventilacao: "Não", cateterVesical: "Não", sonda: "Não", drenos: "Não", feridaOp: "Não", tqt: "Não", vni: "Não" });
+      setDispositivos(cd.dispositivos || { cvc: "", cvp: "Não", cateterArterial: "Não", cateterHemodialise: "", ventilacao: "Não", cateterVesical: "Não", sonda: "Não", drenos: "Não", feridaOp: "Não", tqt: "Não", vni: "Não", picc: "", cuv: "", cva: "" });
       // Migrate legacy single-swap shape into trocas[] for backward compatibility
       const rawDi = cd.dispInvasivos || {};
       const migrateKey = (k: string) => {
@@ -415,6 +419,9 @@ export default function PatientsMonitoring() {
         vmInsercao: rawDi.vmInsercao || "", vmRetirada: rawDi.vmRetirada || "", vmTrocas: migrateKey("vm"),
         tqtInsercao: rawDi.tqtInsercao || "", tqtRetirada: rawDi.tqtRetirada || "", tqtTrocas: migrateKey("tqt"),
         hemoInsercao: rawDi.hemoInsercao || "", hemoRetirada: rawDi.hemoRetirada || "", hemoTrocas: migrateKey("hemo"),
+        piccInsercao: rawDi.piccInsercao || "", piccRetirada: rawDi.piccRetirada || "", piccTrocas: migrateKey("picc"),
+        cuvInsercao: rawDi.cuvInsercao || "", cuvRetirada: rawDi.cuvRetirada || "", cuvTrocas: migrateKey("cuv"),
+        cvaInsercao: rawDi.cvaInsercao || "", cvaRetirada: rawDi.cvaRetirada || "", cvaTrocas: migrateKey("cva"),
       });
       setAntibioticos(cd.antibioticos || []);
       setEvolucao(cd.evolucao || { evolucaoInternacao: "", colonizacoes: "", antibioticoPrevio: "", culturasPreviaCTI: "", resultadoCulturasCTI: "", antibioticosCTI: "", dispositivosInvasivos: "", examesImagem: "", condutasDiarias: "" });
@@ -426,7 +433,7 @@ export default function PatientsMonitoring() {
       setJustificativa(cd.justificativa || "");
       setOcorrencia(cd.ocorrencia || { unidadeSetor: "", leito: "", dataSintomas: "", dataSuspeita: "", dataNotificacao: "", origemNotificacao: "" });
       setLabPanel(cd.labPanel || []);
-      setExames(cd.exames || { hemocultura: "Não", urocultura: "Não", culturaTraqueal: "Não", culturaFerida: "Não", swabRetal: "Não", swabNasal: "Não", hemoculturaObs: "", uroculturaObs: "", culturaTraquealObs: "", culturaFeridaObs: "", swabRetalObs: "", swabNasalObs: "" });
+      setExames(cd.exames || { hemocultura: "Não", urocultura: "Não", culturaTraqueal: "Não", culturaFerida: "Não", swabRetal: "Não", swabNasal: "Não", liquor: "Não", hemoculturaObs: "", uroculturaObs: "", culturaTraquealObs: "", culturaFeridaObs: "", swabRetalObs: "", swabNasalObs: "", liquorObs: "" });
       setVdrl(cd.vdrl || { vdrlMae: "", vdrlRN: "", vdrlLiquor: "" });
       setResponsavel(cd.responsavel || "");
     }
@@ -1518,7 +1525,7 @@ export default function PatientsMonitoring() {
             <p className="text-xs md:text-sm text-muted-foreground">Investigação de infecções — Controle diário</p>
           </div>
         </div>
-        <Button size="sm" onClick={() => setNewPatientOpen(true)} className="self-start sm:self-auto"><Plus className="h-4 w-4 mr-1" />Novo Paciente</Button>
+        <Button size="sm" onClick={() => { setNewForm(emptyNewForm); setNewPatientOpen(true); }} className="self-start sm:self-auto"><Plus className="h-4 w-4 mr-1" />Novo Paciente</Button>
       </div>
 
       {/* ─── KPIs ─────────────────────────────────────────── */}
@@ -1599,7 +1606,7 @@ export default function PatientsMonitoring() {
                 Cadastre o primeiro paciente para iniciar o monitoramento de infecções e controle diário.
               </p>
             </div>
-            <Button onClick={() => setNewPatientOpen(true)} className="gap-2">
+            <Button onClick={() => { setNewForm(emptyNewForm); setNewPatientOpen(true); }} className="gap-2">
               <Plus className="h-4 w-4" />Cadastrar Primeiro Paciente
             </Button>
           </CardContent>
