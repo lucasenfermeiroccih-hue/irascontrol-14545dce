@@ -398,6 +398,15 @@ const CasesInvestigation = () => {
     setDialogOpen(false);
   };
 
+  const handleDeleteCase = async (caseId: string) => {
+    if (!window.confirm("Excluir este caso de investigação? Esta ação não pode ser desfeita.")) return;
+    const { error } = await supabase.from("infection_cases").delete().eq("id", caseId);
+    if (error) { toast.error("Erro ao excluir caso"); return; }
+    setCases(prev => prev.filter(c => c.id !== caseId));
+    if (detailCase?.id === caseId) setDetailCase(null);
+    toast.success("Caso excluído.");
+  };
+
   const handleStatusChange = async (caseId: string, newStatus: CaseStatus) => {
     const updates: any = { status: newStatus };
     if (newStatus === "confirmed") updates.confirmation_date = new Date().toISOString().split("T")[0];
@@ -1109,7 +1118,7 @@ const CasesInvestigation = () => {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)} title="Editar"><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDetailCase(c)} title="Detalhes"><Eye className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openFullInvestigation(c)} title="Investigar"><ClipboardList className="h-3.5 w-3.5 text-primary" /></Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDeletePatient(c)} title="Excluir paciente"><Trash2 className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteCase(c.id)} title="Excluir"><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </TableCell>
 
@@ -1133,6 +1142,7 @@ const CasesInvestigation = () => {
                 <div className="flex gap-2 pt-1 border-t border-border">
                   <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => openEdit(c)}><Pencil className="h-3 w-3" /> Editar</Button>
                   <Button variant="outline" size="sm" className="flex-1 h-7 text-xs gap-1" onClick={() => openFullInvestigation(c)}><ClipboardList className="h-3 w-3" /> Investigar</Button>
+                  <Button variant="outline" size="sm" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive p-0" onClick={() => handleDeleteCase(c.id)} title="Excluir"><Trash2 className="h-3 w-3" /></Button>
                 </div>
               </div>
             ))}
@@ -1209,6 +1219,9 @@ const CasesInvestigation = () => {
                 </div>
                 <Button size="sm" className="w-full gap-1.5" onClick={() => openFullInvestigation(detailCase)}>
                   <ClipboardList className="h-4 w-4" /> Abrir Investigação Completa
+                </Button>
+                <Button variant="outline" size="sm" className="w-full gap-1.5 text-destructive border-destructive/40 hover:bg-destructive hover:text-white" onClick={() => handleDeleteCase(detailCase.id)}>
+                  <Trash2 className="h-4 w-4" /> Excluir Caso
                 </Button>
               </div>
             </>
