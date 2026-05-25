@@ -3,7 +3,7 @@ import {
   FileText, Settings, Users, Microscope, Pill, HandMetal,
   MonitorCheck, Building2, ShoppingBag, Stethoscope, FlaskConical,
   BarChart3, FolderOpen, TrendingUp, Sparkles, Tag, ArrowLeftRight, Droplets,
-  KanbanSquare, Package, ClipboardList, Puzzle
+  KanbanSquare, Package, ClipboardList, Puzzle, ExternalLink, ShieldCheck
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -257,6 +257,33 @@ export function AppSidebar() {
 
         {/* IA */}
         {iaSection && renderSection(iaSection)}
+
+        {/* Guardião Hospitalar */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Integrações</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a
+                    href="https://5w2h.ekaban.irascontrol.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:bg-sidebar-accent/50 flex items-center w-full"
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4 shrink-0 text-emerald-600" />
+                    {!collapsed && (
+                      <span className="flex items-center gap-1 truncate">
+                        Guardião Hospitalar
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </span>
+                    )}
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Admin / Conta */}
         {renderSection(accountSection)}

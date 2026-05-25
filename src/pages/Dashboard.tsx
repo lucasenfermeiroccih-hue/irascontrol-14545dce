@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import {
   Users, AlertTriangle, ShieldAlert, CheckCircle, Activity,
-  TrendingUp, TrendingDown, Bot, ArrowRight, Loader2, Download
+  TrendingUp, TrendingDown, Bot, ArrowRight, Loader2, Download,
+  ShieldCheck, ExternalLink
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -218,6 +219,31 @@ export default function Dashboard() {
       <Card>
         <CardContent className="pt-4 pb-4">
           <DashboardFilters mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+        </CardContent>
+      </Card>
+
+      {/* Guardião Hospitalar — acesso rápido */}
+      <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 dark:border-emerald-800">
+        <CardContent className="flex items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900 shrink-0">
+              <ShieldCheck className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">Guardião Hospitalar</p>
+              <p className="text-xs text-emerald-700/70 dark:text-emerald-400/70 truncate">Gestão integrada de qualidade e segurança do paciente</p>
+            </div>
+          </div>
+          <a
+            href="https://5w2h.ekaban.irascontrol.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0"
+          >
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5">
+              Acessar <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </a>
         </CardContent>
       </Card>
 
