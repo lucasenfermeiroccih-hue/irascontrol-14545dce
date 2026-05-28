@@ -23,6 +23,13 @@ export default function Dashboard() {
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  // Filtros avançados (alinhados ao Mapeamento de Precaução)
+  const [fLeito, setFLeito] = useState("");
+  const [fDataColeta, setFDataColeta] = useState("");
+  const [fStatus, setFStatus] = useState("Todos");
+  const [fOrganismo, setFOrganismo] = useState("Todos");
+  const [fMaterial, setFMaterial] = useState("Todos");
+  const [fPrecaucao, setFPrecaucao] = useState("Todos");
 
   // Real data states
   const [patients, setPatients] = useState<any[]>([]);
@@ -30,6 +37,7 @@ export default function Dashboard() {
   const [audits, setAudits] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [labResults, setLabResults] = useState<any[]>([]);
+  const [precautions, setPrecautions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,6 +56,13 @@ export default function Dashboard() {
       setAudits(aRes.data || []);
       setAlerts(alRes.data || []);
       setLabResults(lRes.data || []);
+      const pIds = (pRes.data || []).map((p: any) => p.id);
+      if (pIds.length > 0) {
+        const { data: precData } = await supabase.from("precautions").select("*").in("patient_id", pIds);
+        setPrecautions(precData || []);
+      } else {
+        setPrecautions([]);
+      }
       setLoading(false);
     };
     fetchAll();
@@ -59,6 +74,33 @@ export default function Dashboard() {
     patients.forEach(p => { if (p.id) m[p.id] = p.sector || ""; });
     return m;
   }, [patients]);
+  const patientBedMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    patients.forEach(p => { if (p.id) m[p.id] = p.bed || ""; });
+    return m;
+  }, [patients]);
+  const patientPrecaucaoMap = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    precautions.filter(pr => pr.is_active).forEach(pr => {
+      if (!m[pr.patient_id]) m[pr.patient_id] = [];
+      m[pr.patient_id].push(pr.precaution_type);
+    });
+    return m;
+  }, [precautions]);
+
+  // Listas únicas para selects
+  const organismOptions = useMemo(
+    () => Array.from(new Set(labResults.map(r => r.organism).filter(Boolean))).sort(),
+    [labResults]
+  );
+  const materialOptions = useMemo(
+    () => Array.from(new Set(labResults.map(r => r.sample_material).filter(Boolean))).sort(),
+    [labResults]
+  );
+  const precaucaoOptions = useMemo(
+    () => Array.from(new Set(precautions.map(p => p.precaution_type).filter(Boolean))).sort(),
+    [precautions]
+  );
 
   const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -75,14 +117,47 @@ export default function Dashboard() {
     if (setor.length === 0) return true;
     return !!s && setor.includes(s);
   };
+  const matchLeito = (b?: string | null) => {
+    if (!fLeito) return true;
+    return !!b && b.toLowerCase().includes(fLeito.toLowerCase());
+  };
+  const matchStatus = (s?: string | null) => fStatus === "Todos" || s === fStatus;
+  const matchPrecaucao = (patientId?: string | null) => {
+    if (fPrecaucao === "Todos") return true;
+    if (!patientId) return false;
+    return (patientPrecaucaoMap[patientId] || []).includes(fPrecaucao);
+  };
+  const patientPassesLabFilters = (patientId?: string | null) => {
+    if (fOrganismo === "Todos" && fMaterial === "Todos" && !fDataColeta) return true;
+    if (!patientId) return false;
+    return labResults.some(r =>
+      r.patient_id === patientId &&
+      (fOrganismo === "Todos" || r.organism === fOrganismo) &&
+      (fMaterial === "Todos" || r.sample_material === fMaterial) &&
+      (!fDataColeta || r.collection_date === fDataColeta)
+    );
+  };
 
   // Filtered datasets
   const fPatients = useMemo(() =>
-    patients.filter(p => matchDate(p.admission_date) && matchSector(p.sector)),
-    [patients, mes, ano, setor]);
+    patients.filter(p =>
+      matchDate(p.admission_date) &&
+      matchSector(p.sector) &&
+      matchLeito(p.bed) &&
+      matchStatus(p.status) &&
+      matchPrecaucao(p.id) &&
+      patientPassesLabFilters(p.id)
+    ),
+    [patients, mes, ano, setor, fLeito, fStatus, fPrecaucao, fOrganismo, fMaterial, fDataColeta, patientPrecaucaoMap, labResults]);
   const fCases = useMemo(() =>
-    cases.filter(c => matchDate(c.detection_date) && matchSector(c.patient_id ? patientSectorMap[c.patient_id] : c.infection_site)),
-    [cases, mes, ano, setor, patientSectorMap]);
+    cases.filter(c =>
+      matchDate(c.detection_date) &&
+      matchSector(c.patient_id ? patientSectorMap[c.patient_id] : c.infection_site) &&
+      matchLeito(c.patient_id ? patientBedMap[c.patient_id] : null) &&
+      matchPrecaucao(c.patient_id) &&
+      patientPassesLabFilters(c.patient_id)
+    ),
+    [cases, mes, ano, setor, fLeito, fPrecaucao, fOrganismo, fMaterial, fDataColeta, patientSectorMap, patientBedMap, patientPrecaucaoMap, labResults]);
   const fAudits = useMemo(() =>
     audits.filter(a => matchDate(a.audit_date) && matchSector(a.sector)),
     [audits, mes, ano, setor]);
@@ -90,8 +165,16 @@ export default function Dashboard() {
     alerts.filter(a => matchDate(a.created_at)),
     [alerts, mes, ano]);
   const fLabResults = useMemo(() =>
-    labResults.filter(r => matchDate(r.collection_date) && matchSector(r.patient_id ? patientSectorMap[r.patient_id] : null)),
-    [labResults, mes, ano, setor, patientSectorMap]);
+    labResults.filter(r =>
+      matchDate(r.collection_date) &&
+      matchSector(r.patient_id ? patientSectorMap[r.patient_id] : null) &&
+      matchLeito(r.patient_id ? patientBedMap[r.patient_id] : null) &&
+      (fOrganismo === "Todos" || r.organism === fOrganismo) &&
+      (fMaterial === "Todos" || r.sample_material === fMaterial) &&
+      (!fDataColeta || r.collection_date === fDataColeta) &&
+      matchPrecaucao(r.patient_id)
+    ),
+    [labResults, mes, ano, setor, fLeito, fOrganismo, fMaterial, fDataColeta, fPrecaucao, patientSectorMap, patientBedMap, patientPrecaucaoMap]);
 
   // Computed KPIs
   const activePatients = fPatients.filter(p => p.status === "active");
@@ -218,8 +301,75 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardContent className="pt-4 pb-4">
+        <CardContent className="pt-4 pb-4 space-y-3">
           <DashboardFilters mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end pt-2 border-t">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Leito</label>
+              <input
+                value={fLeito}
+                onChange={(e) => setFLeito(e.target.value)}
+                placeholder="Leito"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Data de Coleta</label>
+              <input
+                type="date"
+                value={fDataColeta}
+                onChange={(e) => setFDataColeta(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <select
+                value={fStatus}
+                onChange={(e) => setFStatus(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                <option value="active">Ativo</option>
+                <option value="discharged">Alta</option>
+                <option value="deceased">Óbito</option>
+                <option value="transferred">Transferido</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Microrganismo</label>
+              <select
+                value={fOrganismo}
+                onChange={(e) => setFOrganismo(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                {organismOptions.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Material</label>
+              <select
+                value={fMaterial}
+                onChange={(e) => setFMaterial(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                {materialOptions.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Precaução</label>
+              <select
+                value={fPrecaucao}
+                onChange={(e) => setFPrecaucao(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todas</option>
+                {precaucaoOptions.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
