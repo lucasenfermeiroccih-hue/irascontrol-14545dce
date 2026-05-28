@@ -301,8 +301,75 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardContent className="pt-4 pb-4">
+        <CardContent className="pt-4 pb-4 space-y-3">
           <DashboardFilters mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end pt-2 border-t">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Leito</label>
+              <input
+                value={fLeito}
+                onChange={(e) => setFLeito(e.target.value)}
+                placeholder="Leito"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Data de Coleta</label>
+              <input
+                type="date"
+                value={fDataColeta}
+                onChange={(e) => setFDataColeta(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <select
+                value={fStatus}
+                onChange={(e) => setFStatus(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                <option value="active">Ativo</option>
+                <option value="discharged">Alta</option>
+                <option value="deceased">Óbito</option>
+                <option value="transferred">Transferido</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Microrganismo</label>
+              <select
+                value={fOrganismo}
+                onChange={(e) => setFOrganismo(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                {organismOptions.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Material</label>
+              <select
+                value={fMaterial}
+                onChange={(e) => setFMaterial(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todos</option>
+                {materialOptions.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Precaução</label>
+              <select
+                value={fPrecaucao}
+                onChange={(e) => setFPrecaucao(e.target.value)}
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+              >
+                <option value="Todos">Todas</option>
+                {precaucaoOptions.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
