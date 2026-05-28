@@ -56,6 +56,13 @@ export default function Dashboard() {
       setAudits(aRes.data || []);
       setAlerts(alRes.data || []);
       setLabResults(lRes.data || []);
+      const pIds = (pRes.data || []).map((p: any) => p.id);
+      if (pIds.length > 0) {
+        const { data: precData } = await supabase.from("precautions").select("*").in("patient_id", pIds);
+        setPrecautions(precData || []);
+      } else {
+        setPrecautions([]);
+      }
       setLoading(false);
     };
     fetchAll();
@@ -67,6 +74,33 @@ export default function Dashboard() {
     patients.forEach(p => { if (p.id) m[p.id] = p.sector || ""; });
     return m;
   }, [patients]);
+  const patientBedMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    patients.forEach(p => { if (p.id) m[p.id] = p.bed || ""; });
+    return m;
+  }, [patients]);
+  const patientPrecaucaoMap = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    precautions.filter(pr => pr.is_active).forEach(pr => {
+      if (!m[pr.patient_id]) m[pr.patient_id] = [];
+      m[pr.patient_id].push(pr.precaution_type);
+    });
+    return m;
+  }, [precautions]);
+
+  // Listas únicas para selects
+  const organismOptions = useMemo(
+    () => Array.from(new Set(labResults.map(r => r.organism).filter(Boolean))).sort(),
+    [labResults]
+  );
+  const materialOptions = useMemo(
+    () => Array.from(new Set(labResults.map(r => r.sample_material).filter(Boolean))).sort(),
+    [labResults]
+  );
+  const precaucaoOptions = useMemo(
+    () => Array.from(new Set(precautions.map(p => p.precaution_type).filter(Boolean))).sort(),
+    [precautions]
+  );
 
   const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -83,14 +117,47 @@ export default function Dashboard() {
     if (setor.length === 0) return true;
     return !!s && setor.includes(s);
   };
+  const matchLeito = (b?: string | null) => {
+    if (!fLeito) return true;
+    return !!b && b.toLowerCase().includes(fLeito.toLowerCase());
+  };
+  const matchStatus = (s?: string | null) => fStatus === "Todos" || s === fStatus;
+  const matchPrecaucao = (patientId?: string | null) => {
+    if (fPrecaucao === "Todos") return true;
+    if (!patientId) return false;
+    return (patientPrecaucaoMap[patientId] || []).includes(fPrecaucao);
+  };
+  const patientPassesLabFilters = (patientId?: string | null) => {
+    if (fOrganismo === "Todos" && fMaterial === "Todos" && !fDataColeta) return true;
+    if (!patientId) return false;
+    return labResults.some(r =>
+      r.patient_id === patientId &&
+      (fOrganismo === "Todos" || r.organism === fOrganismo) &&
+      (fMaterial === "Todos" || r.sample_material === fMaterial) &&
+      (!fDataColeta || r.collection_date === fDataColeta)
+    );
+  };
 
   // Filtered datasets
   const fPatients = useMemo(() =>
-    patients.filter(p => matchDate(p.admission_date) && matchSector(p.sector)),
-    [patients, mes, ano, setor]);
+    patients.filter(p =>
+      matchDate(p.admission_date) &&
+      matchSector(p.sector) &&
+      matchLeito(p.bed) &&
+      matchStatus(p.status) &&
+      matchPrecaucao(p.id) &&
+      patientPassesLabFilters(p.id)
+    ),
+    [patients, mes, ano, setor, fLeito, fStatus, fPrecaucao, fOrganismo, fMaterial, fDataColeta, patientPrecaucaoMap, labResults]);
   const fCases = useMemo(() =>
-    cases.filter(c => matchDate(c.detection_date) && matchSector(c.patient_id ? patientSectorMap[c.patient_id] : c.infection_site)),
-    [cases, mes, ano, setor, patientSectorMap]);
+    cases.filter(c =>
+      matchDate(c.detection_date) &&
+      matchSector(c.patient_id ? patientSectorMap[c.patient_id] : c.infection_site) &&
+      matchLeito(c.patient_id ? patientBedMap[c.patient_id] : null) &&
+      matchPrecaucao(c.patient_id) &&
+      patientPassesLabFilters(c.patient_id)
+    ),
+    [cases, mes, ano, setor, fLeito, fPrecaucao, fOrganismo, fMaterial, fDataColeta, patientSectorMap, patientBedMap, patientPrecaucaoMap, labResults]);
   const fAudits = useMemo(() =>
     audits.filter(a => matchDate(a.audit_date) && matchSector(a.sector)),
     [audits, mes, ano, setor]);
@@ -98,8 +165,16 @@ export default function Dashboard() {
     alerts.filter(a => matchDate(a.created_at)),
     [alerts, mes, ano]);
   const fLabResults = useMemo(() =>
-    labResults.filter(r => matchDate(r.collection_date) && matchSector(r.patient_id ? patientSectorMap[r.patient_id] : null)),
-    [labResults, mes, ano, setor, patientSectorMap]);
+    labResults.filter(r =>
+      matchDate(r.collection_date) &&
+      matchSector(r.patient_id ? patientSectorMap[r.patient_id] : null) &&
+      matchLeito(r.patient_id ? patientBedMap[r.patient_id] : null) &&
+      (fOrganismo === "Todos" || r.organism === fOrganismo) &&
+      (fMaterial === "Todos" || r.sample_material === fMaterial) &&
+      (!fDataColeta || r.collection_date === fDataColeta) &&
+      matchPrecaucao(r.patient_id)
+    ),
+    [labResults, mes, ano, setor, fLeito, fOrganismo, fMaterial, fDataColeta, fPrecaucao, patientSectorMap, patientBedMap, patientPrecaucaoMap]);
 
   // Computed KPIs
   const activePatients = fPatients.filter(p => p.status === "active");
