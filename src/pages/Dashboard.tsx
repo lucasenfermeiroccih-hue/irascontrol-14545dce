@@ -23,6 +23,13 @@ export default function Dashboard() {
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  // Filtros avançados (alinhados ao Mapeamento de Precaução)
+  const [fLeito, setFLeito] = useState("");
+  const [fDataColeta, setFDataColeta] = useState("");
+  const [fStatus, setFStatus] = useState("Todos");
+  const [fOrganismo, setFOrganismo] = useState("Todos");
+  const [fMaterial, setFMaterial] = useState("Todos");
+  const [fPrecaucao, setFPrecaucao] = useState("Todos");
 
   // Real data states
   const [patients, setPatients] = useState<any[]>([]);
@@ -30,6 +37,7 @@ export default function Dashboard() {
   const [audits, setAudits] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [labResults, setLabResults] = useState<any[]>([]);
+  const [precautions, setPrecautions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
