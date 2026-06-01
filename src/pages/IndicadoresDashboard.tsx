@@ -462,6 +462,9 @@ export default function IndicadoresDashboard() {
           taxaInfCVC: safeDiv(m.infeccaoCVC, m.utilizacaoCVC, 1000),
           taxaInfVM: safeDiv(m.infeccaoVM, m.utilizacaoVM, 1000),
           taxaInfSVD: safeDiv(m.infeccaoSVD, m.utilizacaoSVD, 1000),
+          taxaUtilCVC: safeDiv(m.utilizacaoCVC, m.numPacienteDiaTotal, 100),
+          taxaUtilVM: safeDiv(m.utilizacaoVM, m.numPacienteDiaTotal, 100),
+          taxaUtilSVD: safeDiv(m.utilizacaoSVD, m.numPacienteDiaTotal, 100),
           infeccoesDispositivo: m.infeccaoCVC + m.infeccaoVM + m.infeccaoSVD,
           tempoPermanencia: safeDiv(
             m.numPacientesUtiInicio + m.numPacienteDiaTotal + m.numDiasUtiSubsequente,
