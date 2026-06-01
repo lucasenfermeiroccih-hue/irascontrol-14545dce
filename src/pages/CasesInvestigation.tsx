@@ -553,6 +553,29 @@ const CasesInvestigation = () => {
     toast.success(`Rascunho da investigação ${protocolo} salvo!`);
   };
 
+  const handleSaveAndContinue = async () => {
+    if (!editingCaseId) {
+      toast.error("Abra a investigação a partir de um caso existente para salvar.");
+      return;
+    }
+
+    const nextStatus = investigationStatus === "open" ? "investigating" : investigationStatus;
+    const { error } = await supabase.from("infection_cases").update({
+      investigation_data: buildInvestigationData(),
+      status: (nextStatus as CaseStatus),
+    }).eq("id", editingCaseId);
+
+    if (error) {
+      toast.error("Erro ao salvar investigação: " + error.message);
+      return;
+    }
+
+    setInvestigationStatus(nextStatus);
+    await fetchCases();
+    setDetailStep(s => Math.min(DETAIL_STEPS.length - 1, s + 1));
+    toast.success(`Investigação ${protocolo} salva com sucesso!`);
+  };
+
   // Finalize investigation
   const handleFinalize = async () => {
     if (!conclusao.classificacaoFinal) { toast.error("Classificação final é obrigatória"); setDetailStep(8); return; }
@@ -1033,7 +1056,7 @@ const CasesInvestigation = () => {
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleSaveDraft} className="gap-1"><Save className="h-4 w-4" />Rascunho</Button>
-              <Button variant="outline" size="sm" onClick={() => { handleSaveDraft(); setDetailStep(s => Math.min(DETAIL_STEPS.length - 1, s + 1)); }} className="gap-1">
+              <Button variant="outline" size="sm" onClick={handleSaveAndContinue} className="gap-1">
                 <Save className="h-4 w-4" />Salvar e Continuar
               </Button>
               {detailStep === DETAIL_STEPS.length - 1 && (
