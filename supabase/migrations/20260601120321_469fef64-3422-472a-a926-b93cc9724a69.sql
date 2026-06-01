@@ -1,0 +1,1 @@
+ALTER TABLE public.infection_cases ADD COLUMN IF NOT EXISTS investigation_data jsonb NOT NULL DEFAULT '{}'::jsonb;
