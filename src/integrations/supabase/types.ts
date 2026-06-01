@@ -1276,6 +1276,7 @@ export type Database = {
           infection_site: string | null
           infection_type: string | null
           investigating_user_id: string | null
+          investigation_data: Json
           notes: string | null
           patient_id: string | null
           status: Database["public"]["Enums"]["case_status"]
@@ -1294,6 +1295,7 @@ export type Database = {
           infection_site?: string | null
           infection_type?: string | null
           investigating_user_id?: string | null
+          investigation_data?: Json
           notes?: string | null
           patient_id?: string | null
           status?: Database["public"]["Enums"]["case_status"]
@@ -1312,6 +1314,7 @@ export type Database = {
           infection_site?: string | null
           infection_type?: string | null
           investigating_user_id?: string | null
+          investigation_data?: Json
           notes?: string | null
           patient_id?: string | null
           status?: Database["public"]["Enums"]["case_status"]

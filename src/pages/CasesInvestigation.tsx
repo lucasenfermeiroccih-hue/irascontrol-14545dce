@@ -37,6 +37,7 @@ interface InfectionCase {
   detection_date: string;
   confirmation_date: string | null;
   notes: string | null;
+  investigation_data?: any;
   patient_id?: string | null;
   patient?: { full_name: string; medical_record: string | null; sector: string | null } | null;
 
