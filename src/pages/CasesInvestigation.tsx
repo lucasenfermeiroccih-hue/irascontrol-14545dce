@@ -469,15 +469,27 @@ const CasesInvestigation = () => {
 
   // ── Open full investigation for a case ──
   const openFullInvestigation = (c: InfectionCase) => {
+    setEditingCaseId(c.id);
     setProtocolo(c.case_number || "INV-" + c.id.slice(0, 8));
-    setIdent({
+    const d = c.investigation_data || {};
+    setIdent(d.ident || {
       nome: c.patient?.full_name || "", prontuario: c.patient?.medical_record || "",
       nascimento: "", sexo: "", admissao: c.detection_date, unidade: c.patient?.sector || "",
       leito: "", especialidade: "", diagnostico: c.infection_type || "", origem: "",
     });
-    setClassif({ tipoEvento: c.infection_type || "", topografia: "", categoria: "", criterioInicial: "" });
+    setClassif(d.classif || { tipoEvento: c.infection_type || "", topografia: "", categoria: "", criterioInicial: "" });
     setInvestigationStatus(c.status);
-    setOcorrencia(prev => ({ ...prev, unidadeSetor: c.patient?.sector || "" }));
+    setStatusHistory(d.statusHistory || []);
+    setOcorrencia(d.ocorrencia || { unidadeSetor: c.patient?.sector || "", leito: "", dataSintomas: "", dataSuspeita: "", dataNotificacao: "", origemNotificacao: "" });
+    setCriteriosSelecionados(d.criteriosSelecionados || []);
+    setJustificativaClinica(d.justificativaClinica || "");
+    setLabResults(d.labResults || []);
+    setDispInvasivos(d.dispInvasivos || { cvcInsercao: "", cvcRetirada: "", svuInsercao: "", svuRetirada: "", vmInsercao: "", vmRetirada: "" });
+    setFatoresRiscoSel(d.fatoresRiscoSel || []);
+    setCirurgia(d.cirurgia || { procedimento: "", dataCirurgia: "", contaminacao: "", implante: "Não", profilaxia: "", observacoes: "" });
+    setResponsavel(d.responsavel || "");
+    setChecklistDone(d.checklistDone || []);
+    setConclusao(d.conclusao || { classificacaoFinal: "", conclusaoEpidemiologica: "", condutas: "", desfecho: "", vinculoSurto: "" });
     setDetailStep(0);
     setDetailOpen(true);
     setDetailCase(null);
@@ -486,6 +498,7 @@ const CasesInvestigation = () => {
   // ── New notification (quick) ──
   const handleNewNotification = () => {
     const proto = "NOT-" + Date.now().toString().slice(-8);
+    setEditingCaseId(null);
     setProtocolo(proto);
     setIdent({ nome: "", prontuario: "", nascimento: "", sexo: "", admissao: "", unidade: "", leito: "", especialidade: "", diagnostico: "", origem: "" });
     setClassif({ tipoEvento: "", topografia: "", categoria: "", criterioInicial: "" });
@@ -519,8 +532,24 @@ const CasesInvestigation = () => {
     toast.success(`Status alterado para: ${newStatus}`);
   };
 
+  const buildInvestigationData = () => ({
+    ident, classif, ocorrencia, criteriosSelecionados, justificativaClinica,
+    labResults, dispInvasivos, fatoresRiscoSel, cirurgia, responsavel,
+    checklistDone, conclusao, statusHistory, protocolo,
+  });
+
   // Save investigation draft
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
+    if (!editingCaseId) {
+      toast.error("Abra a investigação a partir de um caso existente para salvar.");
+      return;
+    }
+    const { error } = await supabase.from("infection_cases").update({
+      investigation_data: buildInvestigationData(),
+      status: (investigationStatus as CaseStatus),
+    }).eq("id", editingCaseId);
+    if (error) { toast.error("Erro ao salvar rascunho: " + error.message); return; }
+    await fetchCases();
     toast.success(`Rascunho da investigação ${protocolo} salvo!`);
   };
 
@@ -535,28 +564,35 @@ const CasesInvestigation = () => {
 
     const incompleteChecklist = checklistItems.filter(item => !checklistDone.includes(item));
     if (incompleteChecklist.length > 0) {
-      toast.error(`Complete o checklist (${incompleteChecklist.length} itapens pendentes)`);
+      toast.error(`Complete o checklist (${incompleteChecklist.length} itens pendentes)`);
       setDetailStep(7);
       return;
     }
 
-    if (detailCase?.id) {
-      const { error } = await supabase.from("infection_cases").update({
-        status: "closed",
-        confirmation_date: new Date().toISOString().split("T")[0],
-      }).eq("id", detailCase.id);
-      if (error) { toast.error("Erro ao finalizar: " + error.message); return; }
-      await fetchCases();
+    if (!editingCaseId) {
+      toast.error("Abra a investigação a partir de um caso existente para finalizar.");
+      return;
     }
 
-    setInvestigationStatus("closed");
-    setStatusHistory(prev => [...prev, {
+    const finalHistory = [...statusHistory, {
       status: "closed", user: responsavel || "Usuário atual",
       date: new Date().toLocaleString("pt-BR"), justificativa: "Investigação finalizada e encerrada",
-    }]);
+    }];
+
+    const { error } = await supabase.from("infection_cases").update({
+      status: "closed",
+      confirmation_date: new Date().toISOString().split("T")[0],
+      investigation_data: { ...buildInvestigationData(), statusHistory: finalHistory },
+    }).eq("id", editingCaseId);
+    if (error) { toast.error("Erro ao finalizar: " + error.message); return; }
+    await fetchCases();
+
+    setInvestigationStatus("closed");
+    setStatusHistory(finalHistory);
     toast.success(`Investigação ${protocolo} finalizada e encerrada!`);
     setDetailOpen(false);
   };
+
 
   const cvcDays = dispInvasivos.cvcInsercao ? daysFromDate(dispInvasivos.cvcInsercao) : null;
   const svuDays = dispInvasivos.svuInsercao ? daysFromDate(dispInvasivos.svuInsercao) : null;
