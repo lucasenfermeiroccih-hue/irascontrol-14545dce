@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell, Legend, LabelList, ReferenceLine
 } from "recharts";
 import { HandMetal, CheckCircle, AlertTriangle, Users, Loader2, Download, ClipboardCheck, XCircle } from "lucide-react";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
@@ -11,7 +11,9 @@ import DashboardFilters from "@/components/DashboardFilters";
 import { useAuditDashboard } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import ChartActions from "@/components/ChartActions";
+import YearComparisonChart from "@/components/YearComparisonChart";
 
 const COLORS = ["hsl(168, 66%, 34%)", "hsl(199, 89%, 48%)", "hsl(38, 92%, 50%)", "hsl(280, 65%, 60%)", "hsl(0, 72%, 51%)"];
 const PIE_COLORS = ["hsl(168, 66%, 34%)", "hsl(0, 72%, 51%)"];
