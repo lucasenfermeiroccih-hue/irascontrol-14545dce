@@ -53,6 +53,50 @@ export default function DashboardHygiene() {
     { name: "Não", value: hygieneStats.nao },
   ], [hygieneStats]);
 
+  // Comparativo por profissional (parseado de observations: "Profissional: X")
+  const professionalData = useMemo(() => {
+    const map: Record<string, { sum: number; count: number }> = {};
+    audits.forEach(a => {
+      const m = a.observations?.match(/Profissional:\s*([^|]+)/i);
+      const prof = (m?.[1] || "Não informado").trim();
+      if (!map[prof]) map[prof] = { sum: 0, count: 0 };
+      map[prof].sum += a.compliance_rate || 0;
+      map[prof].count++;
+    });
+    return Object.entries(map)
+      .map(([name, v]) => ({ name, compliance: Math.round((v.sum / v.count) * 10) / 10, audits: v.count }))
+      .sort((a, b) => b.compliance - a.compliance);
+  }, [audits]);
+
+  // Anos disponíveis e dataset de comparativo anual (média de adesão por mês x ano)
+  const yearComparisonYears = useMemo(() => {
+    const set = new Set<string>();
+    audits.forEach(a => { if (a.audit_date) set.add(a.audit_date.substring(0, 4)); });
+    return Array.from(set).sort();
+  }, [audits]);
+
+  const yearComparisonData = useMemo(() => {
+    const monthLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const acc: Record<number, Record<string, { sum: number; count: number }>> = {};
+    audits.forEach(a => {
+      if (!a.audit_date) return;
+      const y = a.audit_date.substring(0, 4);
+      const mi = parseInt(a.audit_date.substring(5, 7), 10) - 1;
+      if (!acc[mi]) acc[mi] = {};
+      if (!acc[mi][y]) acc[mi][y] = { sum: 0, count: 0 };
+      acc[mi][y].sum += a.compliance_rate || 0;
+      acc[mi][y].count++;
+    });
+    return monthLabels.map((mes, i) => {
+      const row: Record<string, any> = { mes };
+      const monthData = acc[i] || {};
+      yearComparisonYears.forEach(y => {
+        if (monthData[y]) row[y] = Math.round((monthData[y].sum / monthData[y].count) * 10) / 10;
+      });
+      return row;
+    });
+  }, [audits, yearComparisonYears]);
+
   const handleExportPdf = () => {
     if (!hospitalId) return;
     exportPdf({
