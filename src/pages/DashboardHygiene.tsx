@@ -20,11 +20,24 @@ const PIE_COLORS = ["hsl(168, 66%, 34%)", "hsl(0, 72%, 51%)"];
 
 export default function DashboardHygiene() {
   const { hospitalId } = useHospitalContext();
-  const { stats, items, loading } = useAuditDashboard("hand_hygiene");
+  const { stats, items, audits, loading } = useAuditDashboard("hand_hygiene");
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+
+  // Metas por gráfico
+  const [metaPie, setMetaPie] = useState<number | undefined>();
+  const [metaResumo, setMetaResumo] = useState<number | undefined>();
+  const [metaProf, setMetaProf] = useState<number | undefined>(90);
+  const [metaSetor, setMetaSetor] = useState<number | undefined>(90);
+  const [metaAno, setMetaAno] = useState<number | undefined>(90);
+
+  // Refs por gráfico
+  const refPie = useRef<HTMLDivElement>(null);
+  const refResumo = useRef<HTMLDivElement>(null);
+  const refProf = useRef<HTMLDivElement>(null);
+  const refSetor = useRef<HTMLDivElement>(null);
 
   // Compute hygiene-specific stats from audit items
   const hygieneStats = useMemo(() => {
