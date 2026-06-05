@@ -1292,10 +1292,133 @@ export const CHECKLISTS_DATA: ChecklistsData = {
   },
 };
 
-// Duplicatas da UTI Adulto com nomes diferentes (mesmo modelo de auditoria)
-CHECKLISTS_DATA.uti_2 = { ...CHECKLISTS_DATA.uti, nome: "UTI 2" };
-CHECKLISTS_DATA.uti_3 = { ...CHECKLISTS_DATA.uti, nome: "UTI 3" };
-CHECKLISTS_DATA.uti_4 = { ...CHECKLISTS_DATA.uti, nome: "UTI 4 (UPO)" };
+// CTI 2, CTI 3 — mesmo modelo de auditoria da UTI Adulto
+CHECKLISTS_DATA.cti_2 = { ...CHECKLISTS_DATA.uti, nome: "CTI 2" };
+CHECKLISTS_DATA.cti_3 = { ...CHECKLISTS_DATA.uti, nome: "CTI 3" };
+CHECKLISTS_DATA.upo = { ...CHECKLISTS_DATA.uti, nome: "UPO" };
+
+// Enfermaria Cirúrgica
+CHECKLISTS_DATA.enfermaria_cirurgica = {
+  nome: "Enfermaria Cirúrgica",
+  icon: "Scissors",
+  grupos: [
+    {
+      grupo: "Infraestrutura e Organização",
+      itens: [
+        "A Enfermaria Cirúrgica possui infraestrutura adequada para sua operacionalização (leitos, espaçamento, iluminação)?",
+        "A Enfermaria Cirúrgica possui expurgo devidamente equipado?",
+        "A Enfermaria Cirúrgica possui depósito de material de limpeza (DML) exclusivo?",
+        "A Enfermaria Cirúrgica possui equipamentos, materiais e medicamentos para atendimento de emergência disponíveis?",
+        "A Enfermaria Cirúrgica possui refrigerador exclusivo para armazenamento de medicamentos?",
+        "A Enfermaria Cirúrgica possui local adequado para guarda de medicamentos controlados?",
+        "Os equipamentos da Enfermaria Cirúrgica possuem manutenção preventiva atualizada?",
+        "A Enfermaria Cirúrgica possui local exclusivo para guarda de roupas limpas?",
+        "A Enfermaria Cirúrgica possui insumos necessários para higienização das mãos em todos os pontos de cuidado?",
+        "A Enfermaria Cirúrgica possui lixeiras adequadas (infectante, comum, perfurocortante) para descarte de resíduos?",
+        "É realizado controle de pragas na Enfermaria Cirúrgica?",
+        "A Enfermaria Cirúrgica possui coordenador médico e de enfermagem designados?",
+        "O dimensionamento das equipes está adequado ao perfil cirúrgico do setor?",
+        "A Enfermaria Cirúrgica possui escalas de trabalho atualizadas e de fácil acesso?",
+        "A Enfermaria Cirúrgica possui protocolos clínicos de cuidado pós-operatório disponíveis?",
+        "A Enfermaria Cirúrgica possui manual de diluição e estabilidade de medicamentos disponível?",
+        "A Enfermaria Cirúrgica possui indicadores definidos e específicos para o setor?",
+      ],
+    },
+    {
+      grupo: "Prevenção de ISC e Cuidado Pós-Operatório",
+      itens: [
+        "É realizada avaliação e registro diário das feridas cirúrgicas (curativos, sinais de ISC)?",
+        "O protocolo de curativo cirúrgico está implantado e é seguido pelos profissionais?",
+        "Os profissionais identificam corretamente sinais precoces de infecção de sítio cirúrgico (ISC)?",
+        "O bundle de prevenção de ISC (banho pré-op, tricotomia, antibioticoprofilaxia, normotermia) está implantado?",
+        "É realizado controle e registro da antibioticoprofilaxia cirúrgica (tipo, dose, horário)?",
+        "Os drenos e sondas estão identificados, datados e com cuidados registrados?",
+        "O controle de glicemia perioperatória é realizado e registrado?",
+        "A avaliação de risco de lesão por pressão é realizada e documentada em todos os pacientes?",
+        "O processo de prevenção de lesão por pressão é realizado à beira leito?",
+        "A avaliação de risco de queda é realizada e documentada na admissão e com alterações clínicas?",
+        "Os pacientes com dispositivos invasivos (CVC, SVD, drenos) são monitorados diariamente?",
+        "É realizado controle de temperatura corporal para prevenção de hipotermia perioperatória?",
+      ],
+    },
+    {
+      grupo: "Processos Assistenciais e Segurança do Paciente",
+      itens: [
+        "A passagem de plantão está implantada e documentada na Enfermaria Cirúrgica?",
+        "A Enfermaria Cirúrgica identifica os pacientes com precaução específica e/ou em isolamento?",
+        "Os registros da equipe médica (evolução, prescrição) são realizados adequadamente?",
+        "Os registros da equipe de enfermagem (checagem, evolução) são realizados adequadamente?",
+        "O processo de identificação do paciente com pulseira está implantado e é verificado antes de procedimentos?",
+        "O processo de checagem da identificação antes de qualquer procedimento está implantado?",
+        "Os profissionais cumprem as condutas sobre uso de adornos conforme NR 32?",
+        "Os profissionais da Enfermaria Cirúrgica utilizam EPI de forma correta e conforme o risco?",
+        "Entrevista 1: O profissional da Enfermaria Cirúrgica tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Entrevista 2: O profissional da Enfermaria Cirúrgica tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Entrevista 3: O profissional da Enfermaria Cirúrgica tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Os profissionais da Enfermaria Cirúrgica notificam eventos adversos ou incidentes assistenciais?",
+        "Os profissionais sabem identificar os medicamentos de alta vigilância?",
+        "Os medicamentos multidoses em uso são identificados com data de abertura e validade?",
+        "É realizado processo de reposição e conferência diária do carro de emergência?",
+        "A Enfermaria Cirúrgica possui registros de limpeza terminal e concorrente?",
+        "Os profissionais descartam resíduos de forma adequada (perfurocortantes, infectantes, comuns)?",
+        "Os resultados dos indicadores são utilizados para estabelecer ações de melhorias?",
+        "O setor apresentou plano de ação para as NCs identificadas?",
+      ],
+    },
+  ],
+};
+
+// Sala Verde (Observação / Internação de Curta Duração)
+CHECKLISTS_DATA.sala_verde = {
+  nome: "Sala Verde",
+  icon: "Activity",
+  grupos: [
+    {
+      grupo: "Infraestrutura e Organização",
+      itens: [
+        "A Sala Verde possui infraestrutura adequada para observação e internação de curta duração?",
+        "A Sala Verde possui área física adequada com número suficiente de macas/leitos e espaçamento mínimo?",
+        "A Sala Verde possui expurgo disponível e devidamente equipado?",
+        "A Sala Verde possui depósito de material de limpeza (DML) exclusivo ou de fácil acesso?",
+        "A Sala Verde possui equipamentos, materiais e medicamentos para atendimento de emergência disponíveis?",
+        "A Sala Verde possui refrigerador exclusivo para armazenamento de medicamentos?",
+        "Os equipamentos da Sala Verde possuem manutenção preventiva atualizada?",
+        "A Sala Verde possui insumos necessários para higienização das mãos em todos os pontos de cuidado?",
+        "A Sala Verde possui lixeiras adequadas para descarte correto de resíduos?",
+        "É realizado controle de pragas na Sala Verde?",
+        "A Sala Verde possui coordenador médico e de enfermagem designados?",
+        "O dimensionamento das equipes está adequado ao fluxo e perfil do setor?",
+        "A Sala Verde possui protocolos de cuidado de observação disponíveis para consulta?",
+        "A Sala Verde possui indicadores definidos específicos para o setor?",
+      ],
+    },
+    {
+      grupo: "Controle de Infecção e Segurança",
+      itens: [
+        "A passagem de plantão está implantada e documentada na Sala Verde?",
+        "Os pacientes com precaução específica e/ou em isolamento são identificados e separados adequadamente?",
+        "O processo de identificação do paciente com pulseira está implantado?",
+        "O processo de checagem da identificação antes de procedimentos está implantado?",
+        "A avaliação de risco de queda é realizada em todos os pacientes na admissão?",
+        "A avaliação de risco de lesão por pressão é realizada?",
+        "Os profissionais cumprem as condutas sobre uso de adornos conforme NR 32?",
+        "Os profissionais da Sala Verde utilizam EPI de forma correta e conforme o risco?",
+        "Os registros da equipe médica são realizados adequadamente?",
+        "Os registros da equipe de enfermagem são realizados adequadamente?",
+        "Entrevista 1: O profissional da Sala Verde tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Entrevista 2: O profissional da Sala Verde tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Entrevista 3: O profissional da Sala Verde tem conhecimento dos 6 protocolos de segurança do paciente?",
+        "Os profissionais da Sala Verde notificam eventos adversos ou incidentes assistenciais?",
+        "Os profissionais sabem identificar os medicamentos de alta vigilância?",
+        "É realizado processo de reposição e conferência do carro de emergência?",
+        "A Sala Verde possui registros de limpeza terminal e concorrente?",
+        "Os profissionais descartam resíduos de forma adequada?",
+        "Os resultados dos indicadores são utilizados para estabelecer ações de melhorias?",
+        "O setor apresentou plano de ação para as NCs identificadas?",
+      ],
+    },
+  ],
+};
 
 export function inferSeverity(question: string): "Crítica" | "Maior" | "Menor" {
   const q = question.toLowerCase();

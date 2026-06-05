@@ -134,8 +134,10 @@ const SCIH_CSS = `
 
 const SECTOR_ICONS: Record<string, string> = {
   ambulatorio: "🩺", banco_sangue: "🩸", cc: "✂️", cme: "♻️",
-  enfermaria: "🛏️", laboratorio: "🔬", ps: "🚨", nutricao: "🥗",
-  diagnostico: "📡", uti: "💗", higiene: "✨", roupas: "👕",
+  enfermaria: "🛏️", enfermaria_cirurgica: "🔪", sala_verde: "🟢",
+  laboratorio: "🔬", ps: "🚨", nutricao: "🥗",
+  diagnostico: "📡", uti: "💗", cti_2: "💗", cti_3: "💗", upo: "🏥",
+  higiene: "✨", roupas: "👕",
   residuos: "🗑️", scih: "🦠", nsp: "🛡️", equipamentos: "🔧",
   incendio: "🔥", ped_int: "👶", ped_em: "🏃", uti_neo: "🍼",
   banco_leite: "🥛", farmacia_hospitalar: "💊", aloj_conjunto: "👨‍👩‍👧",
@@ -163,11 +165,11 @@ const SWOT_DATA: Record<string, { f: string[]; o: string[]; w: string[]; a: stri
 // ─── INTERFACES ─────────────────────────────────────────────────────────────
 
 interface CkState { v: "" | "conf" | "parc" | "nc" | "na"; obs: string; }
-interface AuditRecord { id?: string; setorKey: string; setorNome: string; pct: number; ncCount: number; data: string; tipo: string; auditor: string; respSetor: string; total: number; }
+interface AuditRecord { id?: string; setorKey: string; setorNome: string; pct: number; ncCount: number; data: string; tipo: string; auditor: string; respSetor: string; total: number; relatorioIA?: string; aiGerado?: boolean; }
 interface NC { id?: string; setorKey: string; setor: string; pergunta: string; obs: string; sev: "Crítica" | "Maior" | "Menor"; status: string; data: string; historico?: {status:string;obs:string;data:string}[]; }
-interface Plan5W2H { id?: string; what: string; why: string; where: string; when: string; who: string; how: string; howmuch: string; status: string; }
-interface KanbanCard { id?: string; title: string; setor: string; prio: string; prazo: string; col: string; }
-interface RiskItem { id?: string; desc: string; prob: number; imp: number; setor: string; plano: string; }
+interface Plan5W2H { id?: string; what: string; why: string; where: string; when: string; who: string; how: string; howmuch: string; status: string; auditId?: string; fonte?: "ia" | "manual"; }
+interface KanbanCard { id?: string; title: string; setor: string; prio: string; prazo: string; col: string; auditId?: string; fonte?: "ia" | "manual"; }
+interface RiskItem { id?: string; desc: string; prob: number; imp: number; setor: string; plano: string; auditId?: string; fonte?: "ia" | "manual"; }
 interface CronoItem { id?: string; setor: string; data: string; tipo: string; resp: string; realizado: boolean; }
 interface IrasRecord { id?: string; tipo: string; setor: string; casos: number; denom: number; mes: string; obs: string; }
 interface AppData {
@@ -266,6 +268,10 @@ export default function SCIHAuditModule() {
   // ── navigation ──
   const [activePage, setActivePage] = useState<Page>("dashboard");
 
+  // ── AI state ──
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPlanModal, setAiPlanModal] = useState<{ auditId: string; relatorio: string } | null>(null);
+
   // ── checklist state ──
   const [ckSetor, setCkSetor] = useState<string>("scih");
   const [ckStates, setCkStates] = useState<Record<string,CkState>>({});
@@ -333,6 +339,143 @@ export default function SCIHAuditModule() {
   const avgConf = allPcts.length ? Math.round(allPcts.reduce((a,b)=>a+b,0)/allPcts.length) : 0;
   const criticalNCs = appData.ncs.filter(n => n.sev === "Crítica" && n.status !== "Encerrado");
 
+  // ─── AI GENERATION ────────────────────────────────────────────────────────
+
+  function generateFallback(auditId: string, ncs: NC[], setorNome: string, pct: number): {
+    planos: Plan5W2H[]; kanban: KanbanCard[]; riscos: RiskItem[]; relatorio: string;
+  } {
+    const prazoBase = new Date(); prazoBase.setDate(prazoBase.getDate() + 30);
+    const prazoISO = prazoBase.toISOString().slice(0, 10);
+
+    const criticas = ncs.filter(n => n.sev === "Crítica");
+    const maiores = ncs.filter(n => n.sev === "Maior");
+
+    const planos: Plan5W2H[] = ncs.filter(n => n.sev !== "Menor").slice(0, 5).map(nc => ({
+      id: uid(), auditId, fonte: "ia" as const,
+      what: `Correção: ${nc.pergunta.slice(0, 60)}`,
+      why: `NC ${nc.sev} identificada na auditoria de ${setorNome}. ${nc.obs || "Conformidade abaixo do esperado."}`,
+      where: setorNome,
+      when: prazoISO,
+      who: "Responsável do Setor",
+      how: nc.sev === "Crítica"
+        ? "Ação imediata: treinamento, adequação de processo e supervisão diária."
+        : "Implementar procedimento padrão e monitorar conformidade semanal.",
+      howmuch: nc.sev === "Crítica" ? "Prioritário — sem limite de custo" : "Baixo custo operacional",
+      status: "Aberto",
+    }));
+
+    const kanban: KanbanCard[] = ncs.slice(0, 8).map(nc => ({
+      id: uid(), auditId, fonte: "ia" as const,
+      title: nc.pergunta.slice(0, 60),
+      setor: setorNome,
+      prio: nc.sev === "Crítica" ? "Alta" : nc.sev === "Maior" ? "Média" : "Baixa",
+      prazo: prazoISO,
+      col: "todo",
+    }));
+
+    const riscos: RiskItem[] = ncs.filter(n => n.sev !== "Menor").slice(0, 4).map(nc => ({
+      id: uid(), auditId, fonte: "ia" as const,
+      desc: nc.pergunta.slice(0, 80),
+      prob: nc.sev === "Crítica" ? 4 : 3,
+      imp: nc.sev === "Crítica" ? 5 : 3,
+      setor: setorNome,
+      plano: `Plano de ação imediato para ${nc.sev === "Crítica" ? "risco crítico" : "risco moderado"}`,
+    }));
+
+    const relatorio = `RELATÓRIO DE AUDITORIA — ${setorNome.toUpperCase()}
+Data: ${today()} | Conformidade: ${pct}% | NCs: ${ncs.length}
+
+RESUMO EXECUTIVO
+A auditoria do setor ${setorNome} identificou conformidade de ${pct}%, com ${ncs.length} não conformidades, sendo ${criticas.length} crítica(s) e ${maiores.length} maior(es).
+
+${pct < 50 ? "⚠️ RESULTADO CRÍTICO: O setor requer intervenção imediata e plano de ação urgente." : pct < 70 ? "⚠️ RESULTADO ABAIXO DA META: Ações corretivas necessárias em prazo máximo de 30 dias." : "✅ RESULTADO ADEQUADO: Manter monitoramento e implementar melhorias contínuas."}
+
+NÃO CONFORMIDADES CRÍTICAS (${criticas.length}):
+${criticas.map((nc, i) => `${i + 1}. ${nc.pergunta}\n   Obs: ${nc.obs || "Sem observação"}`).join("\n") || "Nenhuma."}
+
+NÃO CONFORMIDADES MAIORES (${maiores.length}):
+${maiores.map((nc, i) => `${i + 1}. ${nc.pergunta}`).join("\n") || "Nenhuma."}
+
+PLANO DE AÇÃO GERADO: ${planos.length} plano(s) 5W2H | ${kanban.length} card(s) Kanban | ${riscos.length} risco(s) na matriz
+
+RECOMENDAÇÕES
+1. Priorizar resolução das NCs críticas em até 72 horas.
+2. Agendar re-auditoria em 30 dias para verificação das ações.
+3. Treinar equipe nos pontos de maior não conformidade.
+4. Monitorar indicadores semanalmente até próxima auditoria.`;
+
+    return { planos, kanban, riscos, relatorio };
+  }
+
+  async function generateAuditPlanWithAI(
+    auditId: string, ncs: NC[], setorNome: string, pct: number, tipo: string, auditor: string
+  ) {
+    setAiLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("não autenticado");
+
+      const prazoBase = new Date(); prazoBase.setDate(prazoBase.getDate() + 30);
+      const prazoISO = prazoBase.toISOString().slice(0, 10);
+
+      const prompt = `Você é especialista em CCIH. Analise esta auditoria e gere um JSON VÁLIDO (sem markdown, sem texto extra):
+
+SETOR: ${setorNome}
+CONFORMIDADE: ${pct}%
+TIPO: ${tipo}
+AUDITOR: ${auditor || "—"}
+DATA: ${today()}
+NÃO CONFORMIDADES (${ncs.length}):
+${ncs.map((nc, i) => `${i + 1}. [${nc.sev}] ${nc.pergunta}${nc.obs ? " | Obs: " + nc.obs : ""}`).join("\n")}
+
+Gere o JSON no seguinte formato exato:
+{"planos":[{"what":"","why":"","where":"${setorNome}","when":"${prazoISO}","who":"","how":"","howmuch":"","status":"Aberto"}],"kanban":[{"title":"","setor":"${setorNome}","prio":"Alta","prazo":"${prazoISO}","col":"todo"}],"riscos":[{"desc":"","prob":3,"imp":3,"setor":"${setorNome}","plano":""}],"relatorio":""}
+
+Regras:
+- Máximo 5 planos 5W2H (para NCs críticas/maiores)
+- Máximo 8 cards Kanban (um por NC)
+- Máximo 4 riscos (NCs críticas/maiores)
+- relatorio: resumo executivo de 3-5 parágrafos em português
+- prio: "Alta", "Média" ou "Baixa"
+- prob e imp: de 1 a 5`;
+
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: { agent_id: "scih-audit-planner", input: prompt },
+      });
+
+      if (error || !data?.output) throw new Error("sem resposta da IA");
+
+      const raw = (data.output as string).replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(raw);
+
+      const planos: Plan5W2H[] = (parsed.planos || []).map((p: Plan5W2H) => ({ ...p, id: uid(), auditId, fonte: "ia" as const }));
+      const kanban: KanbanCard[] = (parsed.kanban || []).map((c: KanbanCard) => ({ ...c, id: uid(), auditId, fonte: "ia" as const }));
+      const riscos: RiskItem[] = (parsed.riscos || []).map((r: RiskItem) => ({ ...r, id: uid(), auditId, fonte: "ia" as const }));
+      const relatorio: string = parsed.relatorio || "";
+
+      setAppData(prev => ({
+        ...prev,
+        planos: [...planos, ...prev.planos],
+        kanban: [...kanban, ...prev.kanban],
+        riscos: [...riscos, ...prev.riscos],
+        historico: prev.historico.map(h => h.id === auditId ? { ...h, relatorioIA: relatorio, aiGerado: true } : h),
+      }));
+      setAiPlanModal({ auditId, relatorio });
+    } catch {
+      const fb = generateFallback(auditId, ncs, setorNome, pct);
+      setAppData(prev => ({
+        ...prev,
+        planos: [...fb.planos, ...prev.planos],
+        kanban: [...fb.kanban, ...prev.kanban],
+        riscos: [...fb.riscos, ...prev.riscos],
+        historico: prev.historico.map(h => h.id === auditId ? { ...h, relatorioIA: fb.relatorio, aiGerado: true } : h),
+      }));
+      setAiPlanModal({ auditId, relatorio: fb.relatorio });
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   // ─── ACTIONS ──────────────────────────────────────────────────────────────
 
   function finalizeAudit() {
@@ -361,8 +504,9 @@ export default function SCIHAuditModule() {
       ncs: [...newNCs, ...prev.ncs],
     }));
     setCkStates({});
-    alert(`Auditoria finalizada! Conformidade: ${pct}% | NCs geradas: ${newNCs.length}`);
     setActivePage("auditorias");
+    // Gerar plano IA automaticamente
+    generateAuditPlanWithAI(record.id!, newNCs, setor.nome, pct, ckTipo, ckAuditor);
   }
 
   function setCkValue(key: string, v: CkState["v"]) {
@@ -639,20 +783,34 @@ export default function SCIHAuditModule() {
           <div className="scih-card" style={{ padding:0 }}>
             <table className="scih-table">
               <thead>
-                <tr><th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th></tr>
+                <tr><th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th></tr>
               </thead>
               <tbody>
-                {appData.historico.length === 0 && <tr><td colSpan={6} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
+                {appData.historico.length === 0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
                 {appData.historico.map(h => (
                   <tr key={h.id}>
                     <td>{h.setorNome}</td>
                     <td style={{ fontSize:12, color:"var(--text2)" }}>{h.data}</td>
                     <td style={{ fontSize:12 }}>{h.tipo}</td>
                     <td style={{ fontSize:12, color:"var(--text2)" }}>{h.auditor}</td>
-                    <td>
-                      <span style={{ color: barColor(h.pct), fontWeight:600 }}>{h.pct}%</span>
-                    </td>
+                    <td><span style={{ color: barColor(h.pct), fontWeight:600 }}>{h.pct}%</span></td>
                     <td><span className="scih-badge sp-low">{h.ncCount}</span></td>
+                    <td>
+                      {h.aiGerado ? (
+                        <button className="scih-btn scih-btn-teal" style={{ fontSize:11, padding:"3px 10px" }}
+                          onClick={() => setAiPlanModal({ auditId: h.id!, relatorio: h.relatorioIA || "" })}>
+                          🤖 Ver Plano
+                        </button>
+                      ) : (
+                        <button className="scih-btn scih-btn-outline" style={{ fontSize:11, padding:"3px 10px" }}
+                          onClick={() => {
+                            const ncsAudit = appData.ncs.filter(n => n.data === h.data && n.setor === h.setorNome);
+                            generateAuditPlanWithAI(h.id!, ncsAudit, h.setorNome, h.pct, h.tipo, h.auditor);
+                          }}>
+                          🤖 Gerar IA
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -743,7 +901,10 @@ export default function SCIHAuditModule() {
           {appData.planos.map(p => (
             <div key={p.id} className="scih-card">
               <div className="scih-row scih-mb">
-                <div style={{ fontWeight:600, fontSize:14 }}>{p.what || "(Sem título)"}</div>
+                <div style={{ fontWeight:600, fontSize:14 }}>
+                  {p.fonte === "ia" && <span style={{ fontSize:11, background:"rgba(56,139,253,.2)", color:"#388bfd", padding:"1px 6px", borderRadius:8, marginRight:6 }}>🤖 IA</span>}
+                  {p.what || "(Sem título)"}
+                </div>
                 <span className="scih-badge" style={{
                   background: p.status==="Concluído" ? "rgba(26,158,117,.2)" : p.status==="Em andamento" ? "rgba(56,139,253,.2)" : "rgba(212,160,23,.2)",
                   color: p.status==="Concluído" ? "#1a9e75" : p.status==="Em andamento" ? "#388bfd" : "#d4a017"
@@ -822,7 +983,10 @@ export default function SCIHAuditModule() {
               <div className="scih-kanban-col-title" style={{ color: col.color }}>{col.label}</div>
               {appData.kanban.filter(c => c.col === col.key).map(card => (
                 <div key={card.id} className="scih-kanban-card">
-                  <div style={{ fontSize:13, fontWeight:600, color:"var(--text)", marginBottom:6 }}>{card.title}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--text)", marginBottom:4 }}>
+                    {card.fonte === "ia" && <span style={{ fontSize:10, background:"rgba(56,139,253,.2)", color:"#388bfd", padding:"1px 5px", borderRadius:6, marginRight:4 }}>🤖</span>}
+                    {card.title}
+                  </div>
                   <div style={{ fontSize:11, color:"var(--text2)", marginBottom:8 }}>{card.setor} · {card.prazo}</div>
                   <div className="scih-flex" style={{ flexWrap:"wrap", gap:4 }}>
                     {cols.filter(c => c.key !== col.key).map(c => (
@@ -1194,6 +1358,41 @@ export default function SCIHAuditModule() {
     <>
       <style>{SCIH_CSS}</style>
       <div className="scih-wrap">
+
+      {/* Loading IA */}
+      {aiLoading && (
+        <div style={{ position:"fixed", bottom:24, right:24, background:"var(--bg2)", border:"1px solid var(--teal)", borderRadius:12, padding:"14px 20px", zIndex:2000, display:"flex", alignItems:"center", gap:10, boxShadow:"0 4px 20px rgba(0,0,0,.4)" }}>
+          <span style={{ fontSize:20, animation:"spin 1s linear infinite" }}>🤖</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:600, color:"var(--teal)" }}>Gerando plano com IA...</div>
+            <div style={{ fontSize:11, color:"var(--text2)" }}>5W2H · Kanban · Matriz de Risco · Relatório</div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal plano IA */}
+      {aiPlanModal && (
+        <div className="scih-modal-overlay" onClick={() => setAiPlanModal(null)}>
+          <div className="scih-modal" style={{ width:700, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <div className="scih-modal-title" style={{ margin:0 }}>🤖 Plano Gerado por IA</div>
+              <button className="scih-btn scih-btn-outline" style={{ fontSize:11 }} onClick={() => setAiPlanModal(null)}>✕ Fechar</button>
+            </div>
+            <div style={{ background:"rgba(56,139,253,.08)", border:"1px solid rgba(56,139,253,.3)", borderRadius:8, padding:"10px 14px", marginBottom:16, fontSize:12, color:"#388bfd" }}>
+              ✅ Planos 5W2H, Kanban e Matriz de Risco foram gerados automaticamente e adicionados às respectivas abas.
+            </div>
+            <div style={{ background:"var(--bg3)", borderRadius:8, padding:16 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:"var(--text)", marginBottom:10 }}>📈 Relatório Executivo</div>
+              <pre style={{ fontFamily:"inherit", fontSize:12, color:"var(--text2)", whiteSpace:"pre-wrap", lineHeight:1.6, margin:0 }}>{aiPlanModal.relatorio}</pre>
+            </div>
+            <div style={{ marginTop:14, display:"flex", gap:8 }}>
+              <button className="scih-btn scih-btn-teal" onClick={() => { setAiPlanModal(null); setActivePage("plano"); }}>Ver 5W2H</button>
+              <button className="scih-btn scih-btn-outline" onClick={() => { setAiPlanModal(null); setActivePage("kanban"); }}>Ver Kanban</button>
+              <button className="scih-btn scih-btn-outline" onClick={() => { setAiPlanModal(null); setActivePage("risco"); }}>Ver Riscos</button>
+            </div>
+          </div>
+        </div>
+      )}
         {/* Tabs horizontais */}
         <div className="scih-tabs">
           {NAV.map(n => (
