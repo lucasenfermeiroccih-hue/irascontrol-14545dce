@@ -102,8 +102,7 @@ function shouldReset(tarefa: Tarefa): boolean {
   const now = new Date();
 
   if (tarefa.recurrence === "daily") {
-    // Tarefas diárias não resetam no fim de semana
-    if (isWeekend(now)) return false;
+    // Reseta sempre que muda o dia do calendário (inclusive fins de semana)
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const lastDay = new Date(last.getFullYear(), last.getMonth(), last.getDate());
     return lastDay < today;
@@ -315,7 +314,9 @@ export default function KanbanCCIH() {
 
     const toReset = (data as Tarefa[]).filter(shouldReset).map((t) => t.id);
     if (toReset.length > 0) {
-      await (supabase.from("kanban_ccih_tarefas" as any).update({ status: "in_progress" }).in("id", toReset) as any);
+      await (supabase.from("kanban_ccih_tarefas" as any)
+        .update({ status: "in_progress", last_completed_at: null })
+        .in("id", toReset) as any);
     }
 
     // Build a name map: prefer hospitalUsers, fall back to a one-off profiles lookup for assignees outside the list
@@ -344,6 +345,7 @@ export default function KanbanCCIH() {
         ...t,
         assigned_to_ids: ids,
         status: toReset.includes(t.id) ? "in_progress" : t.status,
+        last_completed_at: toReset.includes(t.id) ? null : t.last_completed_at,
         assigned_to_names: ids
           .map((id) => hospitalUsers.find((u) => u.user_id === id)?.full_name || extraNames[id])
           .filter(Boolean) as string[],
@@ -369,6 +371,18 @@ export default function KanbanCCIH() {
   useEffect(() => {
     if (hospitalUsers.length > 0) loadTarefas();
   }, [hospitalUsers]);
+
+  // Recheck resets when tab becomes visible and every 5 minutes
+  useEffect(() => {
+    if (ctxLoading || adminLoading || !hospitalId || !userId) return;
+    const onVisible = () => { if (document.visibilityState === "visible") loadTarefas(); };
+    document.addEventListener("visibilitychange", onVisible);
+    const interval = setInterval(loadTarefas, 5 * 60 * 1000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      clearInterval(interval);
+    };
+  }, [ctxLoading, adminLoading, hospitalId, userId, loadTarefas]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
@@ -505,11 +519,7 @@ export default function KanbanCCIH() {
         t.assigned_to_ids?.includes(userId!) || t.assigned_to === userId
       );
 
-  const todayIsWeekend = isWeekend();
-
   const filtered = myTarefas.filter((t) => {
-    // Tarefas diárias não aparecem no fim de semana (sábado/domingo)
-    if (t.recurrence === "daily" && todayIsWeekend) return false;
     // Aplica filtro de recorrência selecionado
     return recurrenceFilter === "all" || t.recurrence === recurrenceFilter;
   });
