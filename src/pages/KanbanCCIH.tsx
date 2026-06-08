@@ -507,11 +507,7 @@ export default function KanbanCCIH() {
         t.assigned_to_ids?.includes(userId!) || t.assigned_to === userId
       );
 
-  const todayIsWeekend = isWeekend();
-
   const filtered = myTarefas.filter((t) => {
-    // Tarefas diárias não aparecem no fim de semana (sábado/domingo)
-    if (t.recurrence === "daily" && todayIsWeekend) return false;
     // Aplica filtro de recorrência selecionado
     return recurrenceFilter === "all" || t.recurrence === recurrenceFilter;
   });
