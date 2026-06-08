@@ -102,8 +102,7 @@ function shouldReset(tarefa: Tarefa): boolean {
   const now = new Date();
 
   if (tarefa.recurrence === "daily") {
-    // Tarefas diárias não resetam no fim de semana
-    if (isWeekend(now)) return false;
+    // Reseta sempre que muda o dia do calendário (inclusive fins de semana)
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const lastDay = new Date(last.getFullYear(), last.getMonth(), last.getDate());
     return lastDay < today;
