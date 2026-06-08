@@ -932,21 +932,21 @@ export default function DashboardISC() {
                   <ChartActions chartRef={refSitio} chartTitle="Sítio de Cirurgia" metaValue={metas.sitio} onMetaChange={setMeta("sitio")} />
                 </div>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[340px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+                  <PieChart margin={{ top: 10, right: 70, bottom: 10, left: 70 }}>
                     <Pie
-                      data={sitioData} cx="50%" cy="50%" outerRadius={100}
+                      data={sitioData} cx="50%" cy="50%" outerRadius={80}
                       dataKey="value" nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      labelLine={{ stroke: "hsl(var(--muted-foreground))" }}
                     >
                       {sitioData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
