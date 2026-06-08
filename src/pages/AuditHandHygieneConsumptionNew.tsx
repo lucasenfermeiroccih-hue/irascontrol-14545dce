@@ -122,7 +122,7 @@ export default function AuditHandHygieneConsumptionNew() {
             <p className="text-sm text-muted-foreground">RDC nº 36 · Portaria nº 1.377</p>
           </div>
         </div>
-        <AuditHistory auditType="hand_hygiene" />
+        <HygieneConsumptionHistory />
       </div>
 
       {/* Identificação */}
