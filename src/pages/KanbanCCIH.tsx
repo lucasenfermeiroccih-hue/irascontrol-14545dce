@@ -358,12 +358,13 @@ export default function KanbanCCIH() {
     if (ctxLoading || adminLoading || !hospitalId || !userId) return;
     const init = async () => {
       setLoading(true);
-      if (isAdmin) await loadHospitalUsers();
+      // Always load hospital users so admin names show up; cheap query.
+      await loadHospitalUsers();
       await loadTarefas();
       setLoading(false);
     };
     init();
-  }, [ctxLoading, adminLoading, hospitalId, userId, isAdmin]);
+  }, [ctxLoading, adminLoading, hospitalId, userId]);
 
   useEffect(() => {
     if (hospitalUsers.length > 0) loadTarefas();
