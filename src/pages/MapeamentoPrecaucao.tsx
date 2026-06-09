@@ -735,14 +735,31 @@ export default function MapeamentoPrecaucao() {
   const cntGoticulas = internados.filter(p => p.precaucao === "Gotículas").length;
   const cntAerossol  = internados.filter(p => p.precaucao === "Aerossóis").length;
 
+  const matchAdv = (p: Patient) =>
+    (fSetor.length === 0 || fSetor.includes(p.setor)) &&
+    (fLeito.length === 0 || fLeito.includes(p.leito)) &&
+    (fDataColeta.length === 0 || fDataColeta.includes(p.dataColeta)) &&
+    (fOrganismo.length === 0 || fOrganismo.some(o => (p.organismo || "").split(" | ").map(s => s.trim()).includes(o))) &&
+    (fPrecaucao.length === 0 || fPrecaucao.includes(p.precaucao)) &&
+    (fMaterial.length === 0 || fMaterial.some(m => (p.material || "").split(" | ").map(s => s.trim()).includes(m)));
+
   const dashPatients = useMemo(() =>
-    dStatus.length === 0 ? patients : patients.filter(p => dStatus.includes(p.status)),
-    [patients, dStatus]
+    (dStatus.length === 0 ? patients : patients.filter(p => dStatus.includes(p.status))).filter(matchAdv),
+    [patients, dStatus, fSetor, fLeito, fDataColeta, fOrganismo, fPrecaucao, fMaterial]
   );
   const dashCntTotal     = dashPatients.length;
   const dashCntContato   = dashPatients.filter(p => p.precaucao === "Contato").length;
   const dashCntGoticulas = dashPatients.filter(p => p.precaucao === "Gotículas").length;
   const dashCntAerossol  = dashPatients.filter(p => p.precaucao === "Aerossóis").length;
+
+  const internadosA = useMemo(
+    () => internados.filter(matchAdv),
+    [internados, fSetor, fLeito, fDataColeta, fOrganismo, fPrecaucao, fMaterial]
+  );
+  const patientsA = useMemo(
+    () => patients.filter(matchAdv),
+    [patients, fSetor, fLeito, fDataColeta, fOrganismo, fPrecaucao, fMaterial]
+  );
 
   const toggleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
