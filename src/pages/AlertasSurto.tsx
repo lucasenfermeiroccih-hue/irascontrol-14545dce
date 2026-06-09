@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { sendToAgent } from "@/lib/agent-service";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Siren, BrainCircuit, Map, ShieldAlert, ShieldPlus, FileText, ListChecks, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Siren, BrainCircuit, Map, ShieldAlert, ShieldPlus, FileText, ListChecks, X, Filter } from "lucide-react";
+import MultiSelectFilter from "@/components/MultiSelectFilter";
+import { MICROORGANISMS } from "@/data/microorganisms";
 
 /* ─── types ─────────────────────────────────────────────── */
 interface Patient {
@@ -234,8 +236,42 @@ export default function AlertasSurto() {
     return () => clearInterval(t)
   }, [])
 
+  /* ── filtros avançados (Setor, Leito, Data Coleta, Precaução, Microorganismo, Material) ── */
+  const [fSetor, setFSetor] = useState<string[]>([]);
+  const [fLeito, setFLeito] = useState<string[]>([]);
+  const [fDataColeta, setFDataColeta] = useState<string[]>([]);
+  const [fPrecaucao, setFPrecaucao] = useState<string[]>([]);
+  const [fOrganismo, setFOrganismo] = useState<string[]>([]);
+  const [fMaterial, setFMaterial] = useState<string[]>([]);
+
+  const matchAdv = useCallback((p: Patient) =>
+    (fSetor.length === 0 || fSetor.includes(p.setor)) &&
+    (fLeito.length === 0 || fLeito.includes(p.leito)) &&
+    (fDataColeta.length === 0 || fDataColeta.includes(p.dataColeta)) &&
+    (fPrecaucao.length === 0 || fPrecaucao.includes(p.precaucao)) &&
+    (fOrganismo.length === 0 || fOrganismo.includes(p.organismo)) &&
+    (fMaterial.length === 0 || fMaterial.includes(p.material)),
+    [fSetor, fLeito, fDataColeta, fPrecaucao, fOrganismo, fMaterial]);
+
   /* ── derivados ── */
-  const internados = useMemo(() => patients.filter(p => p.status === "Internado"), [patients]);
+  const patientsF = useMemo(() => patients.filter(matchAdv), [patients, matchAdv]);
+  const internados = useMemo(() => patientsF.filter(p => p.status === "Internado"), [patientsF]);
+
+  /* ── opções dos filtros (a partir do dataset completo) ── */
+  const optSetor = useMemo(() => [...new Set(patients.map(p => p.setor).filter(Boolean))].sort(), [patients]);
+  const optLeito = useMemo(() => [...new Set(patients.map(p => p.leito).filter(Boolean))].sort(), [patients]);
+  const optData  = useMemo(() => [...new Set(patients.map(p => p.dataColeta).filter(Boolean))].sort().reverse(), [patients]);
+  const optPrec  = ["Contato", "Gotículas", "Aerossóis"];
+  const optOrg   = useMemo(() => {
+    const used = [...new Set(patients.map(p => p.organismo).filter(Boolean))];
+    return [...new Set([...used, ...MICROORGANISMS])];
+  }, [patients]);
+  const optMat   = useMemo(() => [...new Set(patients.map(p => p.material).filter(Boolean))].sort(), [patients]);
+
+  const hasAnyFilter = fSetor.length || fLeito.length || fDataColeta.length || fPrecaucao.length || fOrganismo.length || fMaterial.length;
+  const clearAllFilters = () => {
+    setFSetor([]); setFLeito([]); setFDataColeta([]); setFPrecaucao([]); setFOrganismo([]); setFMaterial([]);
+  };
 
   const alertas = useMemo((): Alerta[] => {
     const map: Record<string, Patient[]> = {};
@@ -566,14 +602,47 @@ Responda SOMENTE em JSON válido:
           </div>
         ) : (
           <>
+            {/* ══ FILTROS AVANÇADOS ══ */}
+            <div className="gl" style={{ padding:"14px 16px", marginBottom:16 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, flexWrap:"wrap" }}>
+                <Filter size={14} style={{ color: subText }} />
+                <span style={{ fontSize:12, fontWeight:700, color: textColor, textTransform:"uppercase", letterSpacing:"0.5px" }}>Filtros</span>
+                {hasAnyFilter ? (
+                  <button onClick={clearAllFilters}
+                    style={{ marginLeft:"auto", padding:"4px 10px", borderRadius:14, background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.3)", color:"#fca5a5", fontSize:11, cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:4 }}>
+                    <X size={11} /> Limpar filtros
+                  </button>
+                ) : (
+                  <span style={{ marginLeft:"auto", fontSize:11, color: subText }}>{patientsF.length} de {patients.length} pacientes</span>
+                )}
+                {hasAnyFilter ? (
+                  <span style={{ fontSize:11, color: subText }}>{patientsF.length} de {patients.length} pacientes</span>
+                ) : null}
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))", gap:8 }}>
+                <MultiSelectFilter label="Setor" selected={fSetor} onChange={setFSetor}
+                  options={optSetor.map(s => ({ value:s, label:s }))} placeholder="Setor: Todos" />
+                <MultiSelectFilter label="Leito" selected={fLeito} onChange={setFLeito}
+                  options={optLeito.map(l => ({ value:l, label:`Leito ${l}` }))} placeholder="Leito: Todos" />
+                <MultiSelectFilter label="Data da Coleta" selected={fDataColeta} onChange={setFDataColeta}
+                  options={optData.map(d => ({ value:d, label: fmt(d) }))} placeholder="Data: Todas" />
+                <MultiSelectFilter label="Precaução" selected={fPrecaucao} onChange={setFPrecaucao}
+                  options={optPrec.map(p => ({ value:p, label:p }))} placeholder="Precaução: Todas" />
+                <MultiSelectFilter label="Microorganismo" selected={fOrganismo} onChange={setFOrganismo}
+                  options={optOrg.map(o => ({ value:o, label: orgLabel(o) }))} placeholder="Microorganismo: Todos" />
+                <MultiSelectFilter label="Material" selected={fMaterial} onChange={setFMaterial}
+                  options={optMat.map(m => ({ value:m, label:m }))} placeholder="Material: Todos" />
+              </div>
+            </div>
+
             {/* ══ 8 METRIC CARDS ══ */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))", gap:12, marginBottom:20 }}>
               {[
                 { lbl:"Suspeitos",      val: internados.length,                                        c:"rgba(255,255,255,0.8)",  acc:"#38bdf8" },
                 { lbl:"Confirmados",    val: alertas.reduce((s,a)=>s+a.count,0),                       c:"#f87171",                acc:"#ef4444" },
-                { lbl:"Descartados",    val: patients.filter(p=>p.status!=="Internado").length,         c:"#6ee7b7",                acc:"#10b981" },
+                { lbl:"Descartados",    val: patientsF.filter(p=>p.status!=="Internado").length,        c:"#6ee7b7",                acc:"#10b981" },
                 { lbl:"Isolados",       val: alertas.reduce((s,a)=>s+a.count,0),                       c:"#fde68a",                acc:"#f59e0b" },
-                { lbl:"Óbitos",         val: patients.filter(p=>p.status==="Óbito").length,            c:"#fca5a5",                acc:"#ef4444" },
+                { lbl:"Óbitos",         val: patientsF.filter(p=>p.status==="Óbito").length,           c:"#fca5a5",                acc:"#ef4444" },
                 { lbl:"Higiene mãos",   val: "68%",                                                    c:"#a5b4fc",                acc:"#6366f1" },
                 { lbl:"Bundles",        val: "74%",                                                    c:"#86efac",                acc:"#22c55e" },
                 { lbl:"EPI correto",    val: "81%",                                                    c:"#7dd3fc",                acc:"#0ea5e9" },
