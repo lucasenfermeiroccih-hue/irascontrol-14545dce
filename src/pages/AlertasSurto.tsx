@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { sendToAgent } from "@/lib/agent-service";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, RefreshCw, Siren, BrainCircuit, Map, ShieldAlert, ShieldPlus, FileText, ListChecks, X } from "lucide-react";
+import { ArrowLeft, RefreshCw, Siren, BrainCircuit, Map, ShieldAlert, ShieldPlus, FileText, ListChecks, X, Filter } from "lucide-react";
+import MultiSelectFilter from "@/components/MultiSelectFilter";
+import { MICROORGANISMS } from "@/data/microorganisms";
 
 /* ─── types ─────────────────────────────────────────────── */
 interface Patient {
