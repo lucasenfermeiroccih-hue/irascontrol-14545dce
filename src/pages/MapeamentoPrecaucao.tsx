@@ -3048,6 +3048,7 @@ Responda SOMENTE com JSON válido, sem texto antes ou depois, no seguinte format
                   Visão por agente etiológico · {orgManagementF.length} identificado{orgManagementF.length !== 1 ? "s" : ""}
                 </p>
               </div>
+              {advFiltersBlock}
               <div style={{ background:"var(--color-background-primary)", borderRadius:12, border:"0.5px solid var(--color-border-tertiary)", overflow:"hidden" }}>
                 <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
                   <thead>
