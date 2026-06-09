@@ -158,6 +158,7 @@ const CasesInvestigation = () => {
   // ── Full investigation detail view ──
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailStep, setDetailStep] = useState(0);
+  const [printMode, setPrintMode] = useState(false);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
 
   // 1. Identificação
