@@ -2293,6 +2293,10 @@ Responda SOMENTE com JSON válido, sem texto antes ou depois, no seguinte format
             select option { background: #0d1a2e; color: #fff; }
           `}</style>
 
+          <div style={{ padding:"16px 16px 0" }}>{advFiltersBlock}</div>
+
+
+
           {/* Bed modal */}
           {modalBedA && (
             <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:50, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
