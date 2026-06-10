@@ -234,17 +234,8 @@ const PatientDashboardIndicators = () => {
       return !!d && matchPeriod(d);
     }).length;
 
-    // Períodos = exatamente os meses/anos selecionados (cada combinação vira um intervalo)
-    const periods: Array<{ start: Date; end: Date }> = [];
-    selectedYears.forEach(y => {
-      selectedMonths.forEach(m => {
-        // end = último dia do mês às 23:59:59.999 para incluir o dia inteiro
-        periods.push({
-          start: new Date(y, m, 1, 0, 0, 0, 0),
-          end: new Date(y, m + 1, 0, 23, 59, 59, 999),
-        });
-      });
-    });
+    // (periods já calculados acima)
+
 
     const totalPatientDays = filteredPatients.reduce(
       (total, patient) => total + countDistinctCivilDaysInPeriods(getPatientPeriodStart(patient), patient.discharge_date, periods),
