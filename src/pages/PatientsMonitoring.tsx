@@ -489,7 +489,31 @@ export default function PatientsMonitoring() {
         labPanel, exames, vdrl, responsavel,
       },
     } as any);
-    if (ok) toast.success("Dados salvos com sucesso!");
+    if (ok) {
+      // Sincroniza todos os antibióticos com o dashboard de antimicrobianos
+      if (hospitalId && antibioticos.length > 0) {
+        try {
+          const payloads = antibioticos
+            .filter(a => a.nome && a.dataInicio)
+            .map(a => ({
+              id: a.id,
+              hospital_id: hospitalId,
+              patient_id: selectedId,
+              drug_name: a.nome,
+              start_date: a.dataInicio,
+              end_date: a.dataFim || null,
+              is_active: !a.dataFim,
+              prescriber_id: userId || null,
+            }));
+          if (payloads.length > 0) {
+            await supabase.from("antimicrobial_prescriptions").upsert(payloads, { onConflict: "id" });
+          }
+        } catch (err) {
+          console.error("Erro ao sincronizar antibióticos:", err);
+        }
+      }
+      toast.success("Dados salvos com sucesso!");
+    }
   };
 
   const calcTotalDays = (ins: string, ret: string, trocas: Array<{ insercao: string; retirada: string }>) => {
