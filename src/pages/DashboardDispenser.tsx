@@ -745,7 +745,7 @@ export default function DashboardDispenser() {
           </Card>
         )}
 
-        <Card className={fStats.categoryData.length < 3 ? "lg:col-span-2" : ""}>
+        <Card className={fStats.categoryData.length < 3 ? "lg:col-span-5" : "lg:col-span-3"}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
