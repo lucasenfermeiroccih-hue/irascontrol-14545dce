@@ -237,9 +237,20 @@ export default function DashboardHygiene() {
   const [metaProf, setMetaProf] = useState<number | undefined>(META_OMS);
   const [metaSetor, setMetaSetor] = useState<number | undefined>(META_OMS);
   const [metaAno, setMetaAno] = useState<number | undefined>(META_OMS);
+  const [metaEvolucao, setMetaEvolucao] = useState<number | undefined>(META_OMS);
+  const [metaCategoria, setMetaCategoria] = useState<number | undefined>(META_OMS);
+  const [metaPareto, setMetaPareto] = useState<number | undefined>(80);
+  const [metaRadar, setMetaRadar] = useState<number | undefined>(META_OMS);
+  const [ishikawaKey, setIshikawaKey] = useState(0);
 
   const refProf  = useRef<HTMLDivElement>(null);
   const refSetor = useRef<HTMLDivElement>(null);
+  const refEvolucao = useRef<HTMLDivElement>(null);
+  const refPie = useRef<HTMLDivElement>(null);
+  const refCategoria = useRef<HTMLDivElement>(null);
+  const refPareto = useRef<HTMLDivElement>(null);
+  const refRadar = useRef<HTMLDivElement>(null);
+  const refIshikawa = useRef<HTMLDivElement>(null);
 
   // ── Filtered data ──
   const filteredAudits = useMemo(() => audits.filter(a => {
