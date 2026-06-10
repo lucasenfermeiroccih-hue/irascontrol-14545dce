@@ -9,7 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ComposedChart, ReferenceLine, PieChart, Pie, Cell, Legend,
-  AreaChart, Area,
+  AreaChart, Area, LineChart, Line,
 } from "recharts";
 import {
   Building2, CheckCircle2, AlertTriangle, TrendingUp, Loader2, Download,
