@@ -19,9 +19,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 
-const SPECIALTIES = [
+const SPECIALTIES_DEFAULT = [
   "Clínica médica", "Cirurgia Geral", "Cirurgia Cardíaca",
   "Cirurgia Oftalmológica", "Neurocirurgia", "Cirurgia Vascular", "Cirurgia Ortopédica",
+];
+
+const SPECIALTIES_MATERNIDADE = [
+  "Obstetrícia", "Ginecologia", "Neonatologia",
+  "Centro Obstétrico", "Alojamento Conjunto", "UTI Neonatal", "UTI Materna",
 ];
 
 const MONTHS = [
