@@ -839,7 +839,7 @@ export default function DashboardDispenser() {
       )}
 
       {/* ── Ishikawa Causa Raiz ── */}
-      <Card>
+      <Card ref={refIshikawa}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -849,19 +849,40 @@ export default function DashboardDispenser() {
                 <CardDescription className="text-xs">Causas das não conformidades de dispensers · Clique em uma categoria para detalhar</CardDescription>
               </div>
             </div>
-            {selectedIshikawa && (
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
-                <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+            <div className="flex items-center gap-1">
+              {selectedIshikawa && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
+                  <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => {
+                  setSelectedIshikawa(null);
+                  setIshikawaKey(k => k + 1);
+                  toast({ title: "Análise atualizada", description: "Diagrama de Ishikawa recalculado com os dados do filtro atual." });
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Atualizar análise
               </Button>
-            )}
+              <ChartActions chartRef={refIshikawa} chartTitle="Ishikawa — Dispensers" />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <IshikawaDispenser
-            selectedId={selectedIshikawa}
-            onSelect={setSelectedIshikawa}
-            topFailures={fStats.topFailures}
-          />
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[760px]" style={{ minHeight: 340 }}>
+              <IshikawaDispenser
+                key={ishikawaKey}
+                selectedId={selectedIshikawa}
+                onSelect={setSelectedIshikawa}
+                topFailures={fStats.topFailures}
+              />
+            </div>
+          </div>
+
 
           {selectedIshikawa && (() => {
             const cat = DISP_ISHIKAWA.find(c => c.id === selectedIshikawa);
