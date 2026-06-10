@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import DashboardFilters from "@/components/DashboardFilters";
+import ChartActions from "@/components/ChartActions";
 import { useAuditDashboard } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
+import { toast } from "@/hooks/use-toast";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -230,6 +232,21 @@ export default function DashboardDispenser() {
   const [ano, setAno]   = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
+  const [ishikawaKey, setIshikawaKey] = useState(0);
+
+  const [metaEvolucao, setMetaEvolucao] = useState<number | undefined>(META);
+  const [metaSetor, setMetaSetor] = useState<number | undefined>(META);
+  const [metaCategoria, setMetaCategoria] = useState<number | undefined>(META);
+  const [metaRadar, setMetaRadar] = useState<number | undefined>(META);
+  const [metaPareto, setMetaPareto] = useState<number | undefined>(80);
+
+  const refEvolucao = useRef<HTMLDivElement>(null);
+  const refPie = useRef<HTMLDivElement>(null);
+  const refSetor = useRef<HTMLDivElement>(null);
+  const refCategoria = useRef<HTMLDivElement>(null);
+  const refRadar = useRef<HTMLDivElement>(null);
+  const refPareto = useRef<HTMLDivElement>(null);
+  const refIshikawa = useRef<HTMLDivElement>(null);
 
   // ── Filtered data ──
   const filteredAudits = useMemo(() => audits.filter(a => {
@@ -551,10 +568,13 @@ export default function DashboardDispenser() {
 
       {/* ── Charts Row 1: Trend + Pie ── */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Evolução Mensal da Conformidade</CardTitle>
-            <CardDescription className="text-xs">Tendência vs meta de {META}% · linha vermelha = referência</CardDescription>
+        <Card ref={refEvolucao} className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+            <div>
+              <CardTitle className="text-sm">Evolução Mensal da Conformidade</CardTitle>
+              <CardDescription className="text-xs">Tendência vs meta de {metaEvolucao ?? META}% · linha vermelha = referência</CardDescription>
+            </div>
+            <ChartActions chartRef={refEvolucao} chartTitle="Evolução Mensal da Conformidade" metaValue={metaEvolucao} onMetaChange={setMetaEvolucao} metaUnit="%" />
           </CardHeader>
           <CardContent>
             {fStats.monthlyTrend.length === 0 ? (
@@ -572,8 +592,10 @@ export default function DashboardDispenser() {
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={META} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
-                    label={{ value: `Meta ${META}%`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
+                  {metaEvolucao !== undefined && (
+                    <ReferenceLine y={metaEvolucao} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
+                      label={{ value: `Meta ${metaEvolucao}%`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
+                  )}
                   <Area dataKey="compliance" name="Conformidade" stroke="#f59e0b" fill="url(#gradDisp)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -581,10 +603,13 @@ export default function DashboardDispenser() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Status Geral dos Itens</CardTitle>
-            <CardDescription className="text-xs">Distribuição de conformidade dos itens auditados</CardDescription>
+        <Card ref={refPie}>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+            <div>
+              <CardTitle className="text-sm">Status Geral dos Itens</CardTitle>
+              <CardDescription className="text-xs">Distribuição de conformidade dos itens auditados</CardDescription>
+            </div>
+            <ChartActions chartRef={refPie} chartTitle="Status Geral dos Itens" />
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={190}>
@@ -615,26 +640,34 @@ export default function DashboardDispenser() {
 
       {/* ── Charts Row 2: Sector + Category ── */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conformidade por Setor</CardTitle>
-            <CardDescription className="text-xs">Verde ≥90% · Amarelo 75–89% · Vermelho &lt;75% · linha = meta</CardDescription>
+        <Card ref={refSetor}>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+            <div>
+              <CardTitle className="text-sm">Conformidade por Setor</CardTitle>
+              <CardDescription className="text-xs">Verde ≥{metaSetor ?? META}% · Amarelo intermediário · Vermelho abaixo · linha = meta</CardDescription>
+            </div>
+            <ChartActions chartRef={refSetor} chartTitle="Conformidade por Setor" metaValue={metaSetor} onMetaChange={setMetaSetor} metaUnit="%" />
           </CardHeader>
           <CardContent>
             {fStats.sectorData.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">Sem dados por setor</div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={Math.max(240, fStats.sectorData.length * 32)}>
                 <ComposedChart data={fStats.sectorData} layout="vertical" margin={{ left: 0, right: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
                   <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                   <YAxis dataKey="name" type="category" width={130} tick={{ fontSize: 10 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine x={META} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  {metaSetor !== undefined && (
+                    <ReferenceLine x={metaSetor} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  )}
                   <Bar dataKey="compliance" name="Conformidade" radius={[0, 3, 3, 0]}>
-                    {fStats.sectorData.map((entry, i) => (
-                      <Cell key={i} fill={entry.compliance >= META ? "#10b981" : entry.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
-                    ))}
+                    {fStats.sectorData.map((entry, i) => {
+                      const goal = metaSetor ?? META;
+                      return (
+                        <Cell key={i} fill={entry.compliance >= goal ? "#10b981" : entry.compliance >= goal * 0.83 ? "#f59e0b" : "#ef4444"} />
+                      );
+                    })}
                   </Bar>
                 </ComposedChart>
               </ResponsiveContainer>
@@ -642,26 +675,34 @@ export default function DashboardDispenser() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conformidade por Categoria de Item</CardTitle>
-            <CardDescription className="text-xs">Itens ordenados do pior para o melhor desempenho</CardDescription>
+        <Card ref={refCategoria}>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+            <div>
+              <CardTitle className="text-sm">Conformidade por Categoria de Item</CardTitle>
+              <CardDescription className="text-xs">Itens ordenados do pior para o melhor desempenho</CardDescription>
+            </div>
+            <ChartActions chartRef={refCategoria} chartTitle="Conformidade por Categoria" metaValue={metaCategoria} onMetaChange={setMetaCategoria} metaUnit="%" />
           </CardHeader>
           <CardContent>
             {fStats.categoryData.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">Sem dados por categoria</div>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={Math.max(240, fStats.categoryData.length * 32)}>
                 <BarChart data={fStats.categoryData} layout="vertical" margin={{ left: 0, right: 24 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
                   <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                   <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 10 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine x={META} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  {metaCategoria !== undefined && (
+                    <ReferenceLine x={metaCategoria} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  )}
                   <Bar dataKey="compliance" name="Conformidade" radius={[0, 3, 3, 0]}>
-                    {fStats.categoryData.map((entry, i) => (
-                      <Cell key={i} fill={entry.compliance >= META ? "#10b981" : entry.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
-                    ))}
+                    {fStats.categoryData.map((entry, i) => {
+                      const goal = metaCategoria ?? META;
+                      return (
+                        <Cell key={i} fill={entry.compliance >= goal ? "#10b981" : entry.compliance >= goal * 0.83 ? "#f59e0b" : "#ef4444"} />
+                      );
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -671,33 +712,40 @@ export default function DashboardDispenser() {
       </div>
 
       {/* ── Radar + Sector Risk Table ── */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-5">
         {fStats.categoryData.length >= 3 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Radar — Conformidade Multidimensional</CardTitle>
-              <CardDescription className="text-xs">Visão 360° por categoria de dispenser · linha vermelha = meta</CardDescription>
+          <Card ref={refRadar} className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+              <div>
+                <CardTitle className="text-sm">Radar — Conformidade Multidimensional</CardTitle>
+                <CardDescription className="text-xs">Visão 360° por categoria · linha vermelha = meta</CardDescription>
+              </div>
+              <ChartActions chartRef={refRadar} chartTitle="Radar — Conformidade" metaValue={metaRadar} onMetaChange={setMetaRadar} metaUnit="%" />
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={240}>
-                <RadarChart data={fStats.categoryData.map(c => ({
-                  subject: c.name.length > 12 ? c.name.substring(0, 11) + "…" : c.name,
-                  A: c.compliance,
-                  meta: META,
-                }))}>
+              <ResponsiveContainer width="100%" height={320}>
+                <RadarChart
+                  data={fStats.categoryData.map(c => ({
+                    subject: c.name.length > 14 ? c.name.substring(0, 13) + "…" : c.name,
+                    A: c.compliance,
+                    meta: metaRadar ?? META,
+                  }))}
+                  margin={{ top: 16, right: 24, bottom: 16, left: 24 }}
+                >
                   <PolarGrid className="stroke-border" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9 }} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
                   <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 8 }} />
                   <Radar dataKey="A" name="Conformidade" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
                   <Radar dataKey="meta" name="Meta" stroke="#ef4444" fill="transparent" strokeDasharray="4 2" />
                   <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                  <Tooltip content={<CustomTooltip />} />
                 </RadarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         )}
 
-        <Card className={fStats.categoryData.length < 3 ? "lg:col-span-2" : ""}>
+        <Card className={fStats.categoryData.length < 3 ? "lg:col-span-5" : "lg:col-span-3"}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
@@ -760,22 +808,29 @@ export default function DashboardDispenser() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
-              <CardDescription className="text-xs">80% dos problemas concentrados em poucas causas (regra 80/20)</CardDescription>
+          <Card ref={refPareto}>
+            <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+              <div>
+                <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
+                <CardDescription className="text-xs">80% dos problemas concentrados em poucas causas (regra 80/20)</CardDescription>
+              </div>
+              <ChartActions chartRef={refPareto} chartTitle="Análise de Pareto" metaValue={metaPareto} onMetaChange={setMetaPareto} metaUnit="%" />
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <ComposedChart data={fStats.paretoData} margin={{ left: -10, right: 16 }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={fStats.paretoData} margin={{ top: 8, left: -6, right: 16, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" tick={{ fontSize: 8 }} interval={0} angle={-20} textAnchor="end" height={45} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-25} textAnchor="end" height={70} />
                   <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                   <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                   <Tooltip content={<CustomTooltip />} />
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   <Bar yAxisId="left" dataKey="count" name="Ocorrências" fill="#f59e0b" radius={[3, 3, 0, 0]} />
                   <Line yAxisId="right" dataKey="acumulado" name="% Acumulado" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
-                  <ReferenceLine yAxisId="right" y={80} stroke="#3b82f6" strokeDasharray="4 2" />
+                  {metaPareto !== undefined && (
+                    <ReferenceLine yAxisId="right" y={metaPareto} stroke="#3b82f6" strokeDasharray="4 2"
+                      label={{ value: `Meta ${metaPareto}%`, position: "insideTopRight", fontSize: 10, fill: "#3b82f6" }} />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
@@ -784,7 +839,7 @@ export default function DashboardDispenser() {
       )}
 
       {/* ── Ishikawa Causa Raiz ── */}
-      <Card>
+      <Card ref={refIshikawa}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -794,19 +849,40 @@ export default function DashboardDispenser() {
                 <CardDescription className="text-xs">Causas das não conformidades de dispensers · Clique em uma categoria para detalhar</CardDescription>
               </div>
             </div>
-            {selectedIshikawa && (
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
-                <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+            <div className="flex items-center gap-1">
+              {selectedIshikawa && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
+                  <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => {
+                  setSelectedIshikawa(null);
+                  setIshikawaKey(k => k + 1);
+                  toast({ title: "Análise atualizada", description: "Diagrama de Ishikawa recalculado com os dados do filtro atual." });
+                }}
+              >
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Atualizar análise
               </Button>
-            )}
+              <ChartActions chartRef={refIshikawa} chartTitle="Ishikawa — Dispensers" />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <IshikawaDispenser
-            selectedId={selectedIshikawa}
-            onSelect={setSelectedIshikawa}
-            topFailures={fStats.topFailures}
-          />
+          <div className="w-full overflow-x-auto">
+            <div className="min-w-[760px]" style={{ minHeight: 340 }}>
+              <IshikawaDispenser
+                key={ishikawaKey}
+                selectedId={selectedIshikawa}
+                onSelect={setSelectedIshikawa}
+                topFailures={fStats.topFailures}
+              />
+            </div>
+          </div>
+
 
           {selectedIshikawa && (() => {
             const cat = DISP_ISHIKAWA.find(c => c.id === selectedIshikawa);
