@@ -1291,7 +1291,7 @@ export default function PatientsMonitoring() {
                       <ComboboxSearch
                         options={[
                           ...[
-                            "Penicilina G","Penicilina benzatina","Oxacilina","Nafcilina","Ampicilina","Amoxicilina",
+                            "Penicilina G","Penicilina benzatina","Oxacilina","Nafcilina","Ampicilina","Amoxicilina","Amoxicilina + Clavulanato de Potássio",
                             "Piperacilina","Piperacilina/tazobactam","Cefazolina","Cefuroxima","Ceftriaxona","Cefotaxima",
                             "Ceftazidima","Cefepime","Ceftarolina","Ceftolozano/tazobactam","Ceftazidima/avibactam",
                             "Cefiderocol","Imipenem/cilastatina","Meropenem","Ertapenem","Doripenem","Aztreonam",
