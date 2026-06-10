@@ -102,7 +102,7 @@ function IshikawaDiagram({
   topFailures: { item: string; count: number; category: string }[];
 }) {
   return (
-    <svg viewBox="0 0 900 400" className="w-full" style={{ minHeight: 260, maxHeight: 420 }}>
+    <svg viewBox="0 0 900 400" className="w-full" style={{ minHeight: 340, maxHeight: 520 }}>
       {/* Background */}
       <rect width="900" height="400" fill="transparent" />
 
