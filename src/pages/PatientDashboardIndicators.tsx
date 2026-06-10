@@ -80,13 +80,16 @@ function dayKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function countDistinctCivilDaysInPeriods(startDate?: string | null, endDate?: string | null, periods?: Array<{ start: Date; end: Date }>) {
-  if (!startDate || !periods || periods.length === 0) return 0;
+function collectDaysInPeriods(
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  periods: Array<{ start: Date; end: Date }>,
+  bucket: Set<string>,
+) {
+  if (!startDate || !periods || periods.length === 0) return;
   const start = parseLocalDate(startDate);
   const end = endDate ? parseLocalDate(endDate) : new Date();
-  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
-
-  const occupiedDays = new Set<string>();
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
   periods.forEach(({ start: periodStart, end: periodEnd }) => {
     const from = startOfCivilDay(start > periodStart ? start : periodStart);
@@ -97,13 +100,19 @@ function countDistinctCivilDaysInPeriods(startDate?: string | null, endDate?: st
     const lastDay = new Date(to.getFullYear(), to.getMonth(), to.getDate());
 
     while (cursor <= lastDay) {
-      occupiedDays.add(dayKey(cursor));
+      bucket.add(dayKey(cursor));
       cursor.setDate(cursor.getDate() + 1);
     }
   });
+}
 
+function countDistinctCivilDaysInPeriods(startDate?: string | null, endDate?: string | null, periods?: Array<{ start: Date; end: Date }>) {
+  if (!periods) return 0;
+  const occupiedDays = new Set<string>();
+  collectDaysInPeriods(startDate, endDate, periods, occupiedDays);
   return occupiedDays.size;
 }
+
 
 function getPatientPeriodStart(patient: PatientRow) {
   return patient.icu_admission_date || patient.admission_date;
