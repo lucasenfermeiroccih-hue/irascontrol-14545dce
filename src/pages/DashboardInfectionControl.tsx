@@ -700,22 +700,26 @@ export default function DashboardInfectionControl() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
-              <CardDescription className="text-xs">Frequência absoluta · 80% dos problemas em poucas causas</CardDescription>
+          <Card ref={refs.pareto}>
+            <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2 space-y-0">
+              <div className="min-w-0">
+                <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
+                <CardDescription className="text-xs">Frequência absoluta · linha = % acumulado · meta {metas.pareto ?? 80}%</CardDescription>
+              </div>
+              <ChartActions chartRef={refs.pareto} chartTitle="Análise de Pareto" metaValue={metas.pareto} onMetaChange={v => setMeta("pareto", v)} metaUnit="%" />
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <ComposedChart data={derived.paretoData} margin={{ left: -10, right: 16 }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={derived.paretoData} margin={{ left: 0, right: 16, bottom: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" tick={{ fontSize: 8 }} interval={0} angle={-20} textAnchor="end" height={45} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} interval={0} angle={-25} textAnchor="end" height={70} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={30} />
+                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" width={36} />
                   <Tooltip content={<CustomTooltip />} />
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
                   <Bar yAxisId="left" dataKey="count" name="Ocorrências" fill="#ef4444" radius={[3, 3, 0, 0]} />
                   <Line yAxisId="right" dataKey="acumulado" name="% Acumulado" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                  <ReferenceLine yAxisId="right" y={80} stroke="#f59e0b" strokeDasharray="4 2" />
+                  {metas.pareto !== undefined && <ReferenceLine yAxisId="right" y={metas.pareto} stroke="#f59e0b" strokeDasharray="4 2" label={{ value: `${metas.pareto}%`, position: "right", fontSize: 10, fill: "#f59e0b" }} />}
                 </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
