@@ -1512,15 +1512,65 @@ export default function PatientsMonitoring() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setNewLabOpen(false); setEditingLabIndex(null); }}>Cancelar</Button>
-              <Button onClick={() => {
+              <Button onClick={async () => {
                 if (!newLab.exame) { toast.error("Selecione o tipo de exame"); return; }
                 if (!newLab.microrganismo.trim()) { toast.error("Informe o microrganismo"); return; }
+                const labToSave: LabEntry = { ...newLab };
                 if (editingLabIndex !== null) {
-                  setLabPanel(prev => prev.map((l, idx) => idx === editingLabIndex ? { ...newLab } : l));
+                  setLabPanel(prev => prev.map((l, idx) => idx === editingLabIndex ? labToSave : l));
                   toast.success("Exame atualizado!");
                 } else {
-                  setLabPanel(prev => [...prev, { ...newLab }]);
+                  setLabPanel(prev => [...prev, labToSave]);
                   toast.success("Exame cadastrado no painel laboratorial!");
+                }
+                // Sincroniza com Mapeamento de Precaução quando MDR
+                if (labToSave.mdr && selectedId && hospitalId) {
+                  try {
+                    const dStr = labToSave.data || "";
+                    const dataISO = dStr.includes("/")
+                      ? dStr.split("/").reverse().join("-")
+                      : (dStr || new Date().toISOString().slice(0, 10));
+                    const m = (labToSave.microrganismo || "").toLowerCase();
+                    let precType = "Contato";
+                    if (m.includes("tubercul") || m.includes("sars") || m.includes("covid")) precType = "Aerossóis";
+                    else if (m.includes("influenza") || m.includes("h1n1")) precType = "Gotículas";
+
+                    await supabase.from("lab_results").insert({
+                      patient_id: selectedId,
+                      hospital_id: hospitalId,
+                      organism: labToSave.microrganismo || null,
+                      sample_material: labToSave.exame || null,
+                      collection_date: dataISO,
+                      status: "completed" as const,
+                    });
+
+                    const { data: existing } = await supabase
+                      .from("precautions")
+                      .select("id, reason")
+                      .eq("patient_id", selectedId)
+                      .eq("is_active", true)
+                      .maybeSingle();
+
+                    if (existing) {
+                      const reasons = (existing.reason || "").split(" | ").map(s => s.trim()).filter(Boolean);
+                      if (!reasons.includes(labToSave.microrganismo)) reasons.push(labToSave.microrganismo);
+                      await supabase.from("precautions").update({
+                        precaution_type: precType,
+                        reason: reasons.join(" | "),
+                      }).eq("id", existing.id);
+                    } else {
+                      await supabase.from("precautions").insert({
+                        patient_id: selectedId,
+                        precaution_type: precType,
+                        is_active: true,
+                        start_date: dataISO,
+                        reason: labToSave.microrganismo || null,
+                      });
+                    }
+                    toast.success("Paciente enviado ao Mapeamento de Precaução");
+                  } catch (err) {
+                    console.error("Erro ao sincronizar com Mapeamento de Precaução:", err);
+                  }
                 }
                 setNewLabOpen(false);
                 setEditingLabIndex(null);
