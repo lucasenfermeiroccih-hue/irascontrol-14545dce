@@ -632,6 +632,10 @@ Responda SOMENTE em JSON válido:
               style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", background: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)", border:`1px solid ${glassBorder}`, borderRadius:8, cursor:"pointer", color: subText, fontSize:11, fontFamily:"inherit" }}>
               <RefreshCw size={11} /> Atualizar
             </button>
+            <button onClick={printPageData}
+              style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", background:"rgba(56,189,248,0.12)", border:"1px solid rgba(56,189,248,0.3)", borderRadius:8, cursor:"pointer", color:"#38bdf8", fontSize:11, fontWeight:600, fontFamily:"inherit" }}>
+              <FileText size={11} /> Imprimir Dados da Página
+            </button>
           </div>
 
           {/* Main header row */}
