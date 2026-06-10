@@ -479,16 +479,34 @@ export default function PatientsMonitoring() {
 
   const handleSave = async () => {
     if (!selected || !selectedId) return;
+    // Se há sinais vitais preenchidos mas ainda não foram enviados ao histórico,
+    // commit automático para que não se percam ao salvar/recarregar.
+    let svAtuais = sinaisVitais;
+    let svHistorico = sinaisVitaisHistorico;
+    const temAlgumValor = !!(sinaisVitais.temperatura || sinaisVitais.leucocitos || sinaisVitais.pressaoArterial || sinaisVitais.spo2 || sinaisVitais.fio2Peep || sinaisVitais.hematuria);
+    if (temAlgumValor) {
+      const now = new Date();
+      const novoRegistro = {
+        ...sinaisVitais,
+        data: now.toLocaleDateString("pt-BR"),
+        hora: now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      };
+      svHistorico = [novoRegistro, ...sinaisVitaisHistorico];
+      svAtuais = { temperatura: "", leucocitos: "", pressaoArterial: "", fio2Peep: "", hematuria: "", spo2: "" };
+      setSinaisVitaisHistorico(svHistorico);
+      setSinaisVitais(svAtuais);
+    }
     const ok = await updatePatient(selectedId, {
       ...selected,
       // Store all tab data inside clinical_data via a special key
       _tabData: {
         dispositivos, dispInvasivos, antibioticos, evolucao,
-        sinaisVitais, sinaisVitaisHistorico, iras, conclusao,
+        sinaisVitais: svAtuais, sinaisVitaisHistorico: svHistorico, iras, conclusao,
         criteriosSelecionados, justificativa, ocorrencia,
         labPanel, exames, vdrl, responsavel,
       },
     } as any);
+
     if (ok) {
       // Sincroniza todos os antibióticos com o dashboard de antimicrobianos
       if (hospitalId && antibioticos.length > 0) {
