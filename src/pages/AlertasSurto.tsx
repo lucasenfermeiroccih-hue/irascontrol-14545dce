@@ -811,9 +811,9 @@ Responda SOMENTE em JSON válido:
                           style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:"rgba(167,139,250,0.15)", border:"1px solid rgba(167,139,250,0.35)", borderRadius:20, color:"#a78bfa", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
                           <FileText size={12} /> Gerar relatório IA
                         </button>
-                        <button onClick={() => window.print()}
-                          style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background: dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)", border:`1px solid ${glassBorder}`, borderRadius:20, color: subText, fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                          Imprimir
+                        <button onClick={printAIAnalysis}
+                          style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", background:"rgba(167,139,250,0.12)", border:"1px solid rgba(167,139,250,0.3)", borderRadius:20, color:"#a78bfa", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                          <FileText size={12} /> Imprimir Análise + 5W2H
                         </button>
                       </div>
                     </div>
