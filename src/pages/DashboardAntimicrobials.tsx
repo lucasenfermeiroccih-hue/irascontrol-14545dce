@@ -15,7 +15,8 @@ import { ptBR } from "date-fns/locale";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Pill, TrendingDown, AlertTriangle, Activity, Plus, Pencil, Loader2, Download, CalendarIcon } from "lucide-react";
+import { Pill, TrendingDown, AlertTriangle, Activity, Plus, Pencil, Loader2, Download, CalendarIcon, Eye, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import { toast } from "sonner";
@@ -61,6 +62,8 @@ export default function DashboardAntimicrobials() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [viewItem, setViewItem] = useState<any>(null);
+  const [deleteItem, setDeleteItem] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
@@ -168,6 +171,24 @@ export default function DashboardAntimicrobials() {
   };
 
   const setField = (key: string, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const handleDelete = async () => {
+    if (!deleteItem) return;
+    const { error } = await supabase.from("antimicrobial_prescriptions").delete().eq("id", deleteItem.id);
+    if (error) { toast.error("Erro ao excluir: " + error.message); return; }
+    // Também remove do clinical_data do paciente (se existir)
+    if (deleteItem.patient_id) {
+      const { data: pat } = await supabase.from("patients").select("clinical_data").eq("id", deleteItem.patient_id).single();
+      const cd: any = pat?.clinical_data || {};
+      if (Array.isArray(cd.antibioticos)) {
+        cd.antibioticos = cd.antibioticos.filter((a: any) => a.id !== deleteItem.id);
+        await supabase.from("patients").update({ clinical_data: cd }).eq("id", deleteItem.patient_id);
+      }
+    }
+    setPrescriptions(prev => prev.filter(p => p.id !== deleteItem.id));
+    setDeleteItem(null);
+    toast.success("Prescrição excluída!");
+  };
 
   const dayCount = useMemo(() => {
     if (!form.startDate) return null;
@@ -292,7 +313,11 @@ export default function DashboardAntimicrobials() {
                       <TableCell className="text-center">{getStatusBadge(p.is_active ? "Em uso" : "Suspenso")}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{p.indication || "—"}</TableCell>
                       <TableCell className="text-center">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Visualizar" onClick={() => setViewItem(p)}><Eye className="h-3.5 w-3.5" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar" onClick={() => openEdit(p)}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" title="Excluir" onClick={() => setDeleteItem(p)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -410,6 +435,48 @@ export default function DashboardAntimicrobials() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Visualizar */}
+      <Dialog open={!!viewItem} onOpenChange={(o) => !o && setViewItem(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Detalhes da Prescrição</DialogTitle></DialogHeader>
+          {viewItem && (
+            <div className="space-y-2 text-sm">
+              <div><span className="text-muted-foreground">Paciente:</span> <strong>{viewItem.patients?.full_name || "—"}</strong></div>
+              <div><span className="text-muted-foreground">Setor:</span> {viewItem.patients?.sector || "—"}</div>
+              <div><span className="text-muted-foreground">Leito:</span> {viewItem.patients?.bed || "—"}</div>
+              <div><span className="text-muted-foreground">Antimicrobiano:</span> <strong>{viewItem.drug_name}</strong></div>
+              <div><span className="text-muted-foreground">Dose:</span> {viewItem.dose || "—"}</div>
+              <div><span className="text-muted-foreground">Via:</span> {viewItem.route || "—"}</div>
+              <div><span className="text-muted-foreground">Início:</span> {viewItem.start_date ? format(parseISO(viewItem.start_date), "dd/MM/yyyy") : "—"}</div>
+              <div><span className="text-muted-foreground">Término:</span> {viewItem.end_date ? format(parseISO(viewItem.end_date), "dd/MM/yyyy") : "Em curso"}</div>
+              <div><span className="text-muted-foreground">Dias:</span> {daysBetween(viewItem.start_date, viewItem.end_date) ?? "—"}</div>
+              <div className="flex items-center gap-2"><span className="text-muted-foreground">Status:</span> {getStatusBadge(viewItem.is_active ? "Em uso" : "Suspenso")}</div>
+              <div><span className="text-muted-foreground">Indicação:</span> {viewItem.indication || "—"}</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewItem(null)}>Fechar</Button>
+            {viewItem && <Button onClick={() => { openEdit(viewItem); setViewItem(null); }}>Editar</Button>}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir */}
+      <AlertDialog open={!!deleteItem} onOpenChange={(o) => !o && setDeleteItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir prescrição?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação removerá permanentemente a prescrição de <strong>{deleteItem?.drug_name}</strong> do paciente <strong>{deleteItem?.patients?.full_name || "—"}</strong>. Não é possível desfazer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
