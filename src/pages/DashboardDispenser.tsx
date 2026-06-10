@@ -232,6 +232,21 @@ export default function DashboardDispenser() {
   const [ano, setAno]   = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
+  const [ishikawaKey, setIshikawaKey] = useState(0);
+
+  const [metaEvolucao, setMetaEvolucao] = useState<number | undefined>(META);
+  const [metaSetor, setMetaSetor] = useState<number | undefined>(META);
+  const [metaCategoria, setMetaCategoria] = useState<number | undefined>(META);
+  const [metaRadar, setMetaRadar] = useState<number | undefined>(META);
+  const [metaPareto, setMetaPareto] = useState<number | undefined>(80);
+
+  const refEvolucao = useRef<HTMLDivElement>(null);
+  const refPie = useRef<HTMLDivElement>(null);
+  const refSetor = useRef<HTMLDivElement>(null);
+  const refCategoria = useRef<HTMLDivElement>(null);
+  const refRadar = useRef<HTMLDivElement>(null);
+  const refPareto = useRef<HTMLDivElement>(null);
+  const refIshikawa = useRef<HTMLDivElement>(null);
 
   // ── Filtered data ──
   const filteredAudits = useMemo(() => audits.filter(a => {
