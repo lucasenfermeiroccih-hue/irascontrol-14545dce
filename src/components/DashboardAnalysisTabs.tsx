@@ -15,10 +15,13 @@ import {
   Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Cell, LabelList,
 } from "recharts";
 import ChartActions from "@/components/ChartActions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 import {
   RefreshCw, FileText, AlertTriangle, CheckCircle2, Target,
   TrendingUp, Lightbulb, Eye, Plus, Trash2, RotateCcw,
-  Shield, Zap, GitMerge,
+  Shield, Zap, GitMerge, Sparkles, Loader2,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -147,6 +150,13 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
 
   // Risk editable state
   const [risks, setRisks] = useState<RiskItem[]>(config.risks);
+  const [riskDraft, setRiskDraft] = useState<{ name: string; probability: number; impact: number }>({ name: "", probability: 3, impact: 3 });
+  const addRisk = () => {
+    const name = riskDraft.name.trim();
+    if (!name) return;
+    setRisks(prev => [...prev, { name, probability: riskDraft.probability, impact: riskDraft.impact, category: "Manual" }]);
+    setRiskDraft({ name: "", probability: 3, impact: 3 });
+  };
 
   // PDCA editable state
   const [pdca, setPdca] = useState<PDCAData>({ ...config.pdcaData });
@@ -161,6 +171,76 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
   const removePdcaItem = (key: keyof PDCAData, idx: number) => {
     setPdca(prev => ({ ...prev, [key]: prev[key].filter((_, i) => i !== idx) }));
   };
+
+  // ─── AI generation ──────────────────────────────────────────
+  const [aiLoading, setAiLoading] = useState<null | "swot" | "risk" | "pdca">(null);
+
+  const buildContext = () => {
+    const s = config.stats || {};
+    const parts: string[] = [];
+    parts.push(`Domínio: ${config.domain}`);
+    parts.push(`Efeito monitorado: ${config.effectLabel}`);
+    if (s.value !== undefined) parts.push(`Indicador principal: ${s.value} ${s.label ? `(${s.label})` : ""}`);
+    if (s.issues !== undefined) parts.push(`Ocorrências: ${s.issues}`);
+    if (s.topIssue) parts.push(`Principal não conformidade: ${s.topIssue}`);
+    if (s.sector) parts.push(`Setor crítico: ${s.sector}`);
+    if (config.paretoData?.length) {
+      parts.push(`\nTop não conformidades (Pareto):`);
+      config.paretoData.slice(0, 6).forEach((p, i) => {
+        parts.push(`${i + 1}. ${p.fullQuestion || p.question} — ${p.count} ocorrências (${p.acumulado}% acumulado)`);
+      });
+    }
+    if (config.ishikawaCategories?.length) {
+      parts.push(`\nCategorias 6M e causas identificadas:`);
+      config.ishikawaCategories.forEach((c) => {
+        parts.push(`- ${c.label}: ${(c.causes ?? []).slice(0, 3).join("; ")}`);
+      });
+    }
+    return parts.join("\n");
+  };
+
+  const generateWithAI = async (kind: "swot" | "risk" | "pdca") => {
+    setAiLoading(kind);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-analysis", {
+        body: { context: buildContext(), pageTitle: config.domain, kind },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (kind === "swot" && data?.swot) {
+        setSwot({
+          strengths: data.swot.strengths ?? [],
+          weaknesses: data.swot.weaknesses ?? [],
+          opportunities: data.swot.opportunities ?? [],
+          threats: data.swot.threats ?? [],
+        });
+        toast({ title: "SWOT atualizada", description: "Análise gerada com base nos dados do dashboard." });
+      } else if (kind === "risk" && Array.isArray(data?.risks)) {
+        setRisks(data.risks);
+        toast({ title: "Matriz de Risco atualizada", description: `${data.risks.length} riscos identificados.` });
+      } else if (kind === "pdca" && data?.pdca) {
+        setPdca({
+          plan: data.pdca.plan ?? [],
+          do: data.pdca.do ?? [],
+          check: data.pdca.check ?? [],
+          act: data.pdca.act ?? [],
+        });
+        toast({ title: "PDCA atualizado", description: "Ciclo gerado a partir dos indicadores atuais." });
+      } else {
+        throw new Error("Resposta da IA sem dados utilizáveis.");
+      }
+    } catch (e: any) {
+      toast({ title: "Não foi possível gerar com IA", description: e?.message ?? "Tente novamente.", variant: "destructive" });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const resetSwot = () => setSwot({ ...config.swotData });
+  const resetRisks = () => setRisks(config.risks);
+  const resetPdca = () => setPdca({ ...config.pdcaData });
+
 
   // 5W2H navigation
   const go5W2H = (source: "ishikawa" | "swot" | "risk" | "pdca") => {
@@ -466,13 +546,22 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
 
           {/* ── Tab 2: SWOT ───────────────────────────────── */}
           <TabsContent value="swot" className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm text-muted-foreground">Análise estratégica — identifique forças, fraquezas, oportunidades e ameaças</p>
-              <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={() => go5W2H("swot")}>
-                <FileText className="h-3.5 w-3.5" /> Gerar 5W2H
-              </Button>
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <p className="text-sm text-muted-foreground flex-1 min-w-[180px]">Análise estratégica — gerada por IA a partir dos indicadores</p>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={resetSwot} title="Restaurar valores padrão">
+                  <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                </Button>
+                <Button size="sm" variant="secondary" className="gap-1 text-xs h-7" disabled={aiLoading === "swot"} onClick={() => generateWithAI("swot")}>
+                  {aiLoading === "swot" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Gerar com IA
+                </Button>
+                <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => go5W2H("swot")}>
+                  <FileText className="h-3.5 w-3.5" /> 5W2H
+                </Button>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {SWOT_CONFIG.map(cfg => {
                 const key = cfg.key as keyof SWOTData;
@@ -518,13 +607,22 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
 
           {/* ── Tab 3: Matriz de Risco ────────────────────── */}
           <TabsContent value="risco" className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm text-muted-foreground">Avaliação de riscos por probabilidade × impacto</p>
-              <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={() => go5W2H("risk")}>
-                <FileText className="h-3.5 w-3.5" /> Gerar 5W2H
-              </Button>
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <p className="text-sm text-muted-foreground flex-1 min-w-[180px]">Avaliação 5×5 — probabilidade × impacto (gerada por IA ou editável)</p>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={resetRisks} title="Restaurar lista padrão">
+                  <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                </Button>
+                <Button size="sm" variant="secondary" className="gap-1 text-xs h-7" disabled={aiLoading === "risk"} onClick={() => generateWithAI("risk")}>
+                  {aiLoading === "risk" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Gerar com IA
+                </Button>
+                <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => go5W2H("risk")}>
+                  <FileText className="h-3.5 w-3.5" /> 5W2H
+                </Button>
+              </div>
             </div>
+
 
             {/* 5×5 grid */}
             <div className="overflow-x-auto">
@@ -575,9 +673,35 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
               </div>
             </div>
 
+            {/* Add risk form */}
+            <div className="flex flex-wrap items-end gap-2 p-2 rounded-lg border bg-muted/20">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-[10px] text-muted-foreground font-medium">Novo risco</label>
+                <Input value={riskDraft.name} onChange={e => setRiskDraft(d => ({ ...d, name: e.target.value }))}
+                  placeholder="Ex.: Adesão baixa à higienização" className="h-8 text-xs"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRisk(); } }} />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-medium">Prob. (1-5)</label>
+                <Input type="number" min={1} max={5} value={riskDraft.probability}
+                  onChange={e => setRiskDraft(d => ({ ...d, probability: Math.max(1, Math.min(5, Number(e.target.value) || 1)) }))}
+                  className="h-8 text-xs w-16" />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-medium">Impacto (1-5)</label>
+                <Input type="number" min={1} max={5} value={riskDraft.impact}
+                  onChange={e => setRiskDraft(d => ({ ...d, impact: Math.max(1, Math.min(5, Number(e.target.value) || 1)) }))}
+                  className="h-8 text-xs w-16" />
+              </div>
+              <Button size="sm" className="h-8 gap-1 text-xs" onClick={addRisk}>
+                <Plus className="h-3.5 w-3.5" /> Adicionar
+              </Button>
+            </div>
+
             {/* Risk list */}
             <div className="space-y-1.5 mt-2">
               <p className="text-xs font-medium text-muted-foreground">Riscos identificados ({risks.length})</p>
+
               {risks.map((r, i) => {
                 const { bg, label } = riskColor(r.probability, r.impact);
                 return (
@@ -600,13 +724,22 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
 
           {/* ── Tab 4: PDCA ───────────────────────────────── */}
           <TabsContent value="pdca" className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm text-muted-foreground">Ciclo PDCA de melhoria contínua — Plan, Do, Check, Act</p>
-              <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={() => go5W2H("pdca")}>
-                <FileText className="h-3.5 w-3.5" /> Gerar 5W2H
-              </Button>
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <p className="text-sm text-muted-foreground flex-1 min-w-[180px]">Ciclo PDCA — Plan, Do, Check, Act (gerado por IA a partir dos dados)</p>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={resetPdca} title="Restaurar valores padrão">
+                  <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                </Button>
+                <Button size="sm" variant="secondary" className="gap-1 text-xs h-7" disabled={aiLoading === "pdca"} onClick={() => generateWithAI("pdca")}>
+                  {aiLoading === "pdca" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Gerar com IA
+                </Button>
+                <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => go5W2H("pdca")}>
+                  <FileText className="h-3.5 w-3.5" /> 5W2H
+                </Button>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {PDCA_CONFIG.map(cfg => {
                 const key = cfg.key as keyof PDCAData;

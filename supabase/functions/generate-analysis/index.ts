@@ -1,0 +1,150 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+/**
+ * generate-analysis
+ * Generates structured analysis (SWOT, risk matrix, PDCA) for a CCIH dashboard.
+ * Body: { context: string, pageTitle: string, kind: "swot" | "risk" | "pdca" | "all" }
+ * Returns: { swot?, risks?, pdca? }
+ */
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const callerClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await callerClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { context, pageTitle, kind = "all" } = await req.json();
+    if (!context || !pageTitle) {
+      return new Response(JSON.stringify({ error: "Missing context or pageTitle" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (typeof context !== "string" || context.length > 50000) {
+      return new Response(JSON.stringify({ error: "Invalid context" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const wants = {
+      swot: kind === "all" || kind === "swot",
+      risk: kind === "all" || kind === "risk",
+      pdca: kind === "all" || kind === "pdca",
+    };
+
+    const sections: string[] = [];
+    if (wants.swot) sections.push(`"swot": { "strengths": string[3-5], "weaknesses": string[3-5], "opportunities": string[3-5], "threats": string[3-5] }`);
+    if (wants.risk) sections.push(`"risks": Array<{ "name": string (curto, 2-5 palavras), "probability": 1-5, "impact": 1-5, "category": string }> (5 a 7 itens, cobrindo riscos críticos, altos e médios)`);
+    if (wants.pdca) sections.push(`"pdca": { "plan": string[3-5], "do": string[3-5], "check": string[3-5], "act": string[3-5] }`);
+
+    const systemPrompt = `Você é um especialista em controle de infecções hospitalares (CCIH/SCIH) e gestão da qualidade no Brasil.
+Gere uma análise estratégica baseada nos dados reais do dashboard.
+
+Regras:
+- Use os números, percentuais, setores e indicadores fornecidos no contexto
+- Seja específico e acionável (cite valores quando possível)
+- Linguagem profissional em português brasileiro
+- Itens curtos e diretos (1 frase cada)
+- Alinhe sugestões com diretrizes ANVISA/OMS quando aplicável
+- Responda APENAS com JSON válido, sem markdown, sem cercas de código`;
+
+    const userPrompt = `Página: ${pageTitle}
+
+Dados do dashboard:
+${context}
+
+Retorne um JSON com EXATAMENTE este formato:
+{
+  ${sections.join(",\n  ")}
+}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos nas configurações do workspace." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.error("AI gateway error:", response.status, await response.text());
+      return new Response(JSON.stringify({ error: "Erro no gateway de IA" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content || "{}";
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      parsed = m ? JSON.parse(m[0]) : {};
+    }
+
+    // Sanitize risks
+    if (parsed.risks && Array.isArray(parsed.risks)) {
+      parsed.risks = parsed.risks
+        .filter((r: any) => r && typeof r === "object")
+        .slice(0, 8)
+        .map((r: any) => ({
+          name: String(r.name ?? "Risco").slice(0, 80),
+          probability: Math.max(1, Math.min(5, Number(r.probability) || 3)),
+          impact: Math.max(1, Math.min(5, Number(r.impact) || 3)),
+          category: String(r.category ?? "Geral").slice(0, 40),
+        }));
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("generate-analysis error:", e);
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
