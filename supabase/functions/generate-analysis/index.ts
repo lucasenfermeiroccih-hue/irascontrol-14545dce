@@ -142,6 +142,38 @@ Retorne um JSON com EXATAMENTE este formato:
         }));
     }
 
+    // Sanitize ishikawa
+    if (parsed.ishikawa && Array.isArray(parsed.ishikawa)) {
+      parsed.ishikawa = parsed.ishikawa
+        .filter((c: any) => c && typeof c === "object")
+        .slice(0, 6)
+        .map((c: any) => ({
+          label: String(c.label ?? "Categoria").slice(0, 30),
+          causes: Array.isArray(c.causes)
+            ? c.causes.filter((x: any) => typeof x === "string").slice(0, 6).map((x: string) => x.slice(0, 140))
+            : [],
+        }));
+    }
+
+    // Sanitize pareto + compute acumulado
+    if (parsed.pareto && Array.isArray(parsed.pareto)) {
+      const items = parsed.pareto
+        .filter((p: any) => p && typeof p === "object")
+        .slice(0, 10)
+        .map((p: any) => ({
+          question: String(p.question ?? p.fullQuestion ?? "Não conformidade").slice(0, 80),
+          fullQuestion: String(p.fullQuestion ?? p.question ?? "Não conformidade").slice(0, 200),
+          count: Math.max(0, Math.round(Number(p.count) || 0)),
+        }))
+        .sort((a: any, b: any) => b.count - a.count);
+      const total = items.reduce((s: number, p: any) => s + p.count, 0);
+      let running = 0;
+      parsed.pareto = items.map((p: any) => {
+        running += p.count;
+        return { ...p, acumulado: total > 0 ? Number(((running / total) * 100).toFixed(1)) : 0 };
+      });
+    }
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
