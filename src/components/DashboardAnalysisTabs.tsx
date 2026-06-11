@@ -321,7 +321,7 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
                     <ResponsiveContainer width="100%" height={220}>
                       <ComposedChart data={config.paretoData} margin={{ top: 10, right: 40, left: -10, bottom: 55 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="question" tick={{ fontSize: 8, angle: -40, textAnchor: "end" }} interval={0} height={60} />
+                        <XAxis dataKey="question" tick={{ fontSize: 8 }} angle={-40} textAnchor="end" interval={0} height={60} />
                         <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
                         <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                         <RechartsTooltip
