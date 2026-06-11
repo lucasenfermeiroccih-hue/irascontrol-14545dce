@@ -338,13 +338,23 @@ export default function DashboardInfectionControl() {
       auditorias: s.audits,
     }));
 
-    // Pareto data for failures
-    const total = stats.topFailures.reduce((s, f) => s + f.count, 0);
+    // Pareto data for failures (with demo fallback when there are no audits yet)
+    const DEMO_TOP_FAILURES_IC = [
+      { item: "Higienização das mãos antes do paciente",       count: 10, category: "Bundle Higiene" },
+      { item: "Bundle CVC — clorexidina 2% antes do acesso",   count: 7,  category: "Bundle CVC" },
+      { item: "Bundle PAV — cabeceira elevada ≥30°",           count: 6,  category: "Bundle PAV" },
+      { item: "Bundle ITU — retirada precoce de SVD",          count: 5,  category: "Bundle ITU" },
+      { item: "Higienização do estetoscópio entre pacientes",  count: 4,  category: "Equipamentos" },
+      { item: "Descarte adequado de perfurocortantes",         count: 3,  category: "Biossegurança" },
+    ];
+    const effectiveTopFailures = stats.topFailures.length > 0 ? stats.topFailures : DEMO_TOP_FAILURES_IC;
+    const total = effectiveTopFailures.reduce((s, f) => s + f.count, 0);
     let acc = 0;
-    const paretoData = stats.topFailures.map((f) => {
+    const paretoData = effectiveTopFailures.map((f) => {
       acc += f.count;
       return { name: f.item.length > 28 ? f.item.substring(0, 27) + "…" : f.item, count: f.count, acumulado: total > 0 ? Math.round((acc / total) * 100) : 0, categoria: f.category };
     });
+
 
     // OKR Key Results
     const kr1Progress = Math.min(100, Math.round((stats.avgCompliance / 90) * 100));
