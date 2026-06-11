@@ -269,7 +269,6 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
                   stroke="hsl(var(--destructive))" strokeWidth={1.5} />
                 <foreignObject x="814" y="172" width="112" height="76">
                   <div
-                    xmlns="http://www.w3.org/1999/xhtml"
                     style={{
                       width: "100%", height: "100%",
                       display: "flex", alignItems: "center", justifyContent: "center",
@@ -281,6 +280,7 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
                     {config.effectLabel ?? "Efeito"}
                   </div>
                 </foreignObject>
+
 
                 {/* Bones */}
                 {BONES.slice(0, Math.min(6, cats.length)).map((b, i) => {
