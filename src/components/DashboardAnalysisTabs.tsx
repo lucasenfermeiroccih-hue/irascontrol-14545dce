@@ -251,13 +251,13 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
                 <rect x="800" y="168" width="94" height="64" rx="6"
                   fill="hsl(0,84%,60%)" fillOpacity={0.15} stroke="hsl(0,84%,60%)" strokeWidth={1.5} />
                 <text x="847" y="195" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {config.effectLabel.split(" ").slice(0, 2).join(" ")}
+                  {(config.effectLabel ?? "").split(" ").slice(0, 2).join(" ")}
                 </text>
                 <text x="847" y="207" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {config.effectLabel.split(" ").slice(2, 4).join(" ")}
+                  {(config.effectLabel ?? "").split(" ").slice(2, 4).join(" ")}
                 </text>
                 <text x="847" y="219" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {config.effectLabel.split(" ").slice(4).join(" ")}
+                  {(config.effectLabel ?? "").split(" ").slice(4).join(" ")}
                 </text>
 
                 {BONES.slice(0, Math.min(6, cats.length)).map((b, i) => {
