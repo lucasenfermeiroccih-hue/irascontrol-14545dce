@@ -698,13 +698,22 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
 
           {/* ── Tab 4: PDCA ───────────────────────────────── */}
           <TabsContent value="pdca" className="space-y-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm text-muted-foreground">Ciclo PDCA de melhoria contínua — Plan, Do, Check, Act</p>
-              <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={() => go5W2H("pdca")}>
-                <FileText className="h-3.5 w-3.5" /> Gerar 5W2H
-              </Button>
+            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+              <p className="text-sm text-muted-foreground flex-1 min-w-[180px]">Ciclo PDCA — Plan, Do, Check, Act (gerado por IA a partir dos dados)</p>
+              <div className="flex gap-1.5">
+                <Button size="sm" variant="outline" className="gap-1 text-xs h-7" onClick={resetPdca} title="Restaurar valores padrão">
+                  <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                </Button>
+                <Button size="sm" variant="secondary" className="gap-1 text-xs h-7" disabled={aiLoading === "pdca"} onClick={() => generateWithAI("pdca")}>
+                  {aiLoading === "pdca" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  Gerar com IA
+                </Button>
+                <Button size="sm" className="gap-1 text-xs h-7 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => go5W2H("pdca")}>
+                  <FileText className="h-3.5 w-3.5" /> 5W2H
+                </Button>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {PDCA_CONFIG.map(cfg => {
                 const key = cfg.key as keyof PDCAData;
