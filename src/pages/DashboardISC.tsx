@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ import { exportPdf } from "@/lib/pdf-export";
 import { generateSmartInsights, generateStructuredReport, type SmartInsight } from "@/lib/isc-report-engine";
 import { supabase } from "@/integrations/supabase/client";
 import ChartActions from "@/components/ChartActions";
+import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
 import { ReferenceLine } from "recharts";
 import { FileSpreadsheet } from "lucide-react";
 
@@ -70,6 +72,7 @@ const statusIcon = (rate: number) =>
   rate <= 2 ? <TrendingDown className="h-4 w-4" /> : rate <= 5 ? <AlertTriangle className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />;
 
 export default function DashboardISC() {
+  const navigate = useNavigate();
   const { hospitalId } = useHospitalContext();
   const { records: allRecords, loading: dataLoading } = useISCDashboard();
   const [mesFiltro, setMesFiltro] = useState<string[]>([]);
@@ -579,6 +582,22 @@ export default function DashboardISC() {
             if (clinicaStats.length > 0) { const worst = clinicaStats.sort((a, b) => b.taxaISC - a.taxaISC)[0]; ins.push(`🏥 Clínica com maior taxa: ${worst.name} (${worst.taxaISC.toFixed(1)}%).`); }
             return ins;
           }} />
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/quality/5w2h", { state: { prefill: {
+              what: `Taxa de ISC: ${kpis.taxaISC.toFixed(1)}% — ${kpis.totalISC} infecções em ${kpis.totalCirurgias} cirurgias`,
+              why: `ISC eleva mortalidade, reinternações (${kpis.totalReinternacoes}) e custos hospitalares. Identificação de falhas no processo cirúrgico é crítica.`,
+              where: setorFiltro.length > 0 ? setorFiltro.join(", ") : "Todos os setores cirúrgicos",
+              when: anoFiltro.length > 0 ? anoFiltro.join(", ") : "Período atual",
+              who: "CCIH / Cirurgia / Centro Cirúrgico / Enfermagem",
+              how: "Implementar bundle de prevenção de ISC, auditar técnica cirúrgica, reforçar antissepsia e profilaxia antibiótica perioperatória",
+              howMuch: "Investimento em treinamentos, kits de bundle ISC e monitoramento pós-alta conforme orçamento CCIH",
+            }}})}
+            className="gap-1.5"
+          >
+            <FileText className="h-4 w-4 mr-1" /> Gerar Plano 5W2H
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1145,6 +1164,57 @@ export default function DashboardISC() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Analysis Tabs */}
+      {hasData && filtered.length > 0 && (
+        <DashboardAnalysisTabs config={{
+          domain: "Infecção de Sítio Cirúrgico",
+          effectLabel: "Elevada Taxa de ISC",
+          ishikawaCategories: [
+            { name: "Método", items: ["Bundle ISC não implementado", "Profilaxia antibiótica inadequada", "Técnica cirúrgica sem padronização", "Tricotomia incorreta ou ausente"] },
+            { name: "Máquina", items: ["Esterilização insuficiente de instrumentais", "Climatização inadequada do CC", "Falhas em equipamentos de limpeza", "Autoclaves sem manutenção preventiva"] },
+            { name: "Material", items: ["Insumos para antissepsia insuficientes", "Drenos e curativos inadequados", "Campos cirúrgicos de baixa barreira", "Fios cirúrgicos de qualidade inadequada"] },
+            { name: "Mão de Obra", items: ["Lavagem das mãos deficiente", "Alta rotatividade da equipe cirúrgica", "Falta de treinamento em paramentação", "Supervisão insuficiente em cirurgias complexas"] },
+            { name: "Medida", items: ["Monitoramento pós-alta insuficiente", "Ausência de registro de ISC", "Metas não comunicadas à equipe", "Indicadores sem feedback regular"] },
+            { name: "Meio Ambiente", items: ["Fluxo inadequado no centro cirúrgico", "Visitas desnecessárias no CC", "Temperatura/umidade fora do padrão", "Ventilação inadequada no bloco cirúrgico"] },
+          ],
+          paretoData: [
+            { name: "Profilaxia inadequada", value: 35 },
+            { name: "Tricotomia incorreta", value: 28 },
+            { name: "Antissepsia insuficiente", value: 22 },
+            { name: "Bundle não seguido", value: 18 },
+            { name: "Esterilização falha", value: 14 },
+            { name: "Monit. pós-alta ausente", value: 10 },
+            { name: "Outros", value: 7 },
+          ],
+          swotData: {
+            strengths: ["Equipe cirúrgica especializada", "Centro cirúrgico estruturado", "Registro sistemático de ISC", "CCIH com participação ativa"],
+            weaknesses: ["Bundle ISC parcialmente implementado", "Monitoramento pós-alta deficiente", "Alta rotatividade de equipe", "Profilaxia antibiótica não padronizada"],
+            opportunities: ["Implementação completa do bundle ISC", "Treinamentos em higiene e técnica cirúrgica", "Telemonitoramento pós-alta", "Benchmarking com hospitais referência"],
+            threats: ["Pressão por volume cirúrgico elevado", "Limitações de estrutura no CC", "Resistência à mudança de protocolo", "Restrições orçamentárias"],
+          },
+          risks: [
+            { id: "r1", description: "Surto de ISC por cepa resistente no CC", probability: 3, impact: 5 },
+            { id: "r2", description: "Aumento de reinternações por deiscência ou infecção", probability: 4, impact: 4 },
+            { id: "r3", description: "Notificação compulsória de surto à ANVISA", probability: 2, impact: 5 },
+            { id: "r4", description: "Alta mortalidade por ISC profunda ou de órgão/espaço", probability: 3, impact: 5 },
+            { id: "r5", description: "Penalidades contratuais por taxas acima do benchmark", probability: 2, impact: 4 },
+          ],
+          pdcaData: {
+            plan: ["Implementar bundle completo de prevenção de ISC", "Padronizar profilaxia antibiótica perioperatória", "Criar protocolo de monitoramento pós-alta 30 dias", "Definir metas de taxa ISC por especialidade"],
+            do: ["Treinar equipes em paramentação e antissepsia", "Auditar adesão ao bundle semanalmente", "Reforçar contato telefônico pós-alta", "Otimizar fluxo de limpeza no CC"],
+            check: ["Monitorar taxa de ISC mensalmente por clínica", "Avaliar aderência ao bundle nas cirurgias", "Acompanhar reinternações relacionadas à ISC", "Revisar todos os casos de ISC confirmada"],
+            act: ["Ampliar bundle para todas as especialidades", "Ajustar profilaxia baseada em antibiograma local", "Implementar comissão de revisão de ISC mensal", "Escalar ações nos setores com maior taxa"],
+          },
+          stats: {
+            value: `${kpis.taxaISC.toFixed(1)}%`,
+            label: "Taxa de ISC",
+            issues: kpis.totalISC,
+            topIssue: "ISC Confirmada",
+            sector: clinicaStats.length > 0 ? [...clinicaStats].sort((a, b) => b.taxaISC - a.taxaISC)[0]?.name || "—" : "—",
+          },
+        } as AnalysisConfig} />
       )}
     </div>
   );

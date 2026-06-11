@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Activity, Download, Filter, X, Loader2, Heart, Skull, Bug, Timer,
   Syringe, TrendingUp, ShieldAlert, Thermometer, FileDown, Maximize2,
@@ -8,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import SmartInsightsPanel from "@/components/SmartInsightsPanel";
 import ChartActions from "@/components/ChartActions";
+import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
 import YearComparisonChart from "@/components/YearComparisonChart";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -118,6 +120,7 @@ function GaugeChart({ value, max, label, color }: { value: number; max: number; 
 }
 
 export default function IndicadoresDashboard() {
+  const navigate = useNavigate();
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -546,8 +549,24 @@ export default function IndicadoresDashboard() {
             <p className="text-xs md:text-sm text-muted-foreground">Análise gamificada dos indicadores epidemiológicos</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <DashboardAIInsights generateInsights={buildInsights} />
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/quality/5w2h", { state: { prefill: {
+              what: `Taxa de Infecção Hospitalar: ${taxaInfeccao.toFixed(2)}‰ — Letalidade: ${taxaLetalidade.toFixed(2)}%`,
+              why: `Indicadores de infecção hospitalar acima do esperado. CVC: ${taxaInfCVC.toFixed(2)}‰, VM: ${taxaInfVM.toFixed(2)}‰, SVD: ${taxaInfSVD.toFixed(2)}‰. Total de ${agg.numInfeccoes} infecções em ${agg.numPacienteDiaTotal} pac-dia.`,
+              where: setorFiltro.length > 0 ? setorFiltro.join(", ") : "Todos os setores monitorados",
+              when: anoFiltro.length > 0 ? anoFiltro.join(", ") : "Período atual",
+              who: "CCIH / Infectologia / Enfermagem / Gestão Hospitalar",
+              how: "Implementar bundles de prevenção por dispositivo, reforçar higiene das mãos, auditar práticas de inserção e manutenção de dispositivos invasivos",
+              howMuch: "Investimento em treinamentos, insumos de prevenção e monitoramento conforme orçamento da CCIH",
+            }}})}
+            className="gap-1.5"
+          >
+            <FileDown className="h-4 w-4" /> Gerar Plano 5W2H
+          </Button>
           <Button variant="outline" size="sm" onClick={exportTabPdf} disabled={exporting}>
             {exporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileDown className="h-4 w-4 mr-1" />}
             Exportar Aba PDF
@@ -1132,6 +1151,55 @@ export default function IndicadoresDashboard() {
         pageTitle="Dashboard de Indicadores Epidemiológicos"
         contextKey={insightsKey}
       />
+
+      {/* Analysis Tabs */}
+      <DashboardAnalysisTabs config={{
+        domain: "Infecção Hospitalar",
+        effectLabel: "Alta Taxa de Infecção Hospitalar",
+        ishikawaCategories: [
+          { name: "Método", items: ["Bundle de prevenção não implementado", "Técnica asséptica inadequada", "Protocolo de inserção desatualizado", "Ausência de checklist de segurança"] },
+          { name: "Máquina", items: ["Dispositivos invasivos sem manutenção", "Falhas no processamento de materiais", "Bombas de infusão contaminadas", "Ausência de monitores de pressão intravascular"] },
+          { name: "Material", items: ["Cateteres sem impregnação antimicrobiana", "Curativos de baixa barreira", "Falta de insumos para higiene das mãos", "EPIs insuficientes ou inadequados"] },
+          { name: "Mão de Obra", items: ["Higiene das mãos deficiente", "Sobrecarga da equipe de enfermagem", "Falta de treinamento em bundle", "Alta rotatividade de residentes"] },
+          { name: "Medida", items: ["Vigilância epidemiológica passiva", "Taxas não comunicadas à equipe", "Subnotificação de infecções", "Indicadores sem análise crítica mensal"] },
+          { name: "Meio Ambiente", items: ["Superlotação de leitos na UTI", "Estrutura sem isolamento adequado", "Limpeza terminal insuficiente", "Ausência de precauções de contato"] },
+        ],
+        paretoData: [
+          { name: "HM deficiente", value: 40 },
+          { name: "Bundle não seguido", value: 32 },
+          { name: "Superlotação", value: 25 },
+          { name: "Subnotificação", value: 20 },
+          { name: "Falta de treinamento", value: 16 },
+          { name: "Rotatividade alta", value: 12 },
+          { name: "Outros", value: 8 },
+        ],
+        swotData: {
+          strengths: ["CCIH ativa com vigilância estruturada", "Indicadores epidemiológicos registrados", "Suporte da direção hospitalar", "Equipe multidisciplinar engajada"],
+          weaknesses: ["Taxas acima do benchmark nacional", "Subnotificação frequente", "Bundles implementados parcialmente", "Sobrecarga da equipe assistencial"],
+          opportunities: ["Implementação completa dos bundles ANAHP/ANVISA", "Programa de stewardship antimicrobiano", "Treinamentos periódicos multidisciplinares", "Benchmarking com hospitais de referência"],
+          threats: ["Resistência antimicrobiana crescente", "Superlotação persistente nas UTIs", "Limitações orçamentárias", "Turnover elevado de profissionais"],
+        },
+        risks: [
+          { id: "r1", description: "Surto de IRAS nas UTIs por microrganismo resistente", probability: 4, impact: 5 },
+          { id: "r2", description: "Alta mortalidade atribuível à infecção hospitalar", probability: 3, impact: 5 },
+          { id: "r3", description: "Notificação obrigatória à ANVISA por surto", probability: 3, impact: 4 },
+          { id: "r4", description: "Acreditação hospitalar comprometida por indicadores ruins", probability: 2, impact: 5 },
+          { id: "r5", description: "Aumento de custos por reinternações e antibióticos de reserva", probability: 4, impact: 4 },
+        ],
+        pdcaData: {
+          plan: ["Implementar bundles de CVC, VM e SVD conforme ANVISA", "Definir metas trimestrais de redução de IRAS", "Elaborar programa de stewardship antimicrobiano", "Criar rotina de vigilância epidemiológica ativa"],
+          do: ["Treinar equipes nos bundles de dispositivos invasivos", "Auditar práticas de inserção e manutenção semanal", "Reforçar higiene das mãos em todos os setores", "Implementar precauções de contato para MDROs"],
+          check: ["Monitorar taxas de infecção mensalmente por setor", "Avaliar aderência aos bundles por turno", "Acompanhar consumo de antibióticos", "Revisar todos os óbitos associados à IRAS"],
+          act: ["Restringir visitas em surtos confirmados", "Ampliar isolamento em leitos críticos", "Ajustar protocolos baseado nas análises mensais", "Escalar intervenções para setores acima da meta"],
+        },
+        stats: {
+          value: `${taxaInfeccao.toFixed(2)}‰`,
+          label: "Taxa de Infecção",
+          issues: agg.numInfeccoes,
+          topIssue: "Infecção Hospitalar",
+          sector: setorFiltro.length > 0 ? setorFiltro[0] : "—",
+        },
+      } as AnalysisConfig} />
     </div>
   );
 }

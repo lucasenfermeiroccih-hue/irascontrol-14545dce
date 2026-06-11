@@ -1,14 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardFilters from "@/components/DashboardFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from "recharts";
-import { TrendingUp, Pill, Building2, BarChart3, AlertCircle, Loader2, Download, Filter, X } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
+import { TrendingUp, Pill, Building2, BarChart3, AlertCircle, Loader2, Download, Filter, X, Target, FileText, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
+import ChartActions from "@/components/ChartActions";
+import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
 import { useDDDDashboard } from "@/hooks/useDDDDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
@@ -18,6 +21,7 @@ const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Ag
 const COLORS = ["hsl(var(--primary))","hsl(var(--destructive))","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#10b981","#f97316"];
 
 export default function DashboardDDD() {
+  const navigate = useNavigate();
   const { hospitalId } = useHospitalContext();
   const { data: allData, loading: dataLoading } = useDDDDashboard();
   const isEmpty = allData.length === 0;
@@ -27,6 +31,12 @@ export default function DashboardDDD() {
   const [filtroAno, setFiltroAno] = useState<string[]>([]);
   const [filtroUnidade, setFiltroUnidade] = useState<string[]>([]);
   const [filtroAtm, setFiltroAtm] = useState("all");
+
+  const refConsumo = useRef<HTMLDivElement>(null);
+  const refUnidade = useRef<HTMLDivElement>(null);
+  const refPie = useRef<HTMLDivElement>(null);
+  const refHeatmap = useRef<HTMLDivElement>(null);
+  const [metaConsumo, setMetaConsumo] = useState<number | undefined>(undefined);
 
 
   const anos = useMemo(() => [...new Set(allData.map(d => d.ano))].sort(), [allData]);
@@ -145,6 +155,18 @@ export default function DashboardDDD() {
               filenamePrefix: "ddd",
             });
           }}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          <Button size="sm" className="gap-1 bg-amber-600 hover:bg-amber-700 text-white"
+            onClick={() => navigate("/quality/5w2h", { state: { prefill: {
+              title: "Plano de Ação — Consumo de Antimicrobianos (DDD)",
+              what: `Reduzir consumo de ${atmMaisUsado} — indicador atual: ${totalConsumo} DDD`,
+              why: `Consumo acima da meta. Unidade crítica: ${unidadeMaiorConsumo}. ${antimicrobianos.length} antimicrobianos monitorados.`,
+              where: unidadeMaiorConsumo, who: "Farmacêutico Clínico / CCIH",
+              when: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+              how: "Implementar stewardship antimicrobiano, revisar prescrições, adequar à cultura microbiológica",
+              howMuch: "A definir conforme orçamento farmacêutico",
+            }}})}>
+            <FileText className="h-4 w-4" /> Gerar 5W2H
+          </Button>
         </div>
       </div>
 
@@ -246,6 +268,39 @@ export default function DashboardDDD() {
             </Card>
           </div>
 
+          {/* OKRs */}
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4" /> Objetivos e Resultados-Chave (OKR)
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { title: "Indicador Médio DDD", desc: "Consumo médio por registro dentro da meta", current: avgConsumo, target: 10, unit: " DDD" },
+                { title: "Antimicrobianos Monitorados", desc: "Diversidade de antimicrobianos com dados de consumo", current: antimicrobianos.length, target: 15, unit: "" },
+                { title: "Cobertura de Unidades", desc: "Unidades com dados de consumo registrados", current: unidades.length, target: 10, unit: "" },
+              ].map(okr => {
+                const pct = Math.min(100, okr.target > 0 ? Math.round((okr.current / okr.target) * 100) : 0);
+                const status = pct >= 90 ? "on_track" : pct >= 75 ? "at_risk" : "off_track";
+                const bar = status === "on_track" ? "bg-emerald-500" : status === "at_risk" ? "bg-amber-500" : "bg-red-500";
+                const badge = status === "on_track" ? "text-emerald-700 bg-emerald-50 border-emerald-200" : status === "at_risk" ? "text-amber-700 bg-amber-50 border-amber-200" : "text-red-700 bg-red-50 border-red-200";
+                const label = status === "on_track" ? "No Prazo" : status === "at_risk" ? "Em Risco" : "Fora da Meta";
+                return (
+                  <Card key={okr.title} className="p-4 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div><p className="font-semibold text-sm">{okr.title}</p><p className="text-xs text-muted-foreground mt-0.5">{okr.desc}</p></div>
+                      <Badge variant="outline" className={`text-xs shrink-0 ${badge}`}>{label}</Badge>
+                    </div>
+                    <p className="text-2xl font-bold">{typeof okr.current === "number" ? okr.current.toFixed(okr.unit === " DDD" ? 2 : 0) : okr.current}{okr.unit}</p>
+                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-right">{pct}% da meta ({okr.target}{okr.unit})</p>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Ranking */}
           <Card>
             <CardHeader><CardTitle className="text-lg">🏆 Ranking de Consumo</CardTitle></CardHeader>
@@ -264,8 +319,11 @@ export default function DashboardDDD() {
           {/* Charts */}
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="text-base">Evolução do Consumo</CardTitle></CardHeader>
-              <CardContent>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Evolução do Consumo</CardTitle>
+                <ChartActions chartRef={refConsumo} chartTitle="Evolução do Consumo DDD" metaValue={metaConsumo} onMetaChange={setMetaConsumo} metaUnit="DDD" />
+              </CardHeader>
+              <CardContent ref={refConsumo}>
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                   <LineChart data={lineData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -279,8 +337,11 @@ export default function DashboardDDD() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">Consumo por Unidade</CardTitle></CardHeader>
-              <CardContent>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Consumo por Unidade</CardTitle>
+                <ChartActions chartRef={refUnidade} chartTitle="Consumo DDD por Unidade" />
+              </CardHeader>
+              <CardContent ref={refUnidade}>
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                   <BarChart data={barData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -294,8 +355,11 @@ export default function DashboardDDD() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">Distribuição por Antimicrobiano</CardTitle></CardHeader>
-              <CardContent>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Distribuição por Antimicrobiano</CardTitle>
+                <ChartActions chartRef={refPie} chartTitle="Distribuição DDD por Antimicrobiano" />
+              </CardHeader>
+              <CardContent ref={refPie}>
                 <ChartContainer config={chartConfig} className="h-[250px] w-full">
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name }) => name.split(" ")[0]}>
@@ -308,8 +372,11 @@ export default function DashboardDDD() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base">Heatmap: Unidade × Mês</CardTitle></CardHeader>
-              <CardContent className="overflow-x-auto">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">Heatmap: Unidade × Mês</CardTitle>
+                <ChartActions chartRef={refHeatmap} chartTitle="Heatmap DDD Unidade × Mês" />
+              </CardHeader>
+              <CardContent className="overflow-x-auto" ref={refHeatmap}>
                 <table className="w-full text-xs">
                   <thead>
                     <tr>
@@ -376,6 +443,40 @@ export default function DashboardDDD() {
             filtroMes={filtroMes.length > 0 ? filtroMes.join(", ") : "Todos"}
             filtroAno={filtroAno.length > 0 ? filtroAno.join(", ") : "Todos"}
           />
+
+          {/* Análise Avançada */}
+          <DashboardAnalysisTabs config={{
+            domain: "Dashboard DDD — Consumo de Antimicrobianos",
+            effectLabel: "Alto Consumo de Antimicrobianos",
+            ishikawaCategories: [
+              { id: "metodo", label: "Método", color: "#6366f1", causes: ["Prescrição sem base em antibiograma", "Falta de protocolo de stewardship", "Uso empírico de largo espectro"] },
+              { id: "mao_obra", label: "Mão de Obra", color: "#f59e0b", causes: ["Médicos sem treinamento em uso racional", "Alta rotatividade de prescritores", "Falta de farmacêutico clínico"] },
+              { id: "maquina", label: "Infraestrutura", color: "#ef4444", causes: ["Sem alertas de prescrição no sistema", "Cultura microbiológica demorada", "Sem revisão prospectiva automatizada"] },
+              { id: "material", label: "Material", color: "#10b981", causes: ["Antimicrobianos de reserva sem controle", "Estoques excessivos por setor", "Ausência de antimicrobianos alternativos"] },
+              { id: "meio_ambiente", label: "Meio Ambiente", color: "#0ea5e9", causes: ["Alta prevalência de MDR no hospital", "Pressão de seleção por uso prévio", "Transmissão cruzada de cepas resistentes"] },
+              { id: "medicao", label: "Medição", color: "#8b5cf6", causes: ["DDD não monitorado por unidade/mês", "Atraso nos relatórios de consumo", "Sem benchmark nacional disponível"] },
+            ],
+            swotData: {
+              strengths: ["Dados de consumo disponíveis por unidade", "Sistema de registro automatizado", "CCIH com acesso aos dados de dispensação"],
+              weaknesses: ["Ausência de programa de stewardship", "Carbapenêmicos usados como primeira linha", "Sem revisão prospectiva de prescrição"],
+              opportunities: ["Implementar stewardship antimicrobiano multidisciplinar", "Integração com dados de antibiograma", "Educação médica continuada em uso racional"],
+              threats: ["Resistência antimicrobiana crescente", "Seleção de cepas MDR", "Custo elevado de antimicrobianos de última linha"],
+            },
+            risks: [
+              { name: "Resistência a carbapenêmicos", probability: 4, impact: 5 },
+              { name: "Surto por microrganismo MDR", probability: 3, impact: 5 },
+              { name: "Falha terapêutica por resistência", probability: 4, impact: 4 },
+              { name: "Alto custo sem resultado clínico", probability: 5, impact: 3 },
+              { name: "Toxicidade por uso prolongado", probability: 3, impact: 3 },
+            ],
+            pdcaData: {
+              plan: ["Mapear antimicrobianos de maior consumo", "Definir metas DDD por classe", "Formar comitê de stewardship"],
+              do: ["Implementar protocolo de uso racional", "Realizar auditoria prospectiva", "Treinar equipe médica"],
+              check: ["Monitorar DDD mensal por unidade", "Avaliar taxa de culturas realizadas", "Verificar adesão ao protocolo"],
+              act: ["Padronizar protocolo de stewardship", "Restringir antimicrobianos de reserva", "Publicar relatório mensal"],
+            },
+            stats: { value: totalConsumo, label: "DDD Total", issues: filtered.filter(d => d.indicadorConsumo > 50).length, topIssue: atmMaisUsado, sector: unidadeMaiorConsumo },
+          }} />
         </>
       )}
     </>

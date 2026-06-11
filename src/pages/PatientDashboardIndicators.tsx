@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import ChartActions from "@/components/ChartActions";
+import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
 import { ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -133,6 +135,7 @@ function getPatientPeriodStart(patient: PatientRow) {
 }
 
 const PatientDashboardIndicators = () => {
+  const navigate = useNavigate();
   const { hospitalId, hospitalName, loading: ctxLoading } = useHospitalContext();
   const isMaternidade = (hospitalName || "").toLowerCase().includes("maternidade");
   const SPECIALTIES = isMaternidade ? SPECIALTIES_MATERNIDADE : SPECIALTIES_DEFAULT;
@@ -420,6 +423,22 @@ const PatientDashboardIndicators = () => {
           <p className="text-muted-foreground">Dados do Monitoramento de Pacientes — internações, desfechos, dispositivos e antimicrobianos</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/quality/5w2h", { state: { prefill: {
+              what: `Indicadores Operacionais: ${indicators.totalAdmitted} internações, ${indicators.deaths} óbitos, ${indicators.discharges} altas`,
+              why: `Monitoramento dos indicadores assistenciais do período. ${indicators.totalPatientDays} pac-dia. Dispositivos: CVC ${indicators.cvcDays}d, VM ${indicators.vmDays}d, SVD ${indicators.svuDays}d. Antibióticos: ${indicators.abCount}.`,
+              where: unit.length > 0 ? unit.join(", ") : "Todas as unidades",
+              when: year.length > 0 ? year.join(", ") : "Período atual",
+              who: "CCIH / Equipe Assistencial / Gestão Hospitalar",
+              how: "Análise de indicadores operacionais, revisão de protocolos assistenciais, otimização do uso de dispositivos invasivos e antimicrobianos",
+              howMuch: "Investimento em treinamentos, protocolos e monitoramento conforme orçamento hospitalar",
+            }}})}
+            className="gap-1.5"
+          >
+            <FileText className="h-4 w-4" /> Gerar Plano 5W2H
+          </Button>
           <PdfReportButton
             indicators={indicators}
             month={month}
@@ -746,6 +765,57 @@ const PatientDashboardIndicators = () => {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Analysis Tabs */}
+      {patients.length > 0 && (
+        <DashboardAnalysisTabs config={{
+          domain: "Indicadores Operacionais",
+          effectLabel: "Piora dos Indicadores Assistenciais",
+          ishikawaCategories: [
+            { name: "Método", items: ["Protocolos assistenciais desatualizados", "Ausência de checklist de segurança", "Rounds multidisciplinares irregulares", "Critérios de alta não padronizados"] },
+            { name: "Máquina", items: ["Dispositivos invasivos sem manutenção", "Falta de monitores multiparamétricos", "Ventiladores sem calibração periódica", "Bombas de infusão inadequadas"] },
+            { name: "Material", items: ["EPIs insuficientes para isolamento", "Cateteres de baixa qualidade", "Falta de curativos especializados", "Insumos críticos em falta"] },
+            { name: "Mão de Obra", items: ["Sobrecarga da equipe de enfermagem", "Alta rotatividade de médicos", "Falta de especialistas disponíveis", "Treinamento insuficiente em procedimentos"] },
+            { name: "Medida", items: ["Indicadores não analisados regularmente", "Subnotificação de eventos adversos", "Metas não comunicadas à equipe", "Ausência de benchmarking"] },
+            { name: "Meio Ambiente", items: ["Superlotação nas UTIs", "Infraestrutura inadequada", "Falta de isolamentos individuais", "Layout desfavorável ao fluxo de trabalho"] },
+          ],
+          paretoData: [
+            { name: "Sobrecarga de equipe", value: 35 },
+            { name: "Protocolos desatualizados", value: 28 },
+            { name: "Superlotação", value: 22 },
+            { name: "Subnotificação", value: 18 },
+            { name: "Falta de treinamento", value: 14 },
+            { name: "Insumos críticos", value: 10 },
+            { name: "Outros", value: 6 },
+          ],
+          swotData: {
+            strengths: ["Sistema de monitoramento estruturado", "Equipe assistencial comprometida", "Dados operacionais registrados sistematicamente", "Suporte multidisciplinar disponível"],
+            weaknesses: ["Sobrecarga da equipe assistencial", "Alta rotatividade de profissionais", "Monitoramento de dispositivos irregular", "Protocolos de alta nem sempre seguidos"],
+            opportunities: ["Melhoria contínua dos protocolos assistenciais", "Treinamentos em segurança do paciente", "Implementação de rounds multiprofissionais", "Uso de tecnologia para monitoramento remoto"],
+            threats: ["Pressão por redução de leitos", "Escassez de profissionais especializados", "Aumento da complexidade dos casos", "Restrições orçamentárias crescentes"],
+          },
+          risks: [
+            { id: "r1", description: "Aumento da mortalidade hospitalar por falhas assistenciais", probability: 3, impact: 5 },
+            { id: "r2", description: "Elevação do tempo médio de permanência por complicações", probability: 4, impact: 4 },
+            { id: "r3", description: "Uso excessivo de dispositivos aumentando risco de IRAS", probability: 3, impact: 4 },
+            { id: "r4", description: "Subnotificação comprometendo análise de qualidade", probability: 4, impact: 3 },
+            { id: "r5", description: "Acreditação hospitalar em risco por indicadores ruins", probability: 2, impact: 5 },
+          ],
+          pdcaData: {
+            plan: ["Revisar e atualizar protocolos assistenciais", "Definir metas de indicadores por unidade", "Implementar rounds multiprofissionais diários", "Criar comissão de revisão de óbitos"],
+            do: ["Treinar equipes em protocolos de segurança", "Monitorar uso de dispositivos invasivos diariamente", "Otimizar critérios e processo de alta", "Implementar sistema de notificação de eventos adversos"],
+            check: ["Analisar indicadores assistenciais mensalmente", "Auditar adesão aos protocolos nas unidades", "Revisar todos os óbitos e eventos adversos", "Comparar indicadores com benchmark nacional"],
+            act: ["Ajustar protocolos baseado nos dados mensais", "Ampliar treinamentos nos setores com piores índices", "Escalar intervenções em situações críticas", "Propor mudanças estruturais se necessário"],
+          },
+          stats: {
+            value: indicators.totalAdmitted,
+            label: "Internações",
+            issues: indicators.deaths,
+            topIssue: "Óbitos",
+            sector: unit.length > 0 ? unit[0] : "—",
+          },
+        } as AnalysisConfig} />
       )}
     </div>
   );

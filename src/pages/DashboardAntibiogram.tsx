@@ -22,6 +22,7 @@ import {
 import { useAntibiogramDashboard, type AntibiogramDashRecord } from "@/hooks/useAntibiogramDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import MicrobiologicalReport, { type ReportSummary } from "@/components/MicrobiologicalReport";
+import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -456,6 +457,22 @@ export default function DashboardAntibiogram() {
           <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-1.5 text-xs">
             <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate("/quality/5w2h", { state: { prefill: {
+              what: `Taxa de resistência antimicrobiana: ${resistanceRate}% (Sensibilidade: ${sensitivityRate}%)`,
+              why: `Perfil de resistência elevado compromete a eficácia terapêutica. ${phenotypeCount} fenótipos críticos detectados (${phenotypeRate}% dos exames).`,
+              where: filtroSetor.length > 0 ? filtroSetor.join(", ") : "Todos os setores",
+              when: "Período atual monitorado",
+              who: "CCIH / Microbiologia / Farmácia Clínica / Infectologia",
+              how: "Revisão do protocolo antimicrobiano, implementação de antibiograma periódico, stewardship antimicrobiano, treinamento das equipes",
+              howMuch: "Investimento em cultura microbiológica, treinamentos e consultoria em infectologia conforme orçamento hospitalar",
+            }}})}
+            className="gap-1.5 text-xs"
+          >
+            <FileText className="h-3.5 w-3.5" /> Gerar Plano 5W2H
+          </Button>
         </div>
       </div>
 
@@ -561,6 +578,60 @@ export default function DashboardAntibiogram() {
             <p className="text-[10px] text-muted-foreground">{phenotypeRate}% dos exames</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* OKR Section */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Award className="h-4 w-4" /> OKRs — Objetivos e Resultados-Chave
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-l-4" style={{ borderLeftColor: resistanceRate <= 25 ? "#22c55e" : resistanceRate <= 35 ? "#eab308" : "#ef4444" }}>
+            <CardContent className="pt-5">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {resistanceRate <= 25 ? <Activity className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                  <span className="text-sm font-semibold">Resistência ≤ 25%</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${resistanceRate <= 25 ? "bg-green-100 text-green-800 border-green-200" : resistanceRate <= 35 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : "bg-red-100 text-red-800 border-red-200"}`}>{resistanceRate <= 25 ? "No Alvo" : resistanceRate <= 35 ? "Em Risco" : "Fora da Meta"}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Manter taxa de resistência antimicrobiana geral abaixo de 25%</p>
+              <div className="flex justify-between text-xs mb-1"><span className="text-muted-foreground">Atual</span><span className="font-bold">{resistanceRate}%</span></div>
+              <div className="w-full bg-muted rounded-full h-2"><div className="h-2 rounded-full" style={{ width: `${Math.min(resistanceRate, 100)}%`, backgroundColor: resistanceRate <= 25 ? "#22c55e" : resistanceRate <= 35 ? "#eab308" : "#ef4444" }} /></div>
+              <p className="text-xs text-muted-foreground mt-1">Meta: ≤ 25%</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4" style={{ borderLeftColor: sensitivityRate >= 70 ? "#22c55e" : sensitivityRate >= 55 ? "#eab308" : "#ef4444" }}>
+            <CardContent className="pt-5">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {sensitivityRate >= 70 ? <Activity className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                  <span className="text-sm font-semibold">Sensibilidade ≥ 70%</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${sensitivityRate >= 70 ? "bg-green-100 text-green-800 border-green-200" : sensitivityRate >= 55 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : "bg-red-100 text-red-800 border-red-200"}`}>{sensitivityRate >= 70 ? "No Alvo" : sensitivityRate >= 55 ? "Em Risco" : "Fora da Meta"}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Garantir taxa de sensibilidade aos antimicrobianos acima de 70%</p>
+              <div className="flex justify-between text-xs mb-1"><span className="text-muted-foreground">Atual</span><span className="font-bold">{sensitivityRate}%</span></div>
+              <div className="w-full bg-muted rounded-full h-2"><div className="h-2 rounded-full" style={{ width: `${Math.min(sensitivityRate, 100)}%`, backgroundColor: sensitivityRate >= 70 ? "#22c55e" : sensitivityRate >= 55 ? "#eab308" : "#ef4444" }} /></div>
+              <p className="text-xs text-muted-foreground mt-1">Meta: ≥ 70%</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4" style={{ borderLeftColor: phenotypeCount <= 5 ? "#22c55e" : phenotypeCount <= 10 ? "#eab308" : "#ef4444" }}>
+            <CardContent className="pt-5">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {phenotypeCount <= 5 ? <Activity className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                  <span className="text-sm font-semibold">Fenótipos Críticos ≤ 5</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${phenotypeCount <= 5 ? "bg-green-100 text-green-800 border-green-200" : phenotypeCount <= 10 ? "bg-yellow-100 text-yellow-800 border-yellow-200" : "bg-red-100 text-red-800 border-red-200"}`}>{phenotypeCount <= 5 ? "No Alvo" : phenotypeCount <= 10 ? "Em Risco" : "Fora da Meta"}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Limitar detecção de fenótipos de resistência crítica (KPC, MRSA, ESBL, VRE)</p>
+              <div className="flex justify-between text-xs mb-1"><span className="text-muted-foreground">Detectados</span><span className="font-bold">{phenotypeCount} ({phenotypeRate}%)</span></div>
+              <div className="w-full bg-muted rounded-full h-2"><div className="h-2 rounded-full" style={{ width: `${Math.min((phenotypeCount / Math.max(totalExams, 1)) * 100, 100)}%`, backgroundColor: phenotypeCount <= 5 ? "#22c55e" : phenotypeCount <= 10 ? "#eab308" : "#ef4444" }} /></div>
+              <p className="text-xs text-muted-foreground mt-1">Meta: ≤ 5 fenótipos críticos</p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Charts Row 1 */}
@@ -808,6 +879,55 @@ export default function DashboardAntibiogram() {
           />
         </div>
       )}
+
+      {/* Analysis Tabs */}
+      <DashboardAnalysisTabs config={{
+        domain: "Resistência Antimicrobiana",
+        effectLabel: "Alta Taxa de Resistência Antimicrobiana",
+        ishikawaCategories: [
+          { name: "Método", items: ["Uso empírico sem antibiograma", "Esquema antibiótico prolongado", "Dose/duração inadequada", "Sem protocolo de stewardship"] },
+          { name: "Máquina", items: ["Laboratório sem capacidade para CIM", "Ausência de PCR de resistência", "Demora no resultado microbiológico", "Equipamentos desatualizados"] },
+          { name: "Material", items: ["Antibióticos de amplo espectro sem restrição", "Falta de meios de cultura seletivos", "Acesso limitado a antibióticos de reserva", "Insumos laboratoriais insuficientes"] },
+          { name: "Mão de Obra", items: ["Prescrição sem consulta à infectologia", "Falta de farmacêutico clínico", "Subestimação da gravidade da resistência", "Alta rotatividade médica"] },
+          { name: "Medida", items: ["Sem monitoramento contínuo de CIM", "Antibiograma cumulativo não divulgado", "Ausência de indicadores de stewardship", "Feedback tardio para prescritores"] },
+          { name: "Meio Ambiente", items: ["Pressão seletiva por antibióticos", "Transmissão cruzada entre setores", "Estrutura de isolamento inadequada", "Ambiente propício à disseminação clonal"] },
+        ],
+        paretoData: [
+          { name: "Uso empírico sem guia", value: 38 },
+          { name: "Espectro amplo desnecessário", value: 29 },
+          { name: "Duração excessiva", value: 22 },
+          { name: "Sem deescalada", value: 18 },
+          { name: "Transmissão cruzada", value: 14 },
+          { name: "Sem isolamento", value: 10 },
+          { name: "Outros", value: 7 },
+        ],
+        swotData: {
+          strengths: ["Laboratório de microbiologia ativo", "Antibiogramas registrados sistematicamente", "Equipe médica com acesso a dados", "Programa CCIH estruturado"],
+          weaknesses: ["Ausência de farmacêutico clínico dedicado", "Stewardship antimicrobiano informal", "Demora na liberação de resultados", "Prescrição empírica frequente"],
+          opportunities: ["Implementação de programa formal de stewardship", "Treinamentos em infectologia para prescritores", "Divulgação de antibiograma cumulativo", "Parceria com laboratório de referência"],
+          threats: ["Disseminação de cepas multirresistentes (KPC, MRSA)", "Pressão por tratamento imediato na emergência", "Resistência ao protocolo por prescritores sêniors", "Limitações orçamentárias"],
+        },
+        risks: [
+          { id: "r1", description: "Surto por cepa KPC ou MRSA multirresistente", probability: 4, impact: 5 },
+          { id: "r2", description: "Falha terapêutica por resistência não detectada", probability: 3, impact: 5 },
+          { id: "r3", description: "Disseminação clonal entre setores de UTI", probability: 3, impact: 4 },
+          { id: "r4", description: "Auditoria desfavorável por ausência de stewardship", probability: 2, impact: 4 },
+          { id: "r5", description: "Alta mortalidade por infecção resistente sem opções terapêuticas", probability: 3, impact: 5 },
+        ],
+        pdcaData: {
+          plan: ["Elaborar programa formal de stewardship antimicrobiano", "Definir lista de antibióticos restritos com critérios", "Criar protocolo de deescalada baseado em antibiograma", "Estabelecer metas mensais de resistência por setor"],
+          do: ["Implementar auditoria semanal de prescrições", "Divulgar antibiograma cumulativo mensal", "Realizar rounds de infectologia em UTIs", "Implantar isolamento de contato para cepas MDR"],
+          check: ["Monitorar taxa de resistência mensalmente", "Avaliar tempo de adequação do antibiótico", "Rastrear fenótipos críticos (KPC, MRSA, ESBL, VRE)", "Medir impacto do stewardship na redução de consumo"],
+          act: ["Restringir antibióticos com resistência > 30%", "Escalar isolamento em setores com surto", "Atualizar protocolo empírico baseado nos dados", "Capacitar prescritores sobre resistência crítica"],
+        },
+        stats: {
+          value: `${resistanceRate}%`,
+          label: "Taxa de Resistência",
+          issues: phenotypeCount,
+          topIssue: "Fenótipos Críticos",
+          sector: sectorData.length > 0 ? sectorData[0].name : "—",
+        },
+      } as AnalysisConfig} />
     </div>
   );
 }
