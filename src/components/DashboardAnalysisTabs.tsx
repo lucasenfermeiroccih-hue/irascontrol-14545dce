@@ -673,9 +673,35 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
               </div>
             </div>
 
+            {/* Add risk form */}
+            <div className="flex flex-wrap items-end gap-2 p-2 rounded-lg border bg-muted/20">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-[10px] text-muted-foreground font-medium">Novo risco</label>
+                <Input value={riskDraft.name} onChange={e => setRiskDraft(d => ({ ...d, name: e.target.value }))}
+                  placeholder="Ex.: Adesão baixa à higienização" className="h-8 text-xs"
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addRisk(); } }} />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-medium">Prob. (1-5)</label>
+                <Input type="number" min={1} max={5} value={riskDraft.probability}
+                  onChange={e => setRiskDraft(d => ({ ...d, probability: Math.max(1, Math.min(5, Number(e.target.value) || 1)) }))}
+                  className="h-8 text-xs w-16" />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground font-medium">Impacto (1-5)</label>
+                <Input type="number" min={1} max={5} value={riskDraft.impact}
+                  onChange={e => setRiskDraft(d => ({ ...d, impact: Math.max(1, Math.min(5, Number(e.target.value) || 1)) }))}
+                  className="h-8 text-xs w-16" />
+              </div>
+              <Button size="sm" className="h-8 gap-1 text-xs" onClick={addRisk}>
+                <Plus className="h-3.5 w-3.5" /> Adicionar
+              </Button>
+            </div>
+
             {/* Risk list */}
             <div className="space-y-1.5 mt-2">
               <p className="text-xs font-medium text-muted-foreground">Riscos identificados ({risks.length})</p>
+
               {risks.map((r, i) => {
                 const { bg, label } = riskColor(r.probability, r.impact);
                 return (
