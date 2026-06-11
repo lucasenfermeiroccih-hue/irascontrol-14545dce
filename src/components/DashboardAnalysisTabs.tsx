@@ -248,56 +248,122 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
               </div>
             </div>
 
-            <div className="overflow-x-auto" key={ishikawaKey}>
-              <svg viewBox="0 0 900 400" className="w-full min-w-[520px]" style={{ fontFamily: "inherit" }}>
-                <line x1="60" y1="200" x2="800" y2="200" stroke="hsl(var(--foreground))" strokeWidth={2.5} />
-                <rect x="800" y="168" width="94" height="64" rx="6"
-                  fill="hsl(0,84%,60%)" fillOpacity={0.15} stroke="hsl(0,84%,60%)" strokeWidth={1.5} />
-                <text x="847" y="195" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {(config.effectLabel ?? "").split(" ").slice(0, 2).join(" ")}
-                </text>
-                <text x="847" y="207" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {(config.effectLabel ?? "").split(" ").slice(2, 4).join(" ")}
-                </text>
-                <text x="847" y="219" textAnchor="middle" fontSize={8} fontWeight={600} fill="hsl(0,84%,60%)">
-                  {(config.effectLabel ?? "").split(" ").slice(4).join(" ")}
-                </text>
+            {/* Desktop / tablet: SVG fishbone */}
+            <div className="hidden sm:block overflow-x-auto rounded-lg border bg-gradient-to-br from-muted/20 to-background p-2" key={ishikawaKey}>
+              <svg viewBox="0 0 940 420" className="w-full min-w-[560px]" style={{ fontFamily: "inherit" }} role="img" aria-label="Diagrama de Ishikawa 6M">
+                {/* Spine */}
+                <defs>
+                  <linearGradient id="ishikawa-spine" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.35} />
+                    <stop offset="60%" stopColor="hsl(var(--foreground))" stopOpacity={0.85} />
+                    <stop offset="100%" stopColor="hsl(var(--destructive))" stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <line x1="50" y1="210" x2="790" y2="210" stroke="url(#ishikawa-spine)" strokeWidth={3} strokeLinecap="round" />
+                {/* Arrowhead into effect box */}
+                <polygon points="790,200 810,210 790,220" fill="hsl(var(--destructive))" opacity={0.9} />
 
+                {/* Effect box (right) */}
+                <rect x="810" y="168" width="120" height="84" rx="10"
+                  fill="hsl(var(--destructive))" fillOpacity={0.12}
+                  stroke="hsl(var(--destructive))" strokeWidth={1.5} />
+                <foreignObject x="814" y="172" width="112" height="76">
+                  <div
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    style={{
+                      width: "100%", height: "100%",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      textAlign: "center", padding: "2px",
+                      fontSize: 10, fontWeight: 700, lineHeight: 1.15,
+                      color: "hsl(var(--destructive))",
+                    }}
+                  >
+                    {config.effectLabel ?? "Efeito"}
+                  </div>
+                </foreignObject>
+
+                {/* Bones */}
                 {BONES.slice(0, Math.min(6, cats.length)).map((b, i) => {
                   const cat = cats[i];
                   if (!cat) return null;
                   const isSel = selectedCat === i;
                   const isOther = selectedCat !== null && !isSel;
                   const lp = LABEL_ANCHORS[i];
+                  const preview = (cat.causes ?? []).slice(0, 2);
+                  const isTop = b.tip[1] < 200;
                   return (
-                    <g key={cat.id}
-                      style={{ cursor: "pointer", opacity: isOther ? 0.25 : 1, transition: "opacity 0.2s" }}
+                    <g key={cat.id ?? i}
+                      style={{ cursor: "pointer", opacity: isOther ? 0.3 : 1, transition: "opacity 0.2s" }}
                       onClick={() => setSelectedCat(p => p === i ? null : i)}>
                       <line x1={b.tip[0]} y1={b.tip[1]} x2={b.junc[0]} y2={b.junc[1]}
-                        stroke={cat.color} strokeWidth={isSel ? 2.5 : 1.8} />
-                      <circle cx={b.tip[0]} cy={b.tip[1]} r={isSel ? 7 : 5} fill={cat.color} />
+                        stroke={cat.color} strokeWidth={isSel ? 3 : 2} strokeLinecap="round" />
+                      {/* Hit area */}
+                      <circle cx={b.tip[0]} cy={b.tip[1]} r={14} fill="transparent" />
+                      <circle cx={b.tip[0]} cy={b.tip[1]} r={isSel ? 8 : 6} fill={cat.color}
+                        stroke="hsl(var(--background))" strokeWidth={2} />
+                      {/* Category label */}
                       <text x={lp.x} y={lp.y} textAnchor={lp.anchor as any}
-                        fontSize={11} fontWeight={isSel ? 700 : 600} fill={cat.color}>
+                        fontSize={12} fontWeight={isSel ? 800 : 700} fill={cat.color}>
                         {cat.label}
                       </text>
+                      {/* Cause previews along the bone */}
+                      {preview.map((c, idx) => {
+                        const t = 0.35 + idx * 0.25;
+                        const x = b.tip[0] + (b.junc[0] - b.tip[0]) * t;
+                        const y = b.tip[1] + (b.junc[1] - b.tip[1]) * t;
+                        const dy = isTop ? -4 : 12;
+                        return (
+                          <text key={idx} x={x + 8} y={y + dy}
+                            fontSize={9} fill="hsl(var(--muted-foreground))" opacity={isSel ? 1 : 0.75}>
+                            {c.length > 28 ? c.slice(0, 26) + "…" : c}
+                          </text>
+                        );
+                      })}
                     </g>
                   );
                 })}
               </svg>
             </div>
 
+            {/* Mobile: compact chips list */}
+            <div className="sm:hidden space-y-2" key={`m-${ishikawaKey}`}>
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-2 text-center">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Efeito</p>
+                <p className="text-xs font-bold text-destructive leading-tight">{config.effectLabel}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {cats.slice(0, 6).map((cat, i) => {
+                  const isSel = selectedCat === i;
+                  return (
+                    <button key={cat.id ?? i}
+                      onClick={() => setSelectedCat(p => p === i ? null : i)}
+                      className={`text-left rounded-lg border-2 p-2 transition ${isSel ? "ring-2 ring-offset-1" : "opacity-90"}`}
+                      style={{ borderColor: cat.color, ...(isSel ? { boxShadow: `0 0 0 2px ${cat.color}33` } : {}) }}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="h-2 w-2 rounded-full" style={{ background: cat.color }} />
+                        <span className="text-xs font-semibold" style={{ color: cat.color }}>{cat.label}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">
+                        {(cat.causes ?? []).slice(0, 2).join(" • ") || "—"}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {selectedCat !== null && cats[selectedCat] && (
-              <div className="p-3 rounded-lg border-l-4 bg-muted/20"
+              <div className="p-3 rounded-lg border-l-4 bg-muted/30"
                 style={{ borderLeftColor: cats[selectedCat].color }}>
                 <p className="font-semibold text-sm mb-2" style={{ color: cats[selectedCat].color }}>
                   {cats[selectedCat].label} — Causas Identificadas
                 </p>
-                <ul className="space-y-1.5">
+                <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5">
                   {(cats[selectedCat].causes ?? []).map((cause, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
                       <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
                         style={{ backgroundColor: cats[selectedCat].color }} />
-                      {cause}
+                      <span className="flex-1">{cause}</span>
                     </li>
                   ))}
                 </ul>
@@ -310,52 +376,93 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
             )}
 
             {/* Pareto */}
-            {config.paretoData && config.paretoData.length > 0 && (
-              <div className="mt-4">
-                <Card>
-                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                    <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
-                    <ChartActions chartRef={refPareto} chartTitle="Pareto — Não Conformidades" />
-                  </CardHeader>
-                  <CardContent ref={refPareto}>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <ComposedChart data={config.paretoData} margin={{ top: 10, right: 40, left: -10, bottom: 55 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="question" tick={{ fontSize: 8 }} angle={-40} textAnchor="end" interval={0} height={60} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const d = payload[0]?.payload;
-                            return (
-                              <div className="bg-background border rounded p-2 text-xs max-w-[200px] shadow">
-                                <p className="font-medium mb-1">{d?.fullQuestion || d?.question}</p>
-                                <p>Ocorrências: <b>{d?.count}</b></p>
-                                <p>Acumulado: <b>{d?.acumulado}%</b></p>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar yAxisId="left" dataKey="count" fill="hsl(220,83%,53%)" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                        <Line yAxisId="right" type="monotone" dataKey="acumulado"
-                          stroke="hsl(0,84%,60%)" strokeWidth={2} dot={{ r: 3 }} />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                    <div className="mt-2 space-y-1">
-                      {config.paretoData.slice(0, 5).map((d, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs">
-                          <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                          <span className="flex-1 truncate">{d.fullQuestion || d.question}</span>
-                          <Badge variant="destructive" className="text-xs px-1.5 py-0 shrink-0">{d.count}×</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+            {config.paretoData && config.paretoData.length > 0 && (() => {
+              const data = config.paretoData!.map((d, i) => ({
+                ...d,
+                shortLabel: `#${i + 1}`,
+              }));
+              const total = data.reduce((s, d) => s + (d.count ?? 0), 0);
+              const top80Index = data.findIndex(d => (d.acumulado ?? 0) >= 80);
+              const vital = top80Index === -1 ? data.length : top80Index + 1;
+              return (
+                <div className="mt-4">
+                  <Card>
+                    <CardHeader className="pb-2 flex flex-row items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          <span className="font-semibold text-foreground">{vital}</span> de {data.length} causas concentram
+                          {" "}<span className="font-semibold text-destructive">≥80%</span> das {total} ocorrências (regra 80/20)
+                        </p>
+                      </div>
+                      <ChartActions chartRef={refPareto} chartTitle="Pareto — Não Conformidades" />
+                    </CardHeader>
+                    <CardContent ref={refPareto} className="px-2 sm:px-4">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <ComposedChart data={data} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
+                          <defs>
+                            <linearGradient id="pareto-bar" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.95} />
+                              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                          <XAxis dataKey="shortLabel" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={{ stroke: "hsl(var(--border))" }} />
+                          <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                          <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} unit="%" />
+                          <RechartsTooltip
+                            cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null;
+                              const d: any = payload[0]?.payload;
+                              return (
+                                <div className="bg-background border rounded-lg p-2.5 text-xs max-w-[240px] shadow-lg">
+                                  <p className="font-semibold mb-1.5 leading-tight">{d?.fullQuestion || d?.question}</p>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-muted-foreground">Ocorrências</span>
+                                    <span className="font-mono font-bold text-primary">{d?.count}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-muted-foreground">Acumulado</span>
+                                    <span className="font-mono font-bold text-destructive">{d?.acumulado}%</span>
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          />
+                          <ReferenceLine yAxisId="right" y={80} stroke="hsl(var(--destructive))" strokeDasharray="4 4" strokeWidth={1.5}
+                            label={{ value: "80%", position: "right", fill: "hsl(var(--destructive))", fontSize: 10, fontWeight: 600 }} />
+                          <Bar yAxisId="left" dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={42}>
+                            {data.map((_, i) => (
+                              <Cell key={i} fill={i < vital ? "url(#pareto-bar)" : "hsl(var(--muted-foreground) / 0.45)"} />
+                            ))}
+                            <LabelList dataKey="count" position="top" fontSize={10} fill="hsl(var(--foreground))" />
+                          </Bar>
+                          <Line yAxisId="right" type="monotone" dataKey="acumulado"
+                            stroke="hsl(var(--destructive))" strokeWidth={2.25}
+                            dot={{ r: 3, fill: "hsl(var(--destructive))", strokeWidth: 0 }}
+                            activeDot={{ r: 5 }} />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                      <div className="mt-3 space-y-1.5">
+                        {data.slice(0, 5).map((d, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className={`shrink-0 inline-flex items-center justify-center h-5 w-6 rounded font-mono text-[10px] font-bold ${i < vital ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
+                              #{i + 1}
+                            </span>
+                            <span className="flex-1 truncate" title={d.fullQuestion || d.question}>{d.fullQuestion || d.question}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">{d.acumulado}%</span>
+                            <Badge variant={i < vital ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0 shrink-0 tabular-nums">{d.count}×</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
           </TabsContent>
+
 
           {/* ── Tab 2: SWOT ───────────────────────────────── */}
           <TabsContent value="swot" className="space-y-4">
