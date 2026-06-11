@@ -566,8 +566,6 @@ export default function DashboardAnalysisTabs({ config }: { config: AnalysisConf
                       ) : (
                       <>
                       <ResponsiveContainer width="100%" height={260}>
-                    <CardContent ref={refPareto} className="px-2 sm:px-4">
-                      <ResponsiveContainer width="100%" height={260}>
                         <ComposedChart data={data} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
                           <defs>
                             <linearGradient id="pareto-bar" x1="0" y1="0" x2="0" y2="1">
