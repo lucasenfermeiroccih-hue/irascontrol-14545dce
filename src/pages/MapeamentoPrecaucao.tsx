@@ -625,7 +625,8 @@ export default function MapeamentoPrecaucao() {
     const { data: pData } = await supabase
       .from("patients")
       .select("*")
-      .eq("hospital_id", hospitalId);
+      .eq("hospital_id", hospitalId)
+      .eq("source", "precaution_map");
 
     if (!pData || pData.length === 0) { setPatients([]); setLoading(false); return; }
 
@@ -822,13 +823,18 @@ export default function MapeamentoPrecaucao() {
     setPatientSearching(true);
     const { data } = await supabase
       .from("patients")
-      .select("id, full_name, medical_record, sector, bed")
+      .select("id, full_name, medical_record, sector, bed, clinical_data")
       .eq("hospital_id", hospitalId)
       .eq("status", "active")
       .neq("source", "precaution_map")
       .or(`full_name.ilike.%${q}%,medical_record.ilike.%${q}%`)
-      .limit(8);
-    setPatientResults(data || []);
+      .limit(30);
+    // Only show MDR patients (labPanel with mdr: true)
+    const mdrOnly = (data || []).filter(p => {
+      const labPanel = (p.clinical_data as any)?.labPanel;
+      return Array.isArray(labPanel) && labPanel.some((l: any) => l.mdr === true);
+    }).slice(0, 8);
+    setPatientResults(mdrOnly.map(({ clinical_data: _cd, ...rest }) => rest));
     setPatientSearching(false);
   };
 
@@ -907,7 +913,7 @@ export default function MapeamentoPrecaucao() {
         medical_record: form.prontuario,
         sector: form.setor,
         bed: form.leito,
-      }).eq("id", editingId);
+      }).eq("id", editingId).eq("source", "precaution_map");
 
       if (pat?.precaucaoId) {
         await supabase.from("precautions").update({
@@ -1007,7 +1013,7 @@ export default function MapeamentoPrecaucao() {
         status: dbStatus as "active" | "discharged" | "transferred" | "deceased",
         discharge_date: new Date().toISOString().split("T")[0],
         discharge_type: s.toLowerCase(),
-      }).eq("id", id),
+      }).eq("id", id).eq("source", "precaution_map"),
       ...(pat?.precaucaoId ? [supabase.from("precautions").update({
         is_active: false,
         end_date: new Date().toISOString().split("T")[0],
@@ -1036,7 +1042,7 @@ export default function MapeamentoPrecaucao() {
       supabase.from("precautions").delete().eq("patient_id", id),
       supabase.from("lab_results").delete().eq("patient_id", id),
     ]);
-    await supabase.from("patients").delete().eq("id", id);
+    await supabase.from("patients").delete().eq("id", id).eq("source", "precaution_map");
     setPatients(prev => prev.filter(p => p.id !== id));
   };
 
