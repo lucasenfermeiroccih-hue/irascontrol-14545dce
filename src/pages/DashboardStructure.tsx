@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +9,17 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   ComposedChart, ReferenceLine, PieChart, Pie, Cell, Legend,
-  AreaChart, Area, LineChart, Line,
+  AreaChart, Area, LineChart, Line, LabelList,
 } from "recharts";
 import {
   Building2, CheckCircle2, AlertTriangle, TrendingUp, Loader2, Download,
   XCircle, AlertCircle, Target, ArrowRight, Brain, ClipboardList,
   GitBranch, Activity, Info, Flame, ShieldCheck, Layers,
-  Wind, Droplets, Wrench, ClipboardCheck, MapPin,
+  Wind, Droplets, Wrench, ClipboardCheck, MapPin, RefreshCw,
 } from "lucide-react";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import DashboardFilters from "@/components/DashboardFilters";
+import ChartActions from "@/components/ChartActions";
 import { useAuditDashboard as useAudit } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
@@ -249,6 +250,25 @@ export default function DashboardStructure() {
   const [ano, setAno]     = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
+  const [ishikawaKey, setIshikawaKey] = useState(0);
+
+  // Chart refs (for ChartActions: ampliar / JPG / PDF)
+  const chartRefs = {
+    trend:    useRef<HTMLDivElement>(null),
+    pie:      useRef<HTMLDivElement>(null),
+    sector:   useRef<HTMLDivElement>(null),
+    category: useRef<HTMLDivElement>(null),
+    radar:    useRef<HTMLDivElement>(null),
+    pareto:   useRef<HTMLDivElement>(null),
+    ishikawa: useRef<HTMLDivElement>(null),
+  };
+
+  // Per-chart metas
+  const [metas, setMetas] = useState<Record<string, number | undefined>>({
+    trend: META, sector: META, category: META, radar: META,
+  });
+  const setMeta = (key: string, v: number | undefined) =>
+    setMetas(prev => ({ ...prev, [key]: v }));
 
   // ── Filtered data ──
   const MES_NOMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -591,10 +611,16 @@ export default function DashboardStructure() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Evolução Mensal da Conformidade Estrutural</CardTitle>
-            <CardDescription className="text-xs">Tendência vs meta de {META}% · linha vermelha = referência ANVISA</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm">Evolução Mensal da Conformidade Estrutural</CardTitle>
+                <CardDescription className="text-xs">Tendência vs meta de {metas.trend ?? META}% · linha vermelha = referência</CardDescription>
+              </div>
+              <ChartActions chartRef={chartRefs.trend} chartTitle="Evolução Mensal da Conformidade Estrutural"
+                metaValue={metas.trend} onMetaChange={(v) => setMeta("trend", v)} metaUnit="%" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={chartRefs.trend}>
             {fStats.monthlyTrend.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">Sem dados de tendência</div>
             ) : (
@@ -610,8 +636,10 @@ export default function DashboardStructure() {
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine y={META} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
-                    label={{ value: `Meta ${META}%`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
+                  {metas.trend !== undefined && (
+                    <ReferenceLine y={metas.trend} stroke="#ef4444" strokeDasharray="5 3" strokeWidth={1.5}
+                      label={{ value: `Meta ${metas.trend}%`, position: "insideTopRight", fontSize: 10, fill: "#ef4444" }} />
+                  )}
                   <Area dataKey="compliance" name="Conformidade" stroke="#10b981" fill="url(#gradStruct)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -621,10 +649,15 @@ export default function DashboardStructure() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Distribuição dos Itens Auditados</CardTitle>
-            <CardDescription className="text-xs">Conformes · Não Conformes · N/A por período</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm">Distribuição dos Itens Auditados</CardTitle>
+                <CardDescription className="text-xs">Conformes · Não Conformes · N/A</CardDescription>
+              </div>
+              <ChartActions chartRef={chartRefs.pie} chartTitle="Distribuição dos Itens Auditados" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={chartRefs.pie}>
             <ResponsiveContainer width="100%" height={190}>
               <PieChart>
                 <Pie data={fStats.pieData} cx="50%" cy="48%" innerRadius={48} outerRadius={74} paddingAngle={3} dataKey="value">
@@ -655,10 +688,16 @@ export default function DashboardStructure() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conformidade por Setor Hospitalar</CardTitle>
-            <CardDescription className="text-xs">Verde ≥85% · Amarelo 75–84% · Vermelho &lt;75% · linha = meta ANVISA</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm">Conformidade por Setor Hospitalar</CardTitle>
+                <CardDescription className="text-xs">Verde ≥{metas.sector ?? META}% · Amarelo 75–{(metas.sector ?? META) - 1}% · Vermelho &lt;75%</CardDescription>
+              </div>
+              <ChartActions chartRef={chartRefs.sector} chartTitle="Conformidade por Setor"
+                metaValue={metas.sector} onMetaChange={(v) => setMeta("sector", v)} metaUnit="%" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={chartRefs.sector}>
             {fStats.sectorData.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">Sem dados por setor</div>
             ) : (
@@ -668,10 +707,12 @@ export default function DashboardStructure() {
                   <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                   <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 10 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine x={META} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  {metas.sector !== undefined && (
+                    <ReferenceLine x={metas.sector} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  )}
                   <Bar dataKey="compliance" name="Conformidade" radius={[0, 3, 3, 0]}>
                     {fStats.sectorData.map((e, i) => (
-                      <Cell key={i} fill={e.compliance >= META ? "#10b981" : e.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
+                      <Cell key={i} fill={e.compliance >= (metas.sector ?? META) ? "#10b981" : e.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
                     ))}
                   </Bar>
                 </ComposedChart>
@@ -682,10 +723,16 @@ export default function DashboardStructure() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conformidade por Categoria de Estrutura</CardTitle>
-            <CardDescription className="text-xs">Itens ordenados do pior para o melhor desempenho</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm">Conformidade por Categoria de Estrutura</CardTitle>
+                <CardDescription className="text-xs">Itens ordenados do pior para o melhor desempenho</CardDescription>
+              </div>
+              <ChartActions chartRef={chartRefs.category} chartTitle="Conformidade por Categoria"
+                metaValue={metas.category} onMetaChange={(v) => setMeta("category", v)} metaUnit="%" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent ref={chartRefs.category}>
             {fStats.categoryData.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">Sem dados por categoria</div>
             ) : (
@@ -695,10 +742,12 @@ export default function DashboardStructure() {
                   <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
                   <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 10 }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <ReferenceLine x={META} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  {metas.category !== undefined && (
+                    <ReferenceLine x={metas.category} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
+                  )}
                   <Bar dataKey="compliance" name="Conformidade" radius={[0, 3, 3, 0]}>
                     {fStats.categoryData.map((e, i) => (
-                      <Cell key={i} fill={e.compliance >= META ? "#10b981" : e.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
+                      <Cell key={i} fill={e.compliance >= (metas.category ?? META) ? "#10b981" : e.compliance >= 75 ? "#f59e0b" : "#ef4444"} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -712,21 +761,29 @@ export default function DashboardStructure() {
       {fStats.categoryData.length >= 3 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Radar — Conformidade Multidimensional por Categoria</CardTitle>
-            <CardDescription className="text-xs">Visão 360° da estrutura hospitalar · linha vermelha = meta ANVISA {META}%</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-sm">Radar — Conformidade Multidimensional por Categoria</CardTitle>
+                <CardDescription className="text-xs">Visão 360° · linha vermelha = meta {metas.radar ?? META}%</CardDescription>
+              </div>
+              <ChartActions chartRef={chartRefs.radar} chartTitle="Radar de Conformidade"
+                metaValue={metas.radar} onMetaChange={(v) => setMeta("radar", v)} metaUnit="%" />
+            </div>
           </CardHeader>
-          <CardContent className="flex justify-center">
+          <CardContent ref={chartRefs.radar} className="flex justify-center">
             <ResponsiveContainer width="100%" height={280}>
               <RadarChart data={fStats.categoryData.map(c => ({
                 subject: c.name.length > 14 ? c.name.substring(0, 13) + "…" : c.name,
                 A: c.compliance,
-                meta: META,
+                meta: metas.radar ?? META,
               }))}>
                 <PolarGrid className="stroke-border" />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9 }} />
                 <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 8 }} />
                 <Radar dataKey="A" name="Conformidade" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
-                <Radar dataKey="meta" name={`Meta ${META}%`} stroke="#ef4444" fill="transparent" strokeDasharray="4 2" />
+                {metas.radar !== undefined && (
+                  <Radar dataKey="meta" name={`Meta ${metas.radar}%`} stroke="#ef4444" fill="transparent" strokeDasharray="4 2" />
+                )}
                 <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
               </RadarChart>
             </ResponsiveContainer>
@@ -830,22 +887,82 @@ export default function DashboardStructure() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
-              <CardDescription className="text-xs">80% dos problemas estruturais concentrados em poucas causas</CardDescription>
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div className="flex-1 min-w-[180px]">
+                  <CardTitle className="text-sm">Análise de Pareto — Não Conformidades</CardTitle>
+                  <CardDescription className="text-xs">
+                    {(() => {
+                      const top80 = fStats.paretoData.findIndex(d => (d.acumulado ?? 0) >= 80);
+                      const vital = top80 === -1 ? fStats.paretoData.length : top80 + 1;
+                      const total = fStats.paretoData.reduce((s, d) => s + d.count, 0);
+                      return <><span className="font-semibold text-foreground">{vital}</span> de {fStats.paretoData.length} causas concentram <span className="font-semibold text-destructive">≥80%</span> das {total} ocorrências</>;
+                    })()}
+                  </CardDescription>
+                </div>
+                <ChartActions chartRef={chartRefs.pareto} chartTitle="Pareto — Não Conformidades" />
+              </div>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <ComposedChart data={fStats.paretoData} margin={{ left: -10, right: 16 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" tick={{ fontSize: 8 }} interval={0} angle={-20} textAnchor="end" height={45} />
-                  <YAxis yAxisId="left"  tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar yAxisId="left"  dataKey="count"     name="Ocorrências"  fill="#10b981" radius={[3, 3, 0, 0]} />
-                  <Line yAxisId="right" dataKey="acumulado" name="% Acumulado" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
-                  <ReferenceLine yAxisId="right" y={80} stroke="#f59e0b" strokeDasharray="4 2" />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <CardContent ref={chartRefs.pareto} className="px-2 sm:px-4">
+              {(() => {
+                const data = fStats.paretoData.map((d, i) => ({ ...d, shortLabel: `#${i + 1}` }));
+                const top80 = data.findIndex(d => (d.acumulado ?? 0) >= 80);
+                const vital = top80 === -1 ? data.length : top80 + 1;
+                return (
+                  <>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <ComposedChart data={data} margin={{ top: 16, right: 16, left: -8, bottom: 8 }}>
+                        <defs>
+                          <linearGradient id="pareto-bar-struct" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity={0.95} />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity={0.55} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                        <XAxis dataKey="shortLabel" tick={{ fontSize: 10 }} tickLine={false} />
+                        <YAxis yAxisId="left" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" tickLine={false} axisLine={false} />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                          content={({ active, payload }: any) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0]?.payload;
+                            return (
+                              <div className="bg-background border rounded-lg p-2.5 text-xs max-w-[240px] shadow-lg">
+                                <p className="font-semibold mb-1.5 leading-tight">{d?.name}</p>
+                                <div className="flex justify-between gap-3"><span className="text-muted-foreground">Ocorrências</span><span className="font-mono font-bold text-emerald-600">{d?.count}</span></div>
+                                <div className="flex justify-between gap-3"><span className="text-muted-foreground">Acumulado</span><span className="font-mono font-bold text-destructive">{d?.acumulado}%</span></div>
+                              </div>
+                            );
+                          }}
+                        />
+                        <ReferenceLine yAxisId="right" y={80} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5}
+                          label={{ value: "80%", position: "right", fill: "#ef4444", fontSize: 10, fontWeight: 600 }} />
+                        <Bar yAxisId="left" dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={42}>
+                          {data.map((_, i) => (
+                            <Cell key={i} fill={i < vital ? "url(#pareto-bar-struct)" : "hsl(var(--muted-foreground) / 0.45)"} />
+                          ))}
+                          <LabelList dataKey="count" position="top" fontSize={10} />
+                        </Bar>
+                        <Line yAxisId="right" type="monotone" dataKey="acumulado"
+                          stroke="#ef4444" strokeWidth={2.25}
+                          dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                    <div className="mt-3 space-y-1.5">
+                      {data.slice(0, 5).map((d, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className={`shrink-0 inline-flex items-center justify-center h-5 w-6 rounded font-mono text-[10px] font-bold ${i < vital ? "bg-emerald-500/15 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                            #{i + 1}
+                          </span>
+                          <span className="flex-1 truncate" title={d.name}>{d.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">{d.acumulado}%</span>
+                          <Badge variant={i < vital ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0 shrink-0 tabular-nums">{d.count}×</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
@@ -862,15 +979,24 @@ export default function DashboardStructure() {
                 <CardDescription className="text-xs">Causas das não conformidades estruturais · Clique em uma categoria para detalhar</CardDescription>
               </div>
             </div>
-            {selectedIshikawa && (
-              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
-                <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+            <div className="flex items-center gap-1">
+              {selectedIshikawa && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedIshikawa(null)}>
+                  <XCircle className="h-3.5 w-3.5 mr-1" /> Limpar seleção
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="h-7 w-7" title="Atualizar análise"
+                onClick={() => { setSelectedIshikawa(null); setIshikawaKey(k => k + 1); }}>
+                <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
-            )}
+              <ChartActions chartRef={chartRefs.ishikawa} chartTitle="Diagrama de Ishikawa (6M)" />
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <IshikawaStructure selectedId={selectedIshikawa} onSelect={setSelectedIshikawa} topFailures={fStats.topFailures} />
+        <CardContent ref={chartRefs.ishikawa}>
+          <div key={ishikawaKey}>
+            <IshikawaStructure selectedId={selectedIshikawa} onSelect={setSelectedIshikawa} topFailures={fStats.topFailures} />
+          </div>
 
           {selectedIshikawa && (() => {
             const cat = STRUCT_ISHIKAWA.find(c => c.id === selectedIshikawa);
