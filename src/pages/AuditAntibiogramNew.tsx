@@ -161,6 +161,7 @@ export default function AuditAntibiogramNew() {
   const [esbl, setEsbl] = useState<"sim" | "nao" | "ignorado">("ignorado");
   const [carbapenemase, setCarbapenemase] = useState<"sim" | "nao" | "ignorado">("ignorado");
   const [carbapenemaseType, setCarbapenemaseType] = useState("");
+  const [mdr, setMdr] = useState<"sim" | "nao" | "ignorado">("ignorado");
 
   // Resultados
   const buildDefaultResults = (): AntibioticResult[] => [
