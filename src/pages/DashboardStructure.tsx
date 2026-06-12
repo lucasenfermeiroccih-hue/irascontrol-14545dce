@@ -250,6 +250,25 @@ export default function DashboardStructure() {
   const [ano, setAno]     = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
+  const [ishikawaKey, setIshikawaKey] = useState(0);
+
+  // Chart refs (for ChartActions: ampliar / JPG / PDF)
+  const chartRefs = {
+    trend:    useRef<HTMLDivElement>(null),
+    pie:      useRef<HTMLDivElement>(null),
+    sector:   useRef<HTMLDivElement>(null),
+    category: useRef<HTMLDivElement>(null),
+    radar:    useRef<HTMLDivElement>(null),
+    pareto:   useRef<HTMLDivElement>(null),
+    ishikawa: useRef<HTMLDivElement>(null),
+  };
+
+  // Per-chart metas
+  const [metas, setMetas] = useState<Record<string, number | undefined>>({
+    trend: META, sector: META, category: META, radar: META,
+  });
+  const setMeta = (key: string, v: number | undefined) =>
+    setMetas(prev => ({ ...prev, [key]: v }));
 
   // ── Filtered data ──
   const MES_NOMES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
