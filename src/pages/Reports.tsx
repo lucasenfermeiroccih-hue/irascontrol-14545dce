@@ -718,6 +718,18 @@ const Reports = () => {
               </div>
 
               <div className="space-y-1">
+                <Label className="text-xs">MDR</Label>
+                <Select value={filterMdr} onValueChange={(v) => setFilterMdr(v as any)}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="mdr">Somente MDR</SelectItem>
+                    <SelectItem value="non-mdr">Não MDR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
                 <Label className="text-xs">Setor</Label>
                 <Select value={filterSetor} onValueChange={setFilterSetor}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
