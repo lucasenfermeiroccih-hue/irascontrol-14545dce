@@ -360,8 +360,12 @@ export default function AuditAntibiogramNew() {
   const loadForEdit = (record: AntibiogramRecord) => {
     setEditingId(record.id);
     setCollectionDate(record.collection_date || "");
-    setOrganism(record.organism || "");
-    setOrganismCustom(record.organism ? !microorganismsList.includes(record.organism) : false);
+    const parts = (record.organism || "").split(" + ").map(s => s.trim()).filter(Boolean);
+    const known = parts.filter(p => microorganismsList.includes(p));
+    const unknown = parts.filter(p => !microorganismsList.includes(p));
+    setOrganisms(known);
+    setOrganismCustom(unknown.length > 0);
+    setOrganismCustomText(unknown.join(" + "));
     setSampleCategory(record.sample_category || "");
     setSampleMaterial(record.sample_material || "");
     setLocationEnabled((record.sample_location_enabled as any) || "na");
