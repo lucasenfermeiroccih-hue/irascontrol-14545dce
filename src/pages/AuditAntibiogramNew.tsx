@@ -10,8 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Plus, Trash2, AlertTriangle, ShieldAlert, Loader2, HelpCircle, PlusCircle } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, AlertTriangle, ShieldAlert, Loader2, HelpCircle, PlusCircle, ChevronsUpDown, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import AntibiogramHistory, { type AntibiogramRecord } from "@/components/AntibiogramHistory";
@@ -130,9 +133,29 @@ export default function AuditAntibiogramNew() {
   const [locationEnabled, setLocationEnabled] = useState<"sim" | "nao" | "na">("na");
   const [locationDetail, setLocationDetail] = useState("");
 
-  // Microrganismo
-  const [organism, setOrganism] = useState("");
+  // Microrganismo (multi-seleção)
+  const [organisms, setOrganisms] = useState<string[]>([]);
   const [organismCustom, setOrganismCustom] = useState(false);
+  const [organismCustomText, setOrganismCustomText] = useState("");
+  const [organismOpen, setOrganismOpen] = useState(false);
+  const [organismQuery, setOrganismQuery] = useState("");
+
+  const organismJoined = useMemo(() => {
+    const all = [...organisms];
+    if (organismCustom && organismCustomText.trim()) all.push(organismCustomText.trim());
+    return all.join(" + ");
+  }, [organisms, organismCustom, organismCustomText]);
+
+  const organism = organismJoined; // mantém compatibilidade com fenótipos críticos
+  const filteredOrganismOptions = useMemo(() => {
+    const q = organismQuery.trim().toLowerCase();
+    if (!q) return microorganismsList.slice(0, 100);
+    return microorganismsList.filter(o => o.toLowerCase().includes(q)).slice(0, 200);
+  }, [organismQuery]);
+
+  const toggleOrganism = (name: string) => {
+    setOrganisms(prev => prev.includes(name) ? prev.filter(o => o !== name) : [...prev, name]);
+  };
 
   // Fenótipos
   const [esbl, setEsbl] = useState<"sim" | "nao" | "ignorado">("ignorado");
@@ -329,7 +352,7 @@ export default function AuditAntibiogramNew() {
     setRefreshKey(k => k + 1);
     setCollectionDate(""); setSampleId(""); setSector(""); setPatientId("");
     setSampleCategory(""); setSampleMaterial(""); setLocationEnabled("na"); setLocationDetail("");
-    setOrganism(""); setOrganismCustom(false); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
+    setOrganisms([]); setOrganismCustom(false); setOrganismCustomText(""); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
     setResults(buildDefaultResults());
     window.scrollTo(0, 0);
   };
@@ -337,8 +360,12 @@ export default function AuditAntibiogramNew() {
   const loadForEdit = (record: AntibiogramRecord) => {
     setEditingId(record.id);
     setCollectionDate(record.collection_date || "");
-    setOrganism(record.organism || "");
-    setOrganismCustom(record.organism ? !microorganismsList.includes(record.organism) : false);
+    const parts = (record.organism || "").split(" + ").map(s => s.trim()).filter(Boolean);
+    const known = parts.filter(p => microorganismsList.includes(p));
+    const unknown = parts.filter(p => !microorganismsList.includes(p));
+    setOrganisms(known);
+    setOrganismCustom(unknown.length > 0);
+    setOrganismCustomText(unknown.join(" + "));
     setSampleCategory(record.sample_category || "");
     setSampleMaterial(record.sample_material || "");
     setLocationEnabled((record.sample_location_enabled as any) || "na");
@@ -372,7 +399,7 @@ export default function AuditAntibiogramNew() {
     setEditingId(null);
     setCollectionDate(""); setSampleId(""); setSector(""); setPatientId("");
     setSampleCategory(""); setSampleMaterial(""); setLocationEnabled("na"); setLocationDetail("");
-    setOrganism(""); setOrganismCustom(false); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
+    setOrganisms([]); setOrganismCustom(false); setOrganismCustomText(""); setEsbl("ignorado"); setCarbapenemase("ignorado"); setCarbapenemaseType("");
     setResults(buildDefaultResults());
   };
 
@@ -460,27 +487,95 @@ export default function AuditAntibiogramNew() {
           <CardHeader><CardTitle className="text-lg">Microrganismo / Patógeno</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Microrganismo *</Label>
-              <ComboboxSearch
-                options={[...microorganismsList, "Outros (descrever)"]}
-                value={organismCustom ? "Outros (descrever)" : organism}
-                onValueChange={(v) => {
-                  if (v === "Outros (descrever)") {
-                    setOrganismCustom(true);
-                    setOrganism("");
-                  } else {
-                    setOrganismCustom(false);
-                    setOrganism(v);
-                  }
-                }}
-                placeholder="Digite para buscar microrganismo"
-              />
+              <Label>Microrganismo(s) *</Label>
+              <Popover open={organismOpen} onOpenChange={setOrganismOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate text-left">
+                      {organisms.length === 0 && !organismCustom
+                        ? "Selecione um ou mais microrganismos"
+                        : `${organisms.length + (organismCustom ? 1 : 0)} selecionado(s)`}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-popover z-50" align="start">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Digite para buscar..."
+                      value={organismQuery}
+                      onValueChange={setOrganismQuery}
+                    />
+                    <CommandList className="max-h-[300px]">
+                      <CommandEmpty>Nenhum resultado.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredOrganismOptions.map(opt => (
+                          <CommandItem
+                            key={opt}
+                            value={opt}
+                            onSelect={() => toggleOrganism(opt)}
+                            className="gap-2"
+                          >
+                            <Checkbox checked={organisms.includes(opt)} className="pointer-events-none" />
+                            <span className="truncate">{opt}</span>
+                          </CommandItem>
+                        ))}
+                        <CommandItem
+                          value="__outros__"
+                          onSelect={() => setOrganismCustom(v => !v)}
+                          className="gap-2 border-t mt-1 pt-2"
+                        >
+                          <Checkbox checked={organismCustom} className="pointer-events-none" />
+                          <span>Outros (descrever)</span>
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {(organisms.length > 0 || organismCustom) && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {organisms.map(o => (
+                    <Badge key={o} variant="secondary" className="gap-1 pr-1">
+                      <span className="truncate max-w-[260px]">{o}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleOrganism(o)}
+                        className="ml-1 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                        aria-label={`Remover ${o}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  {organismCustom && (
+                    <Badge variant="secondary" className="gap-1 pr-1">
+                      <span>Outros</span>
+                      <button
+                        type="button"
+                        onClick={() => { setOrganismCustom(false); setOrganismCustomText(""); }}
+                        className="ml-1 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                        aria-label="Remover Outros"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                </div>
+              )}
+
               {organismCustom && (
                 <Input
                   className="mt-2"
-                  placeholder="Descreva o microrganismo"
-                  value={organism}
-                  onChange={e => setOrganism(e.target.value)}
+                  placeholder="Descreva o(s) microrganismo(s) — separe múltiplos por vírgula"
+                  value={organismCustomText}
+                  onChange={e => setOrganismCustomText(e.target.value)}
                 />
               )}
             </div>
