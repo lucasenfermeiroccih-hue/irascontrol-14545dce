@@ -103,6 +103,7 @@ export const MICROORGANISMS: string[] = [
   "Staphylococcus aureus",
   "Staphylococcus epidermidis",
   "Staphylococcus haemolyticus",
+  "Staphylococcus hominis",
   "Streptococcus agalactiae",
   "Streptococcus pneumoniae",
   "Streptococcus pyogenes",
