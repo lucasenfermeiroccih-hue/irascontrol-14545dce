@@ -664,7 +664,7 @@ const Reports = () => {
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Filter className="h-4 w-4" /> Filtros
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 items-end">
               {/* Multi-select Microorganismo */}
               <div className="space-y-1 col-span-2 sm:col-span-1">
                 <Label className="text-xs">Microorganismo</Label>
