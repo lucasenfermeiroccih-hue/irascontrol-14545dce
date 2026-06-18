@@ -8,7 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import MultiSelectFilter from "@/components/MultiSelectFilter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
 import {
   BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -17,7 +22,7 @@ import {
 import {
   ArrowLeft, FileText, FileSpreadsheet, Activity, Bug, ShieldAlert,
   TrendingUp, TrendingDown, Award, AlertTriangle, Beaker, Microscope, Clock,
-  Sparkles, Bot, Loader2, Download, RefreshCw,
+  Sparkles, Bot, Loader2, Download, RefreshCw, CalendarIcon, X,
 } from "lucide-react";
 import { useAntibiogramDashboard, type AntibiogramDashRecord } from "@/hooks/useAntibiogramDashboard";
 import { supabase } from "@/integrations/supabase/client";
@@ -1136,6 +1141,8 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
   const [selectedSites, setSelectedSites] = useState<string[]>([]);
   const [selectedAnos, setSelectedAnos] = useState<string[]>([]);
   const [selectedMeses, setSelectedMeses] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const allOrganisms = useMemo(() => [...new Set(data.map(d => d.organism))].sort(), [data]);
   const allAntibiotics = useMemo(() => [...new Set(data.flatMap(d => d.results.map(r => r.antibiotic)))].filter(Boolean).sort(), [data]);
@@ -1159,13 +1166,23 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
 
   // Base filtrada por todos os filtros de contexto
   const dataFiltered = useMemo(() =>
-    data.filter(d =>
-      (selectedSetores.length === 0 || selectedSetores.includes(d.sector)) &&
-      (selectedSites.length === 0 || selectedSites.includes(d.site)) &&
-      (selectedAnos.length === 0 || selectedAnos.includes(d.collectionDate?.substring(0, 4) ?? "")) &&
-      (selectedMeses.length === 0 || selectedMeses.includes(d.collectionDate?.substring(5, 7) ?? ""))
-    ),
-  [data, selectedSetores, selectedSites, selectedAnos, selectedMeses]);
+    data.filter(d => {
+      if (selectedSetores.length > 0 && !selectedSetores.includes(d.sector)) return false;
+      if (selectedSites.length > 0 && !selectedSites.includes(d.site)) return false;
+      if (selectedAnos.length > 0 && !selectedAnos.includes(d.collectionDate?.substring(0, 4) ?? "")) return false;
+      if (selectedMeses.length > 0 && !selectedMeses.includes(d.collectionDate?.substring(5, 7) ?? "")) return false;
+      if (dateFrom || dateTo) {
+        const date = d.collectionDate ? parseISO(d.collectionDate) : null;
+        if (!date) return false;
+        if (dateFrom && date < dateFrom) return false;
+        if (dateTo) {
+          const end = new Date(dateTo); end.setHours(23, 59, 59, 999);
+          if (date > end) return false;
+        }
+      }
+      return true;
+    }),
+  [data, selectedSetores, selectedSites, selectedAnos, selectedMeses, dateFrom, dateTo]);
 
   // Gráfico A: Isolados por microrganismo (com breakdown S/I/R)
   const orgChartData = useMemo(() => {
@@ -1241,6 +1258,43 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
         </CardDescription>
       </CardHeader>
       <CardContent className="p-3 md:p-6 pt-4 space-y-6">
+
+        {/* Filtro de período */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Data início</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 w-[150px] justify-start text-left font-normal text-xs", !dateFrom && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                  {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus locale={ptBR} className="p-3 pointer-events-auto" />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Data fim</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-9 w-[150px] justify-start text-left font-normal text-xs", !dateTo && "text-muted-foreground")}>
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                  {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus locale={ptBR} className="p-3 pointer-events-auto" disabled={dateFrom ? { before: dateFrom } : undefined} />
+              </PopoverContent>
+            </Popover>
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground gap-1" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+              <X className="h-3.5 w-3.5" /> Limpar período
+            </Button>
+          )}
+        </div>
 
         {/* Filtros multi-select */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
