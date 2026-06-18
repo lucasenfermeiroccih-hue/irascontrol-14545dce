@@ -52,6 +52,11 @@ export default function DashboardAntibiogram() {
     sirAntibiotico: useRef<HTMLDivElement>(null),
     tendenciaMensal: useRef<HTMLDivElement>(null),
     fenotipos: useRef<HTMLDivElement>(null),
+    mdrCarbapenemicos: useRef<HTMLDivElement>(null),
+    mdrCefalosporinas: useRef<HTMLDivElement>(null),
+    mdrPolimixina: useRef<HTMLDivElement>(null),
+    mdrAmicacina: useRef<HTMLDivElement>(null),
+    mdrResumo: useRef<HTMLDivElement>(null),
   };
   const [metas, setMetas] = useState<Record<string, number | undefined>>({});
   const setMeta = (k: string, v: number | undefined) => setMetas(prev => ({ ...prev, [k]: v }));
