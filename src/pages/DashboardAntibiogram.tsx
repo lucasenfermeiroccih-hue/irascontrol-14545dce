@@ -1133,10 +1133,12 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
   const [selectedAntibiotics, setSelectedAntibiotics] = useState<string[]>([]);
   const [selectedSIR, setSelectedSIR] = useState<string[]>([]);
   const [selectedSetores, setSelectedSetores] = useState<string[]>([]);
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
 
   const allOrganisms = useMemo(() => [...new Set(data.map(d => d.organism))].sort(), [data]);
   const allAntibiotics = useMemo(() => [...new Set(data.flatMap(d => d.results.map(r => r.antibiotic)))].filter(Boolean).sort(), [data]);
   const allSetores = useMemo(() => [...new Set(data.map(d => d.sector))].filter(Boolean).sort(), [data]);
+  const allSites = useMemo(() => [...new Set(data.map(d => d.site))].filter(Boolean).sort(), [data]);
 
   const sirOptions = [
     { value: "S", label: "Sensível (S)" },
@@ -1144,10 +1146,13 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
     { value: "R", label: "Resistente (R)" },
   ];
 
-  // Base filtrada por setor (usada por ambos os gráficos)
+  // Base filtrada por setor e material biológico (usada por ambos os gráficos)
   const dataFiltered = useMemo(() =>
-    selectedSetores.length > 0 ? data.filter(d => selectedSetores.includes(d.sector)) : data,
-  [data, selectedSetores]);
+    data.filter(d =>
+      (selectedSetores.length === 0 || selectedSetores.includes(d.sector)) &&
+      (selectedSites.length === 0 || selectedSites.includes(d.site))
+    ),
+  [data, selectedSetores, selectedSites]);
 
   // Gráfico A: Isolados por microrganismo (com breakdown S/I/R)
   const orgChartData = useMemo(() => {
@@ -1225,7 +1230,7 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
       <CardContent className="p-3 md:p-6 pt-4 space-y-6">
 
         {/* Filtros multi-select */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="space-y-1">
             <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Setor</label>
             <MultiSelectFilter
@@ -1233,6 +1238,15 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
               selected={selectedSetores}
               onChange={setSelectedSetores}
               options={allSetores.map(s => ({ value: s, label: s }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Material Biológico</label>
+            <MultiSelectFilter
+              label="Material Biológico"
+              selected={selectedSites}
+              onChange={setSelectedSites}
+              options={allSites.map(s => ({ value: s, label: s }))}
             />
           </div>
           <div className="space-y-1">
