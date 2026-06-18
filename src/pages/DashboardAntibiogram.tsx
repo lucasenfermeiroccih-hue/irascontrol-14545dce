@@ -628,6 +628,15 @@ export default function DashboardAntibiogram() {
                 options={organismos.map(o => ({ value: o, label: o }))}
               />
             </div>
+            <div className="space-y-1">
+              <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Antibiótico</label>
+              <MultiSelectFilter
+                label="Antibiótico"
+                selected={filtroAntibiotico}
+                onChange={setFiltroAntibiotico}
+                options={antibioticosDisp.map(a => ({ value: a, label: a }))}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
