@@ -43,6 +43,7 @@ export default function DashboardAntibiogram() {
   const [filtroOrg, setFiltroOrg] = useState<string[]>([]);
   const [filtroMes, setFiltroMes] = useState<string[]>([]);
   const [filtroAno, setFiltroAno] = useState<string[]>([]);
+  const [filtroAntibiotico, setFiltroAntibiotico] = useState<string[]>([]);
 
   // Chart refs + metas
   const chartRefs = {
