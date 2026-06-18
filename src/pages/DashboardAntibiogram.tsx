@@ -1132,9 +1132,11 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
   const [selectedOrgs, setSelectedOrgs] = useState<string[]>([]);
   const [selectedAntibiotics, setSelectedAntibiotics] = useState<string[]>([]);
   const [selectedSIR, setSelectedSIR] = useState<string[]>([]);
+  const [selectedSetores, setSelectedSetores] = useState<string[]>([]);
 
   const allOrganisms = useMemo(() => [...new Set(data.map(d => d.organism))].sort(), [data]);
   const allAntibiotics = useMemo(() => [...new Set(data.flatMap(d => d.results.map(r => r.antibiotic)))].filter(Boolean).sort(), [data]);
+  const allSetores = useMemo(() => [...new Set(data.map(d => d.sector))].filter(Boolean).sort(), [data]);
 
   const sirOptions = [
     { value: "S", label: "Sensível (S)" },
@@ -1142,11 +1144,16 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
     { value: "R", label: "Resistente (R)" },
   ];
 
+  // Base filtrada por setor (usada por ambos os gráficos)
+  const dataFiltered = useMemo(() =>
+    selectedSetores.length > 0 ? data.filter(d => selectedSetores.includes(d.sector)) : data,
+  [data, selectedSetores]);
+
   // Gráfico A: Isolados por microrganismo (com breakdown S/I/R)
   const orgChartData = useMemo(() => {
-    const orgsToShow = selectedOrgs.length > 0 ? selectedOrgs : allOrganisms;
+    const orgsToShow = selectedOrgs.length > 0 ? selectedOrgs : [...new Set(dataFiltered.map(d => d.organism))].sort();
     return orgsToShow.map(org => {
-      const orgRec = data.filter(d => d.organism === org);
+      const orgRec = dataFiltered.filter(d => d.organism === org);
       const results = orgRec.flatMap(d =>
         selectedAntibiotics.length > 0
           ? d.results.filter(r => selectedAntibiotics.includes(r.antibiotic))
@@ -1157,16 +1164,16 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
       const R = results.filter(r => r.sir === "R" && (selectedSIR.length === 0 || selectedSIR.includes("R"))).length;
       return { name: org, isolados: orgRec.length, S, I, R, total: S + I + R };
     }).filter(d => d.isolados > 0).sort((a, b) => b.isolados - a.isolados).slice(0, 15);
-  }, [data, selectedOrgs, allOrganisms, selectedAntibiotics, selectedSIR]);
+  }, [dataFiltered, selectedOrgs, selectedAntibiotics, selectedSIR]);
 
-  // Gráfico B: Sensibilidade por antimicrobiano (filtrado pelos organismos selecionados)
+  // Gráfico B: Sensibilidade por antimicrobiano (filtrado por organismos e setor)
   const antibioticChartData = useMemo(() => {
-    const filteredByOrg = selectedOrgs.length > 0
-      ? data.filter(d => selectedOrgs.includes(d.organism))
-      : data;
+    const base = selectedOrgs.length > 0
+      ? dataFiltered.filter(d => selectedOrgs.includes(d.organism))
+      : dataFiltered;
 
     const map: Record<string, { S: number; I: number; R: number }> = {};
-    filteredByOrg.forEach(d => {
+    base.forEach(d => {
       const results = selectedAntibiotics.length > 0
         ? d.results.filter(r => selectedAntibiotics.includes(r.antibiotic))
         : d.results;
@@ -1183,13 +1190,13 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
       .filter(d => d.total > 0)
       .sort((a, b) => b.total - a.total)
       .slice(0, 20);
-  }, [data, selectedOrgs, selectedAntibiotics, selectedSIR]);
+  }, [dataFiltered, selectedOrgs, selectedAntibiotics, selectedSIR]);
 
   // KPIs
   const totalIsolados = useMemo(() => {
     const orgs = selectedOrgs.length > 0 ? selectedOrgs : allOrganisms;
-    return data.filter(d => orgs.includes(d.organism)).length;
-  }, [data, selectedOrgs, allOrganisms]);
+    return dataFiltered.filter(d => orgs.includes(d.organism)).length;
+  }, [dataFiltered, selectedOrgs, allOrganisms]);
 
   const totalTestes = antibioticChartData.reduce((sum, d) => sum + d.total, 0);
   const totalS = antibioticChartData.reduce((sum, d) => sum + d.S, 0);
@@ -1218,7 +1225,16 @@ function SensibilidadePorOrganismo({ data }: { data: AntibiogramDashRecord[] }) 
       <CardContent className="p-3 md:p-6 pt-4 space-y-6">
 
         {/* Filtros multi-select */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Setor</label>
+            <MultiSelectFilter
+              label="Setor"
+              selected={selectedSetores}
+              onChange={setSelectedSetores}
+              options={allSetores.map(s => ({ value: s, label: s }))}
+            />
+          </div>
           <div className="space-y-1">
             <label className="text-[10px] md:text-xs font-medium text-muted-foreground">Microrganismo</label>
             <MultiSelectFilter
