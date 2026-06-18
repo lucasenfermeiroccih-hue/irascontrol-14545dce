@@ -127,6 +127,10 @@ export function useAntibiogramDashboard() {
         const sectorFromPatient = lab.patient_id ? (patientMap[lab.patient_id]?.sector || "") : "";
         const sector = sectorFromNotes || sectorFromPatient || "Não informado";
 
+        const detectedPhenotypes = detectPhenotypes(organism, results);
+        const mdrFromNotes = /MDR:\s*(sim|true)/i.test(notes);
+        const mdr = mdrFromNotes || detectedPhenotypes.length > 0;
+
         return {
           id: lab.id,
           collectionDate: lab.collection_date,
@@ -136,7 +140,8 @@ export function useAntibiogramDashboard() {
           organism,
           site: lab.sample_type || "Não informado",
           results,
-          detectedPhenotypes: detectPhenotypes(organism, results),
+          detectedPhenotypes,
+          mdr,
           createdAt: lab.created_at,
         };
       });
