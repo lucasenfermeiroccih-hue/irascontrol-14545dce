@@ -133,13 +133,25 @@ export default function AuditInfectionControlNew() {
   const [bed, setBed] = useState("");
   const [auditor, setAuditor] = useState("");
   const [responses, setResponses] = useState<Record<string, ResponseValue>>({});
-  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string[]>>({});
   const [observations, setObservations] = useState<Record<string, string>>({});
 
   const setResponse = (id: string, value: ResponseValue) => setResponses(p => ({ ...p, [id]: value }));
-  const setCustomAnswer = (id: string, label: string) => {
-    setCustomAnswers(p => ({ ...p, [id]: label }));
-    setResponses(p => ({ ...p, [id]: customToResponse(label) }));
+  const toggleCustomAnswer = (id: string, label: string) => {
+    setCustomAnswers(p => {
+      const current = p[id] || [];
+      const isNA = label.toLowerCase().includes("não se aplica");
+      let next: string[];
+      if (current.includes(label)) {
+        next = current.filter(x => x !== label);
+      } else if (isNA) {
+        next = [label]; // N/A is exclusive
+      } else {
+        next = [...current.filter(x => !x.toLowerCase().includes("não se aplica")), label];
+      }
+      setResponses(rp => ({ ...rp, [id]: customToResponse(next) }));
+      return { ...p, [id]: next };
+    });
   };
   const setObs = (k: string, v: string) => setObservations(p => ({ ...p, [k]: v }));
 
