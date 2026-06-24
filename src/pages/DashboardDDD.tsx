@@ -27,7 +27,6 @@ export default function DashboardDDD() {
   const { data: allData, loading: dataLoading } = useDDDDashboard();
   const isEmpty = allData.length === 0;
 
-  const [filtroDia, setFiltroDia] = useState<string[]>([]);
   const [filtroMes, setFiltroMes] = useState<string[]>([]);
   const [filtroAno, setFiltroAno] = useState<string[]>([]);
   const [filtroUnidade, setFiltroUnidade] = useState<string[]>([]);
@@ -192,7 +191,6 @@ export default function DashboardDDD() {
             <CardContent className="pt-4 pb-4">
               <div className="flex flex-wrap items-end gap-4">
                 <DashboardFilters
-                  dia={filtroDia} setDia={setFiltroDia}
                   mes={filtroMes} setMes={setFiltroMes}
                   ano={filtroAno} setAno={setFiltroAno}
                   setor={filtroUnidade} setSetor={setFiltroUnidade}
@@ -215,7 +213,6 @@ export default function DashboardDDD() {
                   size="sm"
                   className="h-9 gap-2 self-end"
                   onClick={() => {
-                    setFiltroDia([]);
                     setFiltroMes([]);
                     setFiltroAno([]);
                     setFiltroUnidade([]);

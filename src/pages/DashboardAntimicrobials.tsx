@@ -32,6 +32,11 @@ const SETORES = [
   "Alojamento Conjunto",
 ];
 
+const MES_NOMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
 const statusOptions = ["Em uso", "Desescalonado", "Suspenso", "Concluído"];
 const routeOptions = ["EV", "VO", "IM", "SC"];
 
@@ -84,16 +89,32 @@ export default function DashboardAntimicrobials() {
     load();
   }, [hospitalId, ctxLoading]);
 
-  const activePrescriptions = prescriptions.filter(p => p.is_active);
+  const filtered = useMemo(() => prescriptions.filter(p => {
+    if (mes.length > 0 || ano.length > 0 || dia.length > 0) {
+      const dateStr: string | undefined = p.start_date;
+      if (!dateStr) return false;
+      const y = dateStr.substring(0, 4);
+      const mi = parseInt(dateStr.substring(5, 7), 10);
+      const di = parseInt(dateStr.substring(8, 10), 10);
+      const mesNome = MES_NOMES[mi - 1];
+      if (ano.length > 0 && !ano.includes(y)) return false;
+      if (mes.length > 0 && !mes.includes(mesNome) && !mes.includes(String(mi))) return false;
+      if (dia.length > 0 && !dia.includes(String(di))) return false;
+    }
+    if (setor.length > 0 && !setor.includes(p.patients?.sector || "Sem setor")) return false;
+    return true;
+  }), [prescriptions, dia, mes, ano, setor]);
+
+  const activePrescriptions = filtered.filter(p => p.is_active);
 
   const monthlyData = useMemo(() => {
     const map: Record<string, number> = {};
-    prescriptions.forEach(p => {
+    filtered.forEach(p => {
       const month = p.start_date?.substring(0, 7) || "N/A";
       map[month] = (map[month] || 0) + 1;
     });
     return Object.entries(map).sort().slice(-6).map(([month, count]) => ({ month, prescriptions: count }));
-  }, [prescriptions]);
+  }, [filtered]);
 
   const openNew = () => { setEditingItem(null); setForm(emptyForm); setDialogOpen(true); };
   const openEdit = (p: any) => {
@@ -200,9 +221,9 @@ export default function DashboardAntimicrobials() {
 
   const kpis = [
     { label: "Prescrições Ativas", value: String(activePrescriptions.length), icon: Pill, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Total Prescrições", value: String(prescriptions.length), icon: Activity, color: "text-info", bg: "bg-info/10" },
-    { label: "Alertas", value: String(prescriptions.filter(p => p.is_active && p.indication).length), icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
-    { label: "Suspensos", value: String(prescriptions.filter(p => !p.is_active).length), icon: TrendingDown, color: "text-success", bg: "bg-success/10" },
+    { label: "Total Prescrições", value: String(filtered.length), icon: Activity, color: "text-info", bg: "bg-info/10" },
+    { label: "Alertas", value: String(filtered.filter(p => p.is_active && p.indication).length), icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
+    { label: "Suspensos", value: String(filtered.filter(p => !p.is_active).length), icon: TrendingDown, color: "text-success", bg: "bg-success/10" },
   ];
 
   return (
@@ -219,8 +240,8 @@ export default function DashboardAntimicrobials() {
             exportPdf({
               type: "audits", hospitalId,
               data: {
-                kpis: { avgCompliance: 0, totalAudits: prescriptions.length, nonCompliant: prescriptions.filter(p => !p.is_active).length },
-                audits: prescriptions.map(p => ({
+                kpis: { avgCompliance: 0, totalAudits: filtered.length, nonCompliant: filtered.filter(p => !p.is_active).length },
+                audits: filtered.map(p => ({
                   type: p.drug_name, sector: p.patients?.full_name || "", date: p.start_date?.split("T")[0] || "",
                   compliance: p.is_active ? 100 : 0, compliant: p.is_active ? 1 : 0, total: 1,
                 })),
@@ -229,15 +250,15 @@ export default function DashboardAntimicrobials() {
             });
           }}><Download className="h-4 w-4 mr-1" />PDF</Button>
           <DashboardAIInsights generateInsights={() => [
-            `📊 ${activePrescriptions.length} prescrições ativas de ${prescriptions.length} totais.`,
-            `💊 ${prescriptions.filter(p => !p.is_active).length} prescrições suspensas/desescalonadas.`,
+            `📊 ${activePrescriptions.length} prescrições ativas de ${filtered.length} totais.`,
+            `💊 ${filtered.filter(p => !p.is_active).length} prescrições suspensas/desescalonadas.`,
             "💡 Recomendação: revisão de antimicrobianos com >7 dias de uso.",
           ]} />
           <Button onClick={openNew} className="gap-2" size="sm"><Plus className="h-4 w-4" /><span className="hidden sm:inline">Adicionar</span></Button>
         </div>
       </div>
 
-      <DashboardFilters dia={dia} setDia={setDia} mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+      <DashboardFilters dia={dia} setDia={setDia} mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} sectors={Array.from(new Set(prescriptions.map(p => p.patients?.sector || "Sem setor"))).sort()} years={Array.from(new Set(prescriptions.map(p => p.start_date?.substring(0, 4)).filter(Boolean) as string[])).sort().reverse()} />
 
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
@@ -293,7 +314,7 @@ export default function DashboardAntimicrobials() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {prescriptions.slice(0, 20).map((p) => {
+              {filtered.slice(0, 20).map((p) => {
                 const days = daysBetween(p.start_date, p.end_date);
                 return (
                   <TableRow key={p.id}>

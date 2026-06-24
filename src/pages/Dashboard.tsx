@@ -102,6 +102,28 @@ export default function Dashboard() {
     [precautions]
   );
 
+  // Setores e anos derivados dos dados reais (evita lista hardcoded que não casa com os dados)
+  const sectorOptions = useMemo(
+    () => Array.from(new Set([
+      ...patients.map(p => p.sector),
+      ...audits.map(a => a.sector),
+    ].filter(Boolean) as string[])).sort(),
+    [patients, audits]
+  );
+  const yearOptions = useMemo(() => {
+    const ys = new Set<string>();
+    const add = (d?: string | null) => {
+      if (!d) return;
+      const y = new Date(d).getFullYear();
+      if (!isNaN(y)) ys.add(String(y));
+    };
+    patients.forEach(p => add(p.admission_date));
+    audits.forEach(a => add(a.audit_date));
+    cases.forEach(c => add(c.detection_date));
+    labResults.forEach(r => add(r.collection_date));
+    return Array.from(ys).sort().reverse();
+  }, [patients, audits, cases, labResults]);
+
   const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
   const matchDate = (dateStr?: string | null) => {
@@ -302,7 +324,7 @@ export default function Dashboard() {
 
       <Card>
         <CardContent className="pt-4 pb-4 space-y-3">
-          <DashboardFilters mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+          <DashboardFilters mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} sectors={sectorOptions.length ? sectorOptions : undefined} years={yearOptions.length ? yearOptions : undefined} />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end pt-2 border-t">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Leito</label>

@@ -22,11 +22,11 @@ function getStatusBadge(status: string) {
 
 export default function DashboardBundles() {
   const { hospitalId } = useHospitalContext();
-  const { stats, loading } = useAuditDashboard("bundles");
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  const { stats, loading, allAudits } = useAuditDashboard("bundles", { dia, mes, ano, setor });
 
   const handleExportPdf = () => {
     if (!hospitalId) return;
@@ -77,7 +77,7 @@ export default function DashboardBundles() {
         </div>
       </div>
 
-      <DashboardFilters dia={dia} setDia={setDia} mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} />
+      <DashboardFilters dia={dia} setDia={setDia} mes={mes} setMes={setMes} ano={ano} setAno={setAno} setor={setor} setSetor={setSetor} sectors={Array.from(new Set(allAudits.map(a => a.sector || "Sem setor"))).sort()} years={Array.from(new Set(allAudits.map(a => a.audit_date?.substring(0, 4)).filter(Boolean) as string[])).sort().reverse()} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (

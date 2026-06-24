@@ -24,7 +24,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, RadialBarChart, RadialBar, LabelList,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from "recharts";
-import { mesesOptions, setorOptions } from "@/data/indicadores-config";
+import { mesesOptions } from "@/data/indicadores-config";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 
@@ -238,6 +238,12 @@ export default function IndicadoresDashboard() {
 
   const anosDisponiveis = useMemo(() => {
     const s = new Set(records.map((r: any) => String(r.ano_vigilancia)));
+    return Array.from(s).sort();
+  }, [records]);
+
+  // Setores reais presentes nos dados (em vez da lista fixa que pode não casar)
+  const setoresDisponiveis = useMemo(() => {
+    const s = new Set(records.map((r: any) => r.setor).filter(Boolean) as string[]);
     return Array.from(s).sort();
   }, [records]);
 
@@ -603,7 +609,7 @@ export default function IndicadoresDashboard() {
                 label="Setor"
                 selected={setorFiltro}
                 onChange={setSetorFiltro}
-                options={setorOptions.map(s => ({ value: s, label: s }))}
+                options={setoresDisponiveis.map(s => ({ value: s, label: s }))}
               />
             </div>
           </div>
