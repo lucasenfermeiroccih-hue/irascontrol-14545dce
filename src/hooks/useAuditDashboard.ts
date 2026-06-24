@@ -201,7 +201,7 @@ export function useAuditDashboard(auditType: AuditType, filters?: AuditDashboard
       topFailures,
       categoryData,
     };
-  }, [audits, items]);
+  }, [filteredAudits, filteredItems]);
 
   return { audits, items, stats, loading, hospitalId };
 }
