@@ -225,13 +225,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function DashboardHygiene() {
   const { hospitalId } = useHospitalContext();
-  const { stats, items, audits, loading } = useAuditDashboard("hand_hygiene");
-  const navigate = useNavigate();
-
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  const { stats, items, audits, loading, allAudits } = useAuditDashboard("hand_hygiene", { dia, mes, ano, setor });
+  const navigate = useNavigate();
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
 
   const [metaProf, setMetaProf] = useState<number | undefined>(META_OMS);
