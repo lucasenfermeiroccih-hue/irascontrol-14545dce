@@ -242,13 +242,12 @@ function sectorColor(c: number) {
 
 export default function DashboardStructure() {
   const { hospitalId } = useHospitalContext();
-  const { stats, items, audits, loading } = useAudit("cti_infrastructure");
-  const navigate = useNavigate();
-
   const [dia, setDia]     = useState<string[]>([]);
   const [mes, setMes]     = useState<string[]>([]);
   const [ano, setAno]     = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  const { stats, items, audits, loading } = useAudit("cti_infrastructure", { dia, mes, ano, setor });
+  const navigate = useNavigate();
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
   const [ishikawaKey, setIshikawaKey] = useState(0);
 
