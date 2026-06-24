@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import ChartActions from "@/components/ChartActions";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import { useDDDDashboard } from "@/hooks/useDDDDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
@@ -442,6 +443,25 @@ export default function DashboardDDD() {
             all={allData}
             filtroMes={filtroMes.length > 0 ? filtroMes.join(", ") : "Todos"}
             filtroAno={filtroAno.length > 0 ? filtroAno.join(", ") : "Todos"}
+          />
+
+          {/* Infectologist AI Insights */}
+          <InfectologistInsightsPanel
+            domain="DDD"
+            buildContext={() => [
+              `Consumo total de antimicrobianos (DDD): ${totalConsumo}`,
+              `Média por registro: ${avgConsumo} DDD`,
+              `Antimicrobiano mais utilizado: ${atmMaisUsado}`,
+              `Unidade com maior consumo: ${unidadeMaiorConsumo}`,
+              `Total de antimicrobianos distintos monitorados: ${antimicrobianos.length}`,
+              `Total de unidades com dados: ${unidades.length}`,
+              `Registros no período filtrado: ${filtered.length} de ${allData.length} total`,
+              ranking.length > 0
+                ? `Top 5 por consumo: ${ranking.map(r => `${r.name} (${r.value})`).join(", ")}`
+                : "",
+              `Filtros: mês ${filtroMes.length > 0 ? filtroMes.join(",") : "todos"}, ano ${filtroAno.length > 0 ? filtroAno.join(",") : "todos"}, unidade ${filtroUnidade.length > 0 ? filtroUnidade.join(",") : "todas"}`,
+            ].filter(Boolean).join("\n")}
+            contextKey={`${filtered.length}|${totalConsumo}|${atmMaisUsado}`}
           />
 
           {/* Análise Avançada */}

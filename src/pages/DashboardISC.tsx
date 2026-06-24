@@ -30,6 +30,7 @@ import { generateSmartInsights, generateStructuredReport, type SmartInsight } fr
 import { supabase } from "@/integrations/supabase/client";
 import ChartActions from "@/components/ChartActions";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import { ReferenceLine } from "recharts";
 import { FileSpreadsheet } from "lucide-react";
 
@@ -1164,6 +1165,28 @@ export default function DashboardISC() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Infectologist AI Insights */}
+      {hasData && filtered.length > 0 && (
+        <InfectologistInsightsPanel
+          domain="ISC"
+          buildContext={() => [
+            `Total cirurgias: ${kpis.totalCirurgias} | ISC confirmadas: ${kpis.totalISC}`,
+            `Taxa de ISC: ${kpis.taxaISC.toFixed(2)}% (meta: ≤2%)`,
+            `Taxa de resposta pós-alta: ${kpis.taxaResposta.toFixed(1)}%`,
+            `Reinternações: ${kpis.totalReinternacoes}`,
+            `Contatos: telefônico ${kpis.totalContatos}, ambulatório ${kpis.totalRetAmb}, WhatsApp ${kpis.totalRetWpp}`,
+            clinicaStats.length > 0
+              ? `Clínicas (taxa ISC): ${[...clinicaStats].sort((a,b) => b.taxaISC - a.taxaISC).slice(0,4).map(c => `${c.name} ${c.taxaISC.toFixed(1)}%`).join(", ")}`
+              : "",
+            lineData.length > 0
+              ? `Evolução mensal (últimos períodos): ${lineData.slice(-4).map(d => `${d.name}: ${d.taxa}%`).join(", ")}`
+              : "",
+            `Filtros aplicados: mês ${mesFiltro.length > 0 ? mesFiltro.join(",") : "todos"}, setor ${setorFiltro.length > 0 ? setorFiltro.join(",") : "todos"}`,
+          ].filter(Boolean).join("\n")}
+          contextKey={`${filtered.length}|${kpis.taxaISC.toFixed(2)}|${kpis.totalISC}`}
+        />
       )}
 
       {/* Analysis Tabs */}

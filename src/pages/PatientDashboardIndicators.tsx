@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ChartActions from "@/components/ChartActions";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import { ReferenceLine } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -765,6 +766,29 @@ const PatientDashboardIndicators = () => {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Infectologist AI Insights */}
+      {patients.length > 0 && (
+        <InfectologistInsightsPanel
+          domain="Indicadores Operacionais"
+          buildContext={() => [
+            `Total de internações: ${indicators.totalAdmitted}`,
+            `Óbitos: ${indicators.deaths} | Altas: ${indicators.discharges}`,
+            `Total paciente-dia: ${indicators.totalPatientDays}`,
+            `Dispositivos invasivos — CVC: ${indicators.cvcDays} dias, VM: ${indicators.vmDays} dias, SVD: ${indicators.svuDays} dias`,
+            `Antibióticos utilizados: ${indicators.abCount}`,
+            `Extubações bem-sucedidas: ${indicators.extubations}`,
+            indicators.topAntibiotics.length > 0
+              ? `Antibióticos mais usados: ${indicators.topAntibiotics.slice(0,3).map((a: any) => `${a.name} (${a.value}x)`).join(", ")}`
+              : "",
+            indicators.topOrganisms.length > 0
+              ? `Microrganismos isolados: ${indicators.topOrganisms.slice(0,3).map((o: any) => `${o.name} (${o.value}x)`).join(", ")}`
+              : "",
+            `Filtros: unidade ${unit.length > 0 ? unit.join(",") : "todas"}, mês ${month.length > 0 ? month.join(",") : "todos"}, ano ${year.length > 0 ? year.join(",") : "todos"}`,
+          ].filter(Boolean).join("\n")}
+          contextKey={`${indicators.totalAdmitted}|${indicators.deaths}|${unit.join(",")}|${month.join(",")}|${year.join(",")}`}
+        />
       )}
 
       {/* Analysis Tabs */}

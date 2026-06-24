@@ -28,6 +28,7 @@ import { useAntibiogramDashboard, type AntibiogramDashRecord } from "@/hooks/use
 import { supabase } from "@/integrations/supabase/client";
 import MicrobiologicalReport, { type ReportSummary } from "@/components/MicrobiologicalReport";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -1076,6 +1077,25 @@ export default function DashboardAntibiogram() {
             hospitalName={directExportData.hospitalName}
           />
         </div>
+      )}
+
+      {/* Infectologist AI Insights */}
+      {filtered.length > 0 && (
+        <InfectologistInsightsPanel
+          domain="Resistência Antimicrobiana"
+          buildContext={() => [
+            `Total de exames/culturas: ${totalExams} | Total de testes SIR: ${totalTests}`,
+            `Taxa de resistência: ${resistanceRate}% (meta: ≤25%)`,
+            `Taxa de sensibilidade: ${sensitivityRate}% (meta: ≥70%)`,
+            `Fenótipos críticos detectados: ${phenotypeCount} (${phenotypeRate}% dos exames) — meta: ≤5`,
+            `Microrganismos mais frequentes: ${orgCounts.slice(0,4).map(o => `${o.name} (${o.value})`).join(", ")}`,
+            sectorData.length > 0
+              ? `Setores com mais isolados: ${sectorData.slice(0,3).map(s => `${s.name} (${s.value})`).join(", ")}`
+              : "",
+            `Filtros: setor ${filtroSetor.length > 0 ? filtroSetor.join(",") : "todos"}, organismo ${filtroOrg.length > 0 ? filtroOrg.join(",") : "todos"}, ano ${filtroAno.length > 0 ? filtroAno.join(",") : "todos"}`,
+          ].filter(Boolean).join("\n")}
+          contextKey={`${filtered.length}|${resistanceRate}|${phenotypeCount}`}
+        />
       )}
 
       {/* Analysis Tabs */}

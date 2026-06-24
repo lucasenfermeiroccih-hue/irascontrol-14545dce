@@ -9,6 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import DashboardAIInsights from "@/components/DashboardAIInsights";
 import ChartActions from "@/components/ChartActions";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
@@ -527,6 +528,25 @@ export default function HygieneConsumptionDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Infectologist AI Insights */}
+          <InfectologistInsightsPanel
+            domain="Higiene das Mãos"
+            buildContext={() => [
+              `Taxa de adesão geral: ${taxaGeral}% (meta: ≥${OKR_TAXA_META}%)`,
+              `Status OKR adesão: ${okrTaxaStatus === "on_track" ? "No Alvo" : okrTaxaStatus === "at_risk" ? "Em Risco" : "Fora da Meta"}`,
+              `Consumo total: ${(totalAlcool + totalSabonete).toLocaleString("pt-BR")} ML (álcool: ${totalAlcool.toLocaleString("pt-BR")} ML, sabonete: ${totalSabonete.toLocaleString("pt-BR")} ML)`,
+              `Consumo por paciente-dia: ${consumoPD} ML/PD (meta: ≤${OKR_CONSUMO_META} ML/PD)`,
+              `Observações com HM: ${totalCom} | Sem HM: ${totalSem}`,
+              `Formulários avaliados: ${totalFormularios} (meta: ≥${OKR_FORMS_META})`,
+              `Setor com menor adesão: ${piorSetor}`,
+              `Filtro setor: ${setor} | Filtro período: ${periodo}`,
+              comparativoSetores.length > 0
+                ? `Setores monitorados: ${comparativoSetores.map(s => `${s.setor} (${s.adesao}%)`).join(", ")}`
+                : "Sem dados por setor disponíveis",
+            ].join("\n")}
+            contextKey={`${setor}|${periodo}|${totalFormularios}|${totalCom}`}
+          />
 
           {/* Analysis Tabs */}
           <DashboardAnalysisTabs config={analysisConfig} />

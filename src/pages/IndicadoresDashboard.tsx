@@ -10,6 +10,7 @@ import DashboardAIInsights from "@/components/DashboardAIInsights";
 import SmartInsightsPanel from "@/components/SmartInsightsPanel";
 import ChartActions from "@/components/ChartActions";
 import DashboardAnalysisTabs, { AnalysisConfig } from "@/components/DashboardAnalysisTabs";
+import InfectologistInsightsPanel from "@/components/InfectologistInsightsPanel";
 import YearComparisonChart from "@/components/YearComparisonChart";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -1151,6 +1152,26 @@ export default function IndicadoresDashboard() {
         pageTitle="Dashboard de Indicadores Epidemiológicos"
         contextKey={insightsKey}
       />
+
+      {/* Infectologist AI Insights */}
+      {filtered.length > 0 && (
+        <InfectologistInsightsPanel
+          domain="Infecção Hospitalar"
+          buildContext={() => [
+            `Taxa de infecção hospitalar: ${taxaInfeccao.toFixed(2)}‰ (por 1.000 pac-dia)`,
+            `Taxa de letalidade por infecção: ${taxaLetalidade.toFixed(2)}%`,
+            `Taxa de infecção por CVC: ${taxaInfCVC.toFixed(2)}‰`,
+            `Taxa de infecção por VM (PAV): ${taxaInfVM.toFixed(2)}‰`,
+            `Taxa de infecção por SVD: ${taxaInfSVD.toFixed(2)}‰`,
+            `Infecções hospitais notificadas: ${agg.numInfeccoes} | Óbitos por infecção: ${agg.numObitosInfeccao}`,
+            `Paciente-dia total: ${agg.numPacienteDiaTotal} | Admissões: ${agg.numAdmissoes}`,
+            `Utilização CVC: ${agg.utilizacaoCVC} dias | VM: ${agg.utilizacaoVM} dias | SVD: ${agg.utilizacaoSVD} dias`,
+            `Antibióticos utilizados: ${agg.numAntibioticosUtilizados}`,
+            `Filtros: setor ${setorFiltro.length > 0 ? setorFiltro.join(",") : "todos"}, ano ${anoFiltro.length > 0 ? anoFiltro.join(",") : "todos"}`,
+          ].join("\n")}
+          contextKey={insightsKey}
+        />
+      )}
 
       {/* Analysis Tabs */}
       <DashboardAnalysisTabs config={{
