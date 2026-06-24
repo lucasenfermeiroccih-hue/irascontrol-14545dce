@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ArrowLeft, Save, FileText, Activity, Loader2 } from "lucide-react";
 import { useAuditSave } from "@/hooks/useAuditSave";
+import { AuditPhotoUpload } from "@/components/AuditPhotoUpload";
 import AuditHistory from "@/components/AuditHistory";
 import { EmployeeCombobox } from "@/components/EmployeeCombobox";
 
@@ -58,6 +59,7 @@ export default function AuditDispenserNew() {
   const [responses, setResponses] = useState<Record<string, ItemStatus>>({});
   const [justifications, setJustifications] = useState<Record<string, string>>({});
   const [generalObservations, setGeneralObservations] = useState("");
+  const [photos, setPhotos] = useState<File[]>([]);
 
   const stats = useMemo(() => {
     const answered = checklistItems.filter(i => responses[i.id] && responses[i.id] !== "");
@@ -91,11 +93,12 @@ export default function AuditDispenserNew() {
       sector,
       observations: `Funcionário: ${auditorName} | Dispenser: ${dispenserId} | Tipo: ${preparationType}\n${generalObservations}`,
       items,
+      photos,
     });
     setSaving(false);
     if (ok) {
       setAuditorName(""); setSector(""); setDispenserId(""); setPreparationType("");
-      setResponses({}); setJustifications({}); setGeneralObservations("");
+      setResponses({}); setJustifications({}); setGeneralObservations(""); setPhotos([]);
       window.scrollTo(0, 0);
     }
   };
@@ -149,6 +152,8 @@ export default function AuditDispenserNew() {
       </Card>
 
       <Card><CardHeader><CardTitle className="text-lg">Observações Gerais</CardTitle></CardHeader><CardContent><Textarea className="min-h-[100px]" value={generalObservations} onChange={e => setGeneralObservations(e.target.value)} /></CardContent></Card>
+
+      <AuditPhotoUpload photos={photos} onChange={setPhotos} disabled={saving} />
 
       <Separator />
       <div className="flex justify-end gap-3">

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ArrowLeft, ClipboardCheck, Loader2 } from "lucide-react";
 import { useAuditSave } from "@/hooks/useAuditSave";
+import { AuditPhotoUpload } from "@/components/AuditPhotoUpload";
 import AuditHistory from "@/components/AuditHistory";
 import { EmployeeCombobox } from "@/components/EmployeeCombobox";
 
@@ -31,6 +32,7 @@ export default function AuditHandHygieneNew() {
     employeeName: "", auditDate: "", unit: "", professionalCategory: "",
     hasAdornments: false, fiveMomentsSituation: "", performedHygiene: true, techniqueUsed: "",
   });
+  const [photos, setPhotos] = useState<File[]>([]);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [field]: e.target.value }));
@@ -54,10 +56,12 @@ export default function AuditHandHygieneNew() {
       sector: form.unit,
       observations: `Funcionário: ${form.employeeName} | Profissional: ${form.professionalCategory}`,
       items,
+      photos,
     });
     setSaving(false);
     if (ok) {
       setForm({ employeeName: "", auditDate: "", unit: "", professionalCategory: "", hasAdornments: false, fiveMomentsSituation: "", performedHygiene: true, techniqueUsed: "" });
+      setPhotos([]);
     }
   };
 
@@ -132,6 +136,8 @@ export default function AuditHandHygieneNew() {
           </div>
         </CardContent>
       </Card>
+
+      <AuditPhotoUpload photos={photos} onChange={setPhotos} disabled={saving} />
 
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>

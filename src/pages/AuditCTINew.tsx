@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { ArrowLeft, Save, FileText, Loader2 } from "lucide-react";
 import { useAuditSave } from "@/hooks/useAuditSave";
+import { AuditPhotoUpload } from "@/components/AuditPhotoUpload";
 import AuditHistory from "@/components/AuditHistory";
 
 const sectors = ["UTI 1 Adulto", "UTI 2 Adulto", "UTI 3 Adulto", "UTI Neonatal", "UTI Pediátrica", "UPO", "Trauma Clínico", "Clínica Médica", "Clínica Cirúrgica Contêiner", "Pediatria", "Pediatria (Enfermaria)", "Alojamento Conjunto"];
@@ -70,6 +71,7 @@ export default function AuditCTINew() {
   const [responsible, setResponsible] = useState("");
   const [responses, setResponses] = useState<Record<string, ResponseValue>>({});
   const [observations, setObservations] = useState<Record<string, string>>({});
+  const [photos, setPhotos] = useState<File[]>([]);
 
   const stats = useMemo(() => {
     const answered = allItems.filter(i => responses[i.id] && responses[i.id] !== "");
@@ -110,11 +112,12 @@ export default function AuditCTINew() {
       sector,
       observations: `Responsável: ${responsible} | Turno: ${shift}`,
       items,
+      photos,
     });
     setSaving(false);
     if (ok) {
       setAuditDate(""); setShift(""); setSector(""); setResponsible("");
-      setResponses({}); setObservations({});
+      setResponses({}); setObservations({}); setPhotos([]);
       window.scrollTo(0, 0);
     }
   };
@@ -182,6 +185,8 @@ export default function AuditCTINew() {
           <div className="text-center p-3 rounded-lg border"><p className="text-xs text-muted-foreground">Progresso</p><p className="text-xl md:text-2xl font-bold">{stats.answered}/{allItems.length}</p></div>
         </CardContent>
       </Card>
+
+      <AuditPhotoUpload photos={photos} onChange={setPhotos} disabled={saving} />
 
       <Separator />
       <div className="flex justify-end gap-3">

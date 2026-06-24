@@ -21,6 +21,7 @@ export function useAuditSave() {
     sector: string;
     observations?: string;
     items: AuditItem[];
+    photos?: File[];
   }) => {
     if (!hospitalId || !userId) {
       toast.error("Contexto de hospital não encontrado. Faça login novamente.");
@@ -69,6 +70,25 @@ export function useAuditSave() {
       if (itemsError) {
         toast.error("Erro ao salvar itens: " + itemsError.message);
         return false;
+      }
+    }
+
+    if (opts.photos && opts.photos.length > 0) {
+      const paths: string[] = [];
+      for (let i = 0; i < opts.photos.length; i++) {
+        const file = opts.photos[i];
+        const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `${hospitalId}/${audit.id}/${Date.now()}-${i}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("audit-photos")
+          .upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
+        if (!upErr) paths.push(path);
+      }
+      if (paths.length > 0) {
+        await supabase.from("audits").update({ photo_urls: paths }).eq("id", audit.id);
+      }
+      if (paths.length < opts.photos.length) {
+        toast.warning(`Auditoria salva, mas ${opts.photos.length - paths.length} foto(s) não foram enviadas.`);
       }
     }
 

@@ -616,6 +616,7 @@ export type Database = {
           hospital_id: string
           id: string
           observations: string | null
+          photo_urls: string[]
           sector: string | null
           total_items: number
           updated_at: string
@@ -630,6 +631,7 @@ export type Database = {
           hospital_id: string
           id?: string
           observations?: string | null
+          photo_urls?: string[]
           sector?: string | null
           total_items?: number
           updated_at?: string
@@ -644,6 +646,7 @@ export type Database = {
           hospital_id?: string
           id?: string
           observations?: string | null
+          photo_urls?: string[]
           sector?: string | null
           total_items?: number
           updated_at?: string

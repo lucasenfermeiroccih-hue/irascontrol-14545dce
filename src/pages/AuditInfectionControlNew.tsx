@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { ArrowLeft, Save, BarChart3, Loader2, ChevronsUpDown } from "lucide-react";
 import { useAuditSave } from "@/hooks/useAuditSave";
+import { AuditPhotoUpload } from "@/components/AuditPhotoUpload";
 import AuditHistory from "@/components/AuditHistory";
 import { EmployeeCombobox } from "@/components/EmployeeCombobox";
 
@@ -135,6 +136,7 @@ export default function AuditInfectionControlNew() {
   const [responses, setResponses] = useState<Record<string, ResponseValue>>({});
   const [customAnswers, setCustomAnswers] = useState<Record<string, string[]>>({});
   const [observations, setObservations] = useState<Record<string, string>>({});
+  const [photos, setPhotos] = useState<File[]>([]);
 
   const setResponse = (id: string, value: ResponseValue) => setResponses(p => ({ ...p, [id]: value }));
   const toggleCustomAnswer = (id: string, label: string) => {
@@ -201,11 +203,12 @@ export default function AuditInfectionControlNew() {
       sector,
       observations: `Auditor: ${auditor} | Turno: ${shift} | Leito: ${bed}\n${obsText}`,
       items,
+      photos,
     });
     setSaving(false);
     if (ok) {
       setAuditDate(""); setSector(""); setShift(""); setBed(""); setAuditor("");
-      setResponses({}); setCustomAnswers({}); setObservations({});
+      setResponses({}); setCustomAnswers({}); setObservations({}); setPhotos([]);
       window.scrollTo(0, 0);
     }
   };
@@ -325,6 +328,8 @@ export default function AuditInfectionControlNew() {
           </div>
         </CardContent>
       </Card>
+
+      <AuditPhotoUpload photos={photos} onChange={setPhotos} disabled={saving} />
 
       <Separator />
       <div className="flex justify-end gap-3">

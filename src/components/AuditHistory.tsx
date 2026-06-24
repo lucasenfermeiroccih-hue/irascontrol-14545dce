@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   History, Pencil, Trash2, FileDown, Filter, X, Loader2, ChevronDown, ChevronUp, Mail,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,7 @@ interface AuditRecord {
   total_items: number;
   observations: string | null;
   created_at: string;
+  photo_urls?: string[] | null;
   items?: AuditItem[];
 }
 
@@ -72,6 +74,8 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
   const [deleting, setDeleting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [signedPhotos, setSignedPhotos] = useState<Record<string, string[]>>({});
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Email-to-manager state
@@ -160,6 +164,16 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
     if (open) fetchRecords();
   }, [open, fetchRecords]);
 
+  const ensurePhotos = async (rec: AuditRecord) => {
+    if (!rec.photo_urls || rec.photo_urls.length === 0) return;
+    if (signedPhotos[rec.id]) return;
+    const { data } = await supabase.storage
+      .from("audit-photos")
+      .createSignedUrls(rec.photo_urls, 3600);
+    const urls = (data || []).map(d => d.signedUrl).filter(Boolean) as string[];
+    setSignedPhotos(prev => ({ ...prev, [rec.id]: urls }));
+  };
+
   const toggleExpand = async (id: string) => {
     if (expandedId === id) {
       setExpandedId(null);
@@ -177,13 +191,18 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
         setRecords(prev => prev.map(r => r.id === id ? { ...r, items: data as AuditItem[] } : r));
       }
     }
+    if (rec) ensurePhotos(rec);
     setExpandedId(id);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
-    // Delete items first, then audit
+    // Remove photos from storage, then items, then audit
+    const recToDelete = records.find(r => r.id === deleteId);
+    if (recToDelete?.photo_urls && recToDelete.photo_urls.length > 0) {
+      await supabase.storage.from("audit-photos").remove(recToDelete.photo_urls);
+    }
     await supabase.from("audit_items").delete().eq("audit_id", deleteId);
     const { error } = await supabase.from("audits").delete().eq("id", deleteId);
     if (error) {
@@ -341,6 +360,11 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
                       >
                         {record.compliance_rate?.toFixed(1) ?? "—"}%
                       </Badge>
+                      {record.photo_urls && record.photo_urls.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] gap-1">
+                          <ImageIcon className="h-3 w-3" />{record.photo_urls.length}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       {onEdit && (
@@ -401,6 +425,30 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
                           <span>{item.question}</span>
                         </div>
                       ))}
+
+                      {record.photo_urls && record.photo_urls.length > 0 && (
+                        <div className="pt-2">
+                          <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                            <ImageIcon className="h-3.5 w-3.5" /> Fotos ({record.photo_urls.length})
+                          </p>
+                          {signedPhotos[record.id] ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                              {signedPhotos[record.id].map((url, i) => (
+                                <button
+                                  key={url}
+                                  type="button"
+                                  onClick={() => setLightbox(url)}
+                                  className="aspect-square rounded-md overflow-hidden border bg-muted hover:opacity-80 transition-opacity"
+                                >
+                                  <img src={url} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -459,6 +507,18 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
               Enviar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo lightbox */}
+      <Dialog open={!!lightbox} onOpenChange={(o) => { if (!o) setLightbox(null); }}>
+        <DialogContent className="max-w-3xl p-2">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Foto da auditoria</DialogTitle>
+          </DialogHeader>
+          {lightbox && (
+            <img src={lightbox} alt="Foto da auditoria" className="w-full max-h-[80vh] object-contain rounded" />
+          )}
         </DialogContent>
       </Dialog>
 
