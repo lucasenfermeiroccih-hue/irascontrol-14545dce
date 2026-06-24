@@ -276,13 +276,12 @@ function sectorColor(compliance: number) {
 
 export default function DashboardInfectionControl() {
   const { hospitalId } = useHospitalContext();
-  const { stats, loading, audits, items } = useAuditDashboard("infection_control");
-  const navigate = useNavigate();
-
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
   const [setor, setSetor] = useState<string[]>([]);
+  const { stats, loading, audits, items, allAudits } = useAuditDashboard("infection_control", { dia, mes, ano, setor });
+  const navigate = useNavigate();
   const [selectedIshikawa, setSelectedIshikawa] = useState<string | null>(null);
   const [ishikawaKey, setIshikawaKey] = useState(0);
 
