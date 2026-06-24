@@ -82,6 +82,7 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
   const [emailRecord, setEmailRecord] = useState<AuditRecord | null>(null);
   const [managerName, setManagerName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
+  const [managerCc, setManagerCc] = useState("");
   const [sending, setSending] = useState(false);
 
   const ensureItems = async (id: string): Promise<AuditItem[]> => {
@@ -100,15 +101,23 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
   const openEmail = async (record: AuditRecord) => {
     setManagerName("");
     setManagerEmail("");
+    setManagerCc("");
     const items = await ensureItems(record.id);
     setEmailRecord({ ...record, items });
   };
 
   const handleSendEmail = async () => {
     if (!emailRecord) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const email = managerEmail.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!emailRegex.test(email)) {
       toast.error("Informe um e-mail válido para o gestor do setor.");
+      return;
+    }
+    const ccEmails = managerCc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    const invalidCc = ccEmails.filter(e => !emailRegex.test(e));
+    if (invalidCc.length > 0) {
+      toast.error("E-mail(s) de cópia inválido(s): " + invalidCc.join(", "));
       return;
     }
     setSending(true);
@@ -117,6 +126,7 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
       const { data, error } = await supabase.functions.invoke("send-audit-email", {
         body: {
           to: email,
+          cc: ccEmails,
           managerName: managerName.trim(),
           audit: {
             typeLabel: AUDIT_TYPE_LABEL[auditType] || auditType,
@@ -235,6 +245,42 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
       pdf.setFontSize(9);
       pdf.text(`Data: ${record.audit_date} | Setor: ${record.sector || "—"}`, margin, margin + 11);
       pdf.addImage(imgData, "PNG", margin, margin + 16, usableW, Math.min(imgH, 260));
+
+      // Anexar fotos da auditoria (baixadas via storage para evitar CORS no canvas)
+      if (record.photo_urls && record.photo_urls.length > 0) {
+        const pageH = pdf.internal.pageSize.getHeight();
+        const maxImgH = 110; // mm por foto
+        pdf.addPage();
+        let y = margin;
+        pdf.setFontSize(12);
+        pdf.text("Fotos da auditoria", margin, y);
+        y += 8;
+        for (let i = 0; i < record.photo_urls.length; i++) {
+          try {
+            const { data: blob } = await supabase.storage.from("audit-photos").download(record.photo_urls[i]);
+            if (!blob) continue;
+            const dataUrl: string = await new Promise((res, rej) => {
+              const fr = new FileReader();
+              fr.onload = () => res(fr.result as string);
+              fr.onerror = rej;
+              fr.readAsDataURL(blob);
+            });
+            const props = pdf.getImageProperties(dataUrl);
+            const fmt = (props.fileType || "JPEG").toUpperCase();
+            let w = usableW;
+            let h = w * (props.height / props.width);
+            if (h > maxImgH) { h = maxImgH; w = h * (props.width / props.height); }
+            if (y + h > pageH - margin) { pdf.addPage(); y = margin; }
+            pdf.addImage(dataUrl, fmt, margin, y, w, h);
+            pdf.setFontSize(8);
+            pdf.text(`Foto ${i + 1}`, margin, y + h + 3);
+            y += h + 8;
+          } catch {
+            // pula foto que não pôde ser carregada/convertida
+          }
+        }
+      }
+
       pdf.save(`auditoria-${auditType}-${record.audit_date}.pdf`);
       toast.success("PDF exportado!");
     } catch {
@@ -428,7 +474,7 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
                       ))}
 
                       {record.photo_urls && record.photo_urls.length > 0 && (
-                        <div className="pt-2">
+                        <div className="pt-2" data-html2canvas-ignore="true">
                           <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
                             <ImageIcon className="h-3.5 w-3.5" /> Fotos ({record.photo_urls.length})
                           </p>
@@ -496,6 +542,16 @@ export default function AuditHistory({ auditType, onEdit }: AuditHistoryProps) {
                 onChange={(e) => setManagerEmail(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !sending) handleSendEmail(); }}
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="manager-cc" className="text-xs">Com cópia (CC) — opcional</Label>
+              <Input
+                id="manager-cc"
+                placeholder="email1@hospital.com, email2@hospital.com"
+                value={managerCc}
+                onChange={(e) => setManagerCc(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">Separe vários e-mails por vírgula, ponto e vírgula ou espaço.</p>
             </div>
             <p className="text-[11px] text-muted-foreground">
               O e-mail incluirá o corpo padrão do SCIH e a auditoria completa (itens, conformidade e não conformidades).

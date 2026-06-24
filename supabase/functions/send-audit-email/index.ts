@@ -145,8 +145,8 @@ serve(async (req) => {
       });
     }
 
-    const { to, managerName, audit, photoPaths } = await req.json() as {
-      to?: string; managerName?: string; audit?: AuditPayload; photoPaths?: string[];
+    const { to, cc, managerName, audit, photoPaths } = await req.json() as {
+      to?: string; cc?: string[]; managerName?: string; audit?: AuditPayload; photoPaths?: string[];
     };
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -160,6 +160,11 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Destinatários em cópia (CC) — apenas e-mails válidos e distintos do destinatário
+    const ccList = Array.isArray(cc)
+      ? [...new Set(cc.filter((e) => typeof e === "string" && emailRegex.test(e.trim()) && e.trim() !== to).map((e) => e.trim()))]
+      : [];
 
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
@@ -176,7 +181,7 @@ serve(async (req) => {
       const MAX_PHOTOS = 12;
       const MAX_TOTAL_BYTES = 30 * 1024 * 1024; // limite de segurança (~30MB)
       let totalBytes = 0;
-      const thumbs: string[] = [];
+      const cells: string[] = [];
       for (let i = 0; i < photoPaths.length && attachments.length < MAX_PHOTOS; i++) {
         const path = photoPaths[i];
         if (typeof path !== "string") continue;
@@ -189,10 +194,20 @@ serve(async (req) => {
         const ext = (path.split(".").pop() || "jpg").toLowerCase();
         const cid = `audit-photo-${i}`;
         attachments.push({ filename: `foto-${i + 1}.${ext}`, content: encodeBase64(bytes), content_id: cid });
-        thumbs.push(`<img src="cid:${cid}" alt="Foto ${i + 1}" style="width:150px;height:150px;object-fit:cover;border:1px solid #e5e7eb;border-radius:8px;margin:0 6px 6px 0;display:inline-block;vertical-align:top;" />`);
+        cells.push(`<td width="50%" style="padding:6px;text-align:center;vertical-align:top;">
+          <img src="cid:${cid}" alt="Foto ${i + 1}" style="width:100%;max-width:300px;height:auto;border:1px solid #e5e7eb;border-radius:8px;" />
+          <div style="font-size:11px;color:#6b7280;margin-top:4px;">Foto ${i + 1}</div>
+        </td>`);
       }
-      if (thumbs.length > 0) {
-        photosHtml = `<div style="margin:16px 0;"><h4 style="margin:0 0 8px;font-size:14px;color:#111827;">Fotos da auditoria (${thumbs.length})</h4><div>${thumbs.join("")}</div></div>`;
+      if (cells.length > 0) {
+        let rows = "";
+        for (let r = 0; r < cells.length; r += 2) {
+          rows += `<tr>${cells[r]}${cells[r + 1] || '<td width="50%"></td>'}</tr>`;
+        }
+        photosHtml = `<div style="margin:20px 0;">
+          <h4 style="margin:0 0 10px;font-size:14px;color:#111827;border-bottom:1px solid #e5e7eb;padding-bottom:6px;">Fotos da auditoria (${cells.length})</h4>
+          <table role="presentation" width="100%" style="border-collapse:collapse;"><tbody>${rows}</tbody></table>
+        </div>`;
       }
     }
 
@@ -207,6 +222,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from, to: [to], subject, html,
+        ...(ccList.length > 0 ? { cc: ccList } : {}),
         ...(attachments.length > 0 ? { attachments } : {}),
       }),
     });
