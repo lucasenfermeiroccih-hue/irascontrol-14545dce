@@ -24,7 +24,19 @@ export interface AuditItemRow {
   observation: string | null;
 }
 
-export function useAuditDashboard(auditType: AuditType) {
+const MES_NOMES = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
+];
+
+export interface AuditDashboardFilters {
+  dia?: string[];
+  mes?: string[];
+  ano?: string[];
+  setor?: string[];
+}
+
+export function useAuditDashboard(auditType: AuditType, filters?: AuditDashboardFilters) {
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const [audits, setAudits] = useState<AuditRow[]>([]);
   const [items, setItems] = useState<AuditItemRow[]>([]);
