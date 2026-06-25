@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AreaChart, Area, ComposedChart, Bar, Line,
@@ -199,6 +200,10 @@ export default function DashboardPrecautions() {
   const [managerEmail, setManagerEmail] = useState("");
   const [managerCc, setManagerCc] = useState("");
   const [emailSending, setEmailSending] = useState(false);
+  // Multi-select for bulk email
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -523,6 +528,51 @@ export default function DashboardPrecautions() {
     setManagerCc("");
     setEmailRecord(record);
   };
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function toggleSelectAll() {
+    if (selectedIds.size === filteredRecords.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredRecords.map(r => r.id)));
+  }
+  async function handleBulkSendEmail() {
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const to = managerEmail.trim();
+    if (!emailRx.test(to)) { toast.error("Informe um e-mail válido."); return; }
+    const cc = managerCc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    if (cc.some(e => !emailRx.test(e))) { toast.error("E-mail de cópia (CC) inválido."); return; }
+    const selected = filteredRecords.filter(r => selectedIds.has(r.id));
+    setEmailSending(true);
+    let ok = 0;
+    for (let i = 0; i < selected.length; i++) {
+      const r = selected[i];
+      setBulkProgress(`Enviando ${i + 1} de ${selected.length}…`);
+      try {
+        const { error } = await supabase.functions.invoke("send-audit-email", {
+          body: {
+            to, cc, managerName: managerName.trim(),
+            audit: {
+              typeLabel: "Precauções e Isolamento",
+              date: r.audit_date, sector: r.sector,
+              complianceRate: r.compliance_rate,
+              compliantItems: r.compliant_items,
+              totalItems: r.total_items,
+              observations: r.observations,
+              items: r.items.map(it => ({ question: it.question, status: it.status, observation: it.observation ?? null })),
+            },
+            photoPaths: [], photoCaptions: [],
+          },
+        });
+        if (!error) ok++;
+      } catch {}
+    }
+    setEmailSending(false);
+    setBulkProgress("");
+    setBulkEmailOpen(false);
+    setSelectedIds(new Set());
+    toast.success(`${ok} de ${selected.length} auditoria(s) enviada(s) com sucesso!`);
+  }
 
   const handleSendEmail = async () => {
     if (!emailRecord) return;
@@ -1030,9 +1080,24 @@ export default function DashboardPrecautions() {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-md bg-primary/10 border border-primary/20">
+                  <span className="text-sm font-medium text-primary">{selectedIds.size} auditoria(s) selecionada(s)</span>
+                  <Button size="sm" className="ml-auto gap-1.5" onClick={() => { setManagerName(""); setManagerEmail(""); setManagerCc(""); setBulkEmailOpen(true); }}>
+                    <Mail className="h-3.5 w-3.5" /> Enviar selecionadas
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Limpar seleção</Button>
+                </div>
+              )}
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={filteredRecords.length > 0 && selectedIds.size === filteredRecords.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead>Unidade</TableHead>
                     <TableHead>Conformidade</TableHead>
@@ -1044,6 +1109,9 @@ export default function DashboardPrecautions() {
                     const rs = getRecordStats(r);
                     return (
                       <TableRow key={r.id}>
+                        <TableCell>
+                          <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelect(r.id)} />
+                        </TableCell>
                         <TableCell className="text-sm">{r.audit_date}</TableCell>
                         <TableCell className="text-sm">{r.sector || "—"}</TableCell>
                         <TableCell>
@@ -1313,6 +1381,49 @@ export default function DashboardPrecautions() {
             <Button onClick={handleSendEmail} disabled={emailSending} className="gap-2">
               {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
               Enviar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── BULK EMAIL DIALOG ──────────────────────────────── */}
+      <Dialog open={bulkEmailOpen} onOpenChange={o => { if (!o && !emailSending) setBulkEmailOpen(false); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              Enviar {selectedIds.size} auditoria(s) por e-mail
+            </DialogTitle>
+            <DialogDescription>
+              Cada auditoria selecionada será enviada individualmente para o mesmo destinatário.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome do gestor do setor</Label>
+              <Input placeholder="Ex.: Maria Silva" value={managerName} onChange={e => setManagerName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">E-mail do gestor *</Label>
+              <Input type="email" placeholder="gestor@hospital.com.br" value={managerEmail} onChange={e => setManagerEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Com cópia (CC) — opcional</Label>
+              <Input placeholder="email1@hospital.com, email2@hospital.com" value={managerCc} onChange={e => setManagerCc(e.target.value)} />
+              <p className="text-[10px] text-muted-foreground">Separe vários e-mails por vírgula, ponto e vírgula ou espaço.</p>
+            </div>
+            {emailSending && bulkProgress && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {bulkProgress}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkEmailOpen(false)} disabled={emailSending}>Cancelar</Button>
+            <Button onClick={handleBulkSendEmail} disabled={emailSending} className="gap-2">
+              {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Enviar {selectedIds.size} auditoria(s)
             </Button>
           </DialogFooter>
         </DialogContent>

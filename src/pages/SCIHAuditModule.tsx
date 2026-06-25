@@ -306,6 +306,9 @@ export default function SCIHAuditModule() {
   const [viewAuditRecord, setViewAuditRecord] = useState<AuditRecord | null>(null);
   const [deleteAuditId, setDeleteAuditId] = useState<string | null>(null);
   const [pdfExportingId, setPdfExportingId] = useState<string | null>(null);
+  const [selectedHistIds, setSelectedHistIds] = useState<Set<string>>(new Set());
+  const [scihBulkEmailOpen, setScihBulkEmailOpen] = useState(false);
+  const [scihBulkProgress, setScihBulkProgress] = useState("");
   const [editAuditRecord, setEditAuditRecord] = useState<AuditRecord | null>(null);
   const [editAuditForm, setEditAuditForm] = useState<{ auditor: string; respSetor: string; tipo: string }>({ auditor: "", respSetor: "", tipo: "" });
   const [scihEmailRecord, setScihEmailRecord] = useState<AuditRecord | null>(null);
@@ -738,6 +741,53 @@ Regras:
     }
   }
 
+  function toggleHistSelect(id: string) {
+    setSelectedHistIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function toggleHistSelectAll() {
+    if (selectedHistIds.size === appData.historico.length) setSelectedHistIds(new Set());
+    else setSelectedHistIds(new Set(appData.historico.map(h => h.id!)));
+  }
+  async function handleBulkSendScihEmail() {
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const to = scihEmailTo.trim();
+    if (!emailRx.test(to)) { alert("Informe um e-mail válido."); return; }
+    const cc = scihEmailCc.split(/[,;\s]+/).map((s: string) => s.trim()).filter(Boolean);
+    if (cc.some((e: string) => !emailRx.test(e))) { alert("E-mail de cópia inválido."); return; }
+    const selected = appData.historico.filter(h => selectedHistIds.has(h.id!));
+    setScihEmailSending(true);
+    let ok = 0;
+    for (let i = 0; i < selected.length; i++) {
+      const h = selected[i];
+      setScihBulkProgress(`Enviando ${i + 1} de ${selected.length}…`);
+      const ncsAudit = appData.ncs.filter(n => n.data === h.data && n.setor === h.setorNome);
+      const parts = h.data.split("/");
+      const isoDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : h.data;
+      try {
+        const { error } = await supabase.functions.invoke("send-audit-email", {
+          body: {
+            to, cc, managerName: scihEmailName.trim(),
+            audit: {
+              typeLabel: "SCIH/CCIH — " + h.setorNome,
+              date: isoDate, sector: h.setorNome,
+              complianceRate: h.pct, compliantItems: h.total,
+              totalItems: h.total + h.ncCount,
+              observations: h.relatorioIA || "",
+              items: ncsAudit.map(nc => ({ question: nc.pergunta, status: "non_compliant", observation: nc.obs || "" })),
+            },
+            photoPaths: [], photoCaptions: [],
+          },
+        });
+        if (!error) ok++;
+      } catch {}
+    }
+    setScihEmailSending(false);
+    setScihBulkProgress("");
+    setScihBulkEmailOpen(false);
+    setSelectedHistIds(new Set());
+    alert(`${ok} de ${selected.length} auditoria(s) enviada(s) com sucesso!`);
+  }
+
   function handleDeleteAudit(id: string) {
     setAppData(prev => ({ ...prev, historico: prev.historico.filter(h => h.id !== id) }));
     setDeleteAuditId(null);
@@ -982,14 +1032,36 @@ Regras:
 
         {auditTab === "historico" && (
           <div className="scih-card" style={{ padding:0 }}>
+            {selectedHistIds.size > 0 && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"rgba(13,148,136,.1)", borderBottom:"1px solid var(--border)" }}>
+                <span style={{ fontSize:13, color:"var(--text)", fontWeight:500 }}>{selectedHistIds.size} auditoria(s) selecionada(s)</span>
+                <button className="scih-btn scih-btn-teal" style={{ fontSize:12, padding:"4px 12px", marginLeft:"auto" }}
+                  onClick={() => { setScihEmailTo(""); setScihEmailCc(""); setScihEmailName(""); setScihBulkEmailOpen(true); }}>
+                  ✉️ Enviar selecionadas
+                </button>
+                <button className="scih-btn scih-btn-outline" style={{ fontSize:12, padding:"4px 10px" }} onClick={() => setSelectedHistIds(new Set())}>Limpar</button>
+              </div>
+            )}
             <table className="scih-table">
               <thead>
-                <tr><th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th><th>Ações</th></tr>
+                <tr>
+                  <th style={{ width:36 }}>
+                    <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)" }}
+                      checked={appData.historico.length > 0 && selectedHistIds.size === appData.historico.length}
+                      onChange={toggleHistSelectAll} />
+                  </th>
+                  <th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th><th>Ações</th>
+                </tr>
               </thead>
               <tbody>
-                {appData.historico.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
+                {appData.historico.length === 0 && <tr><td colSpan={9} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
                 {appData.historico.map(h => (
                   <tr key={h.id}>
+                    <td>
+                      <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)" }}
+                        checked={selectedHistIds.has(h.id!)}
+                        onChange={() => toggleHistSelect(h.id!)} />
+                    </td>
                     <td>{h.setorNome}</td>
                     <td style={{ fontSize:12, color:"var(--text2)" }}>{h.data}</td>
                     <td style={{ fontSize:12 }}>{h.tipo}</td>
@@ -1710,6 +1782,41 @@ Regras:
             <div style={{ marginTop:14, display:"flex", gap:8 }}>
               <button className="scih-btn scih-btn-teal" onClick={() => { exportAuditPdf(viewAuditRecord); setViewAuditRecord(null); }}>📄 PDF</button>
               <button className="scih-btn scih-btn-outline" onClick={() => { openEmailDialog(viewAuditRecord); setViewAuditRecord(null); }}>✉️ E-mail</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal e-mail em massa */}
+      {scihBulkEmailOpen && (
+        <div className="scih-modal-overlay" onClick={() => { if (!scihEmailSending) setScihBulkEmailOpen(false); }}>
+          <div className="scih-modal" style={{ width:480, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div className="scih-modal-title">✉️ Enviar {selectedHistIds.size} auditoria(s) por E-mail</div>
+            <p style={{ fontSize:12, color:"var(--text2)", marginBottom:16 }}>
+              Cada auditoria selecionada será enviada individualmente para o mesmo destinatário.
+            </p>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <label className="scih-label">Nome do Gestor (opcional)</label>
+                <input className="scih-input" placeholder="Ex: Dr. João Silva" value={scihEmailName} onChange={e => setScihEmailName(e.target.value)} />
+              </div>
+              <div>
+                <label className="scih-label">E-mail do Gestor *</label>
+                <input className="scih-input" type="email" placeholder="gestor@hospital.com.br" value={scihEmailTo} onChange={e => setScihEmailTo(e.target.value)} />
+              </div>
+              <div>
+                <label className="scih-label">Cópia (CC) — separe por vírgula</label>
+                <input className="scih-input" type="text" placeholder="outro@hospital.com.br" value={scihEmailCc} onChange={e => setScihEmailCc(e.target.value)} />
+              </div>
+              {scihEmailSending && scihBulkProgress && (
+                <div style={{ fontSize:12, color:"var(--teal)" }}>⏳ {scihBulkProgress}</div>
+              )}
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:20, justifyContent:"flex-end" }}>
+              <button className="scih-btn scih-btn-outline" onClick={() => setScihBulkEmailOpen(false)} disabled={scihEmailSending}>Cancelar</button>
+              <button className="scih-btn scih-btn-teal" onClick={handleBulkSendScihEmail} disabled={scihEmailSending}>
+                {scihEmailSending ? `⏳ ${scihBulkProgress || "Enviando…"}` : `✉️ Enviar ${selectedHistIds.size} auditoria(s)`}
+              </button>
             </div>
           </div>
         </div>
