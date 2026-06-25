@@ -11,11 +11,12 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Loader2, HardHat } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, HardHat, Download } from "lucide-react";
 import { useAuditSave } from "@/hooks/useAuditSave";
 import { AuditPhotoUpload, type PhotoItem } from "@/components/AuditPhotoUpload";
 import AuditHistory from "@/components/AuditHistory";
 import { EmployeeCombobox } from "@/components/EmployeeCombobox";
+import { buildConstructionAuthorizationPdf } from "@/lib/constructionAuthorizationPdf";
 
 const sectors = ["UTI 1 Adulto", "UTI 2 Adulto", "UTI 3 Adulto", "UTI Neonatal", "UTI Pediátrica", "UPO", "Trauma Clínico", "Clínica Médica", "Clínica Cirúrgica Contêiner", "Pediatria", "Pediatria (Enfermaria)", "Alojamento Conjunto", "Centro Cirúrgico", "Ambulatório", "Setores administrativos", "Área externa"];
 
@@ -75,6 +76,23 @@ export default function AuditConstructionNew() {
   const [responses, setResponses] = useState<Record<string, ResponseValue>>({});
   const [observations, setObservations] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [downloadingAuth, setDownloadingAuth] = useState(false);
+
+  const handleDownloadAuthorization = async () => {
+    setDownloadingAuth(true);
+    try {
+      const pdf = await buildConstructionAuthorizationPdf({
+        localizacao: sector || project || "",
+        coordenador: reviewer || "",
+      });
+      pdf.save("autorizacao-obras-reformas-hgni.pdf");
+      toast.success("Autorização de obras baixada!");
+    } catch {
+      toast.error("Erro ao gerar a autorização em PDF.");
+    } finally {
+      setDownloadingAuth(false);
+    }
+  };
 
   const stats = useMemo(() => {
     const answered = allItems.filter(i => responses[i.id] && responses[i.id] !== "");
@@ -135,7 +153,20 @@ export default function AuditConstructionNew() {
             <div><h1 className="text-xl md:text-2xl font-bold">Verificação de Obras/Reformas</h1><p className="text-muted-foreground text-sm">Controle de infecção em obras e reformas hospitalares</p></div>
           </div>
         </div>
-        <AuditHistory auditType="construction_renovation" />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleDownloadAuthorization}
+            disabled={downloadingAuth}
+            title="Baixar Autorização do Controle de Infecções para Obras/Reformas (PDF)"
+          >
+            {downloadingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span className="hidden sm:inline">Autorização (PDF)</span>
+          </Button>
+          <AuditHistory auditType="construction_renovation" />
+        </div>
       </div>
 
       <Card>
