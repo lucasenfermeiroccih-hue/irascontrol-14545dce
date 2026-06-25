@@ -301,6 +301,19 @@ export default function SCIHAuditModule() {
 
   const [swotSetor, setSwotSetor] = useState("scih");
 
+  // ── email / pdf / crud state ──
+  const [postAuditRecord, setPostAuditRecord] = useState<AuditRecord | null>(null);
+  const [viewAuditRecord, setViewAuditRecord] = useState<AuditRecord | null>(null);
+  const [deleteAuditId, setDeleteAuditId] = useState<string | null>(null);
+  const [pdfExportingId, setPdfExportingId] = useState<string | null>(null);
+  const [editAuditRecord, setEditAuditRecord] = useState<AuditRecord | null>(null);
+  const [editAuditForm, setEditAuditForm] = useState<{ auditor: string; respSetor: string; tipo: string }>({ auditor: "", respSetor: "", tipo: "" });
+  const [scihEmailRecord, setScihEmailRecord] = useState<AuditRecord | null>(null);
+  const [scihEmailTo, setScihEmailTo] = useState("");
+  const [scihEmailCc, setScihEmailCc] = useState("");
+  const [scihEmailName, setScihEmailName] = useState("");
+  const [scihEmailSending, setScihEmailSending] = useState(false);
+
   // ─── COMPUTED ─────────────────────────────────────────────────────────────
 
   function computeChecklist() {
@@ -505,6 +518,7 @@ Regras:
     }));
     setCkStates({});
     setActivePage("auditorias");
+    setPostAuditRecord(record);
     // Gerar plano IA automaticamente
     generateAuditPlanWithAI(record.id!, newNCs, setor.nome, pct, ckTipo, ckAuditor);
   }
@@ -554,6 +568,193 @@ Regras:
   }
   function closeNc(id: string) {
     setAppData(prev => ({ ...prev, ncs: prev.ncs.map(n => n.id === id ? { ...n, status: "Encerrado" } : n) }));
+  }
+
+  async function fetchLogosForPdf(): Promise<{ hospitalLogo: { dataUrl: string; w: number; h: number } | null; scihLogos: Array<{ dataUrl: string; w: number; h: number }> }> {
+    if (!hospitalId) return { hospitalLogo: null, scihLogos: [] };
+    try {
+      const { data: logos } = await supabase.from("hospital_logos" as never).select("logo_type, storage_path, display_order").eq("hospital_id", hospitalId).order("display_order");
+      if (!(logos as any[])?.length) return { hospitalLogo: null, scihLogos: [] };
+      const getUrl = (path: string) => supabase.storage.from("hospital-logos").getPublicUrl(path).data.publicUrl;
+      const loadLogo = async (url: string) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          const dataUrl: string = await new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result as string); fr.onerror = reject; fr.readAsDataURL(blob); });
+          const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => { const img = new Image(); img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = reject; img.src = dataUrl; });
+          return { dataUrl, w: dims.w, h: dims.h };
+        } catch { return null; }
+      };
+      const ls = logos as any[];
+      const hospitalRec = ls.find(l => l.logo_type === "hospital");
+      const scihRecs = ls.filter(l => l.logo_type === "scih");
+      const [hospitalLogo, ...scihResults] = await Promise.all([
+        hospitalRec ? loadLogo(getUrl(hospitalRec.storage_path)) : Promise.resolve(null),
+        ...scihRecs.map((r: any) => loadLogo(getUrl(r.storage_path))),
+      ]);
+      return { hospitalLogo, scihLogos: (scihResults as any[]).filter((l): l is { dataUrl: string; w: number; h: number } => l !== null) };
+    } catch { return { hospitalLogo: null, scihLogos: [] }; }
+  }
+
+  async function exportAuditPdf(record: AuditRecord) {
+    setPdfExportingId(record.id!);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { hospitalLogo, scihLogos } = await fetchLogosForPdf();
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const PW = doc.internal.pageSize.getWidth();
+      const PH = doc.internal.pageSize.getHeight();
+      const MG = 14;
+
+      // Header bar
+      doc.setFillColor(15, 76, 117);
+      doc.rect(0, 0, PW, 42, "F");
+      doc.setFillColor(13, 148, 136);
+      doc.rect(0, 0, PW, 2.5, "F");
+      doc.rect(0, 42, PW, 2.5, "F");
+
+      // Logos
+      let logoX = MG;
+      if (hospitalLogo) {
+        const lh = 14, lw = (hospitalLogo.w / hospitalLogo.h) * lh;
+        doc.addImage(hospitalLogo.dataUrl, "PNG", logoX, 7, lw, lh);
+        logoX += lw + 6;
+      }
+      scihLogos.slice(0, 2).forEach(logo => {
+        const lh = 14, lw = (logo.w / logo.h) * lh;
+        doc.addImage(logo.dataUrl, "PNG", logoX, 7, lw, lh);
+        logoX += lw + 4;
+      });
+
+      // Title
+      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
+      doc.text("Relatório de Auditoria SCIH/CCIH", PW - MG, 14, { align: "right" });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(160, 205, 235);
+      doc.text(`${record.setorNome} · ${record.data}`, PW - MG, 21, { align: "right" });
+      doc.text(`Auditoria ${record.tipo}`, PW - MG, 28, { align: "right" });
+
+      let y = 54;
+      const pct = record.pct;
+      const col: [number,number,number] = pct >= 70 ? [26,158,117] : pct >= 50 ? [212,160,23] : [218,54,51];
+      doc.setFillColor(245,245,245); doc.rect(MG, y, PW - MG * 2, 26, "F");
+      doc.setFillColor(...col); doc.rect(MG, y, 3, 26, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(26); doc.setTextColor(...col);
+      doc.text(`${pct}%`, MG + 10, y + 17);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+      doc.text("Conformidade", MG + 10, y + 23);
+      doc.setFontSize(10); doc.setTextColor(50,50,50);
+      doc.text(`Auditor: ${record.auditor}`, MG + 50, y + 10);
+      doc.text(`Resp. Setor: ${record.respSetor}`, MG + 50, y + 17);
+      doc.text(`Tipo: ${record.tipo}   NCs: ${record.ncCount}`, MG + 50, y + 23);
+      y += 34;
+
+      // NCs
+      const ncsAudit = appData.ncs.filter(n => n.data === record.data && n.setor === record.setorNome);
+      if (ncsAudit.length > 0) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15,76,117);
+        doc.text("Não Conformidades", MG, y);
+        doc.setDrawColor(15,76,117); doc.setLineWidth(0.4); doc.line(MG, y+2, PW-MG, y+2);
+        y += 8;
+        ncsAudit.forEach((nc, i) => {
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.setFillColor(i%2===0?250:244, i%2===0?250:244, i%2===0?250:244);
+          doc.rect(MG, y-4, PW-MG*2, 8, "F");
+          const sevCol: [number,number,number] = nc.sev === "Crítica" ? [218,54,51] : nc.sev === "Alta" ? [212,160,23] : [26,158,117];
+          doc.setFillColor(...sevCol); doc.rect(MG, y-4, 3, 8, "F");
+          doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(40,40,40);
+          const perg = nc.pergunta.length > 72 ? nc.pergunta.slice(0, 72) + "…" : nc.pergunta;
+          doc.text(`${i+1}. ${perg}`, MG+5, y);
+          doc.setTextColor(...sevCol);
+          doc.text(nc.sev, PW-MG, y, { align:"right" });
+          y += 9;
+        });
+      }
+
+      // Relatorio IA
+      if (record.relatorioIA) {
+        if (y > 240) { doc.addPage(); y = 20; }
+        y += 4;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15,76,117);
+        doc.text("Análise & Plano de Ação (IA)", MG, y);
+        doc.setDrawColor(15,76,117); doc.setLineWidth(0.4); doc.line(MG, y+2, PW-MG, y+2);
+        y += 8;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(50,50,50);
+        const lines = doc.splitTextToSize(record.relatorioIA, PW - MG * 2);
+        lines.forEach((line: string) => {
+          if (y > 278) { doc.addPage(); y = 20; }
+          doc.text(line, MG, y); y += 5;
+        });
+      }
+
+      // Footer
+      doc.setFillColor(245,245,245); doc.rect(0, PH-8, PW, 8, "F");
+      doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(130,130,130);
+      doc.text("IRAS Control · SCIH/CCIH · " + new Date().toLocaleString("pt-BR"), MG, PH-2);
+
+      doc.save(`auditoria-scih-${record.setorKey}-${record.data}.pdf`);
+    } finally {
+      setPdfExportingId(null);
+    }
+  }
+
+  function openEmailDialog(record: AuditRecord) {
+    setScihEmailTo(""); setScihEmailCc(""); setScihEmailName("");
+    setScihEmailRecord(record);
+  }
+
+  async function handleSendAuditEmail() {
+    if (!scihEmailRecord) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const email = scihEmailTo.trim();
+    if (!emailRegex.test(email)) { alert("Informe um e-mail válido."); return; }
+    const ccEmails = scihEmailCc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    setScihEmailSending(true);
+    try {
+      const ncsAudit = appData.ncs.filter(n => n.data === scihEmailRecord.data && n.setor === scihEmailRecord.setorNome);
+      const { error } = await supabase.functions.invoke("send-audit-email", {
+        body: {
+          to: email, cc: ccEmails, managerName: scihEmailName.trim(),
+          audit: {
+            typeLabel: "SCIH/CCIH — " + scihEmailRecord.setorNome,
+            date: scihEmailRecord.data,
+            sector: scihEmailRecord.setorNome,
+            complianceRate: scihEmailRecord.pct,
+            compliantItems: scihEmailRecord.total,
+            totalItems: scihEmailRecord.total + scihEmailRecord.ncCount,
+            observations: scihEmailRecord.relatorioIA || "",
+            items: ncsAudit.map(nc => ({ question: nc.pergunta, status: "non_compliant", observation: nc.obs || "" })),
+          },
+          photoPaths: [], photoCaptions: [],
+        },
+      });
+      if (error) throw error;
+      alert(`Auditoria enviada para ${email}.`);
+      setScihEmailRecord(null);
+    } catch (e: any) {
+      alert("Erro ao enviar: " + (e?.message || "erro desconhecido"));
+    } finally {
+      setScihEmailSending(false);
+    }
+  }
+
+  function handleDeleteAudit(id: string) {
+    setAppData(prev => ({ ...prev, historico: prev.historico.filter(h => h.id !== id) }));
+    setDeleteAuditId(null);
+  }
+
+  function openEditAudit(record: AuditRecord) {
+    setEditAuditForm({ auditor: record.auditor, respSetor: record.respSetor, tipo: record.tipo });
+    setEditAuditRecord(record);
+  }
+
+  function saveEditAudit() {
+    if (!editAuditRecord) return;
+    setAppData(prev => ({
+      ...prev,
+      historico: prev.historico.map(h => h.id === editAuditRecord.id ? { ...h, ...editAuditForm } : h),
+    }));
+    setEditAuditRecord(null);
   }
 
   // ─── RENDER PAGES ─────────────────────────────────────────────────────────
@@ -783,10 +984,10 @@ Regras:
           <div className="scih-card" style={{ padding:0 }}>
             <table className="scih-table">
               <thead>
-                <tr><th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th></tr>
+                <tr><th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th><th>Ações</th></tr>
               </thead>
               <tbody>
-                {appData.historico.length === 0 && <tr><td colSpan={7} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
+                {appData.historico.length === 0 && <tr><td colSpan={8} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
                 {appData.historico.map(h => (
                   <tr key={h.id}>
                     <td>{h.setorNome}</td>
@@ -810,6 +1011,15 @@ Regras:
                           🤖 Gerar IA
                         </button>
                       )}
+                    </td>
+                    <td>
+                      <div style={{ display:"flex", gap:4 }}>
+                        <button title="Visualizar" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} onClick={() => setViewAuditRecord(h)}>👁️</button>
+                        <button title="Exportar PDF" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} disabled={pdfExportingId === h.id} onClick={() => exportAuditPdf(h)}>{pdfExportingId === h.id ? "⏳" : "📄"}</button>
+                        <button title="Enviar por e-mail" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} onClick={() => openEmailDialog(h)}>✉️</button>
+                        <button title="Editar" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} onClick={() => openEditAudit(h)}>✏️</button>
+                        <button title="Excluir" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px", color:"var(--red)" }} onClick={() => setDeleteAuditId(h.id!)}>🗑️</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1263,7 +1473,7 @@ Regras:
         <div className="scih-card" style={{ padding:0 }}>
           <table className="scih-table">
             <thead>
-              <tr><th>Setor</th><th>Última Auditoria</th><th>Conformidade</th><th>NCs</th><th>Status</th></tr>
+              <tr><th>Setor</th><th>Última Auditoria</th><th>Conformidade</th><th>NCs</th><th>Status</th><th>Ações</th></tr>
             </thead>
             <tbody>
               {Object.entries(CHECKLISTS_DATA).map(([k,v]) => {
@@ -1283,6 +1493,15 @@ Regras:
                     </td>
                     <td><span className="scih-badge sp-low">{lastAudit?.ncCount ?? 0}</span></td>
                     <td><span className={`scih-badge ${confClass(pct)}`}>{pct>=70?"Adequado":pct>=50?"Atenção":pct>0?"Crítico":"—"}</span></td>
+                    <td>
+                      {lastAudit ? (
+                        <div style={{ display:"flex", gap:4 }}>
+                          <button title="Visualizar" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} onClick={() => setViewAuditRecord(lastAudit)}>👁️</button>
+                          <button title="Exportar PDF" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} disabled={pdfExportingId === lastAudit.id} onClick={() => exportAuditPdf(lastAudit)}>{pdfExportingId === lastAudit.id ? "⏳" : "📄"}</button>
+                          <button title="Enviar por e-mail" className="scih-btn scih-btn-outline" style={{ fontSize:14, padding:"3px 7px" }} onClick={() => openEmailDialog(lastAudit)}>✉️</button>
+                        </div>
+                      ) : <span style={{ color:"var(--text3)", fontSize:11 }}>—</span>}
+                    </td>
                   </tr>
                 );
               })}
@@ -1423,6 +1642,150 @@ Regras:
           <div>
             <div style={{ fontSize:13, fontWeight:600, color:"var(--teal)" }}>Gerando plano com IA...</div>
             <div style={{ fontSize:11, color:"var(--text2)" }}>5W2H · Kanban · Matriz de Risco · Relatório</div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pós-auditoria */}
+      {postAuditRecord && (
+        <div className="scih-modal-overlay" onClick={() => setPostAuditRecord(null)}>
+          <div className="scih-modal" style={{ width:480, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div className="scih-modal-title">✅ Auditoria Finalizada</div>
+            <div style={{ background:"rgba(26,158,117,.1)", border:"1px solid rgba(26,158,117,.3)", borderRadius:8, padding:"12px 16px", marginBottom:16 }}>
+              <div style={{ fontSize:13, color:"var(--teal)", fontWeight:600 }}>{postAuditRecord.setorNome} — {postAuditRecord.data}</div>
+              <div style={{ fontSize:12, color:"var(--text2)", marginTop:4 }}>Conformidade: <strong style={{ color: barColor(postAuditRecord.pct) }}>{postAuditRecord.pct}%</strong> · NCs: {postAuditRecord.ncCount}</div>
+            </div>
+            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>O que deseja fazer agora?</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <button className="scih-btn scih-btn-teal" style={{ justifyContent:"flex-start", gap:10 }}
+                onClick={() => { openEmailDialog(postAuditRecord); setPostAuditRecord(null); }}>
+                ✉️ Enviar por e-mail para o gestor
+              </button>
+              <button className="scih-btn scih-btn-outline" style={{ justifyContent:"flex-start", gap:10 }}
+                onClick={() => { exportAuditPdf(postAuditRecord); setPostAuditRecord(null); }}>
+                📄 Exportar em PDF
+              </button>
+              <button className="scih-btn scih-btn-outline" style={{ justifyContent:"flex-start", gap:10 }}
+                onClick={() => setPostAuditRecord(null)}>
+                📋 Ver histórico de auditorias
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal visualizar auditoria */}
+      {viewAuditRecord && (
+        <div className="scih-modal-overlay" onClick={() => setViewAuditRecord(null)}>
+          <div className="scih-modal" style={{ width:600, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <div className="scih-modal-title" style={{ margin:0 }}>👁️ Detalhes da Auditoria</div>
+              <button className="scih-btn scih-btn-outline" style={{ fontSize:11 }} onClick={() => setViewAuditRecord(null)}>✕ Fechar</button>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+              {[
+                { lbl:"Setor", val: viewAuditRecord.setorNome },
+                { lbl:"Data", val: viewAuditRecord.data },
+                { lbl:"Tipo", val: viewAuditRecord.tipo },
+                { lbl:"Auditor", val: viewAuditRecord.auditor },
+                { lbl:"Resp. Setor", val: viewAuditRecord.respSetor },
+                { lbl:"NCs", val: String(viewAuditRecord.ncCount) },
+              ].map(f => (
+                <div key={f.lbl} style={{ background:"var(--bg3)", borderRadius:6, padding:"10px 14px" }}>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginBottom:3 }}>{f.lbl}</div>
+                  <div style={{ fontSize:13, color:"var(--text)", fontWeight:600 }}>{f.val || "—"}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign:"center", marginBottom:16 }}>
+              <span style={{ fontSize:36, fontWeight:700, color: barColor(viewAuditRecord.pct) }}>{viewAuditRecord.pct}%</span>
+              <div style={{ fontSize:12, color:"var(--text2)" }}>Conformidade</div>
+            </div>
+            {viewAuditRecord.relatorioIA && (
+              <div style={{ background:"var(--bg3)", borderRadius:8, padding:14 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:8 }}>🤖 Análise IA</div>
+                <pre style={{ fontFamily:"inherit", fontSize:11.5, color:"var(--text2)", whiteSpace:"pre-wrap", lineHeight:1.6, margin:0 }}>{viewAuditRecord.relatorioIA}</pre>
+              </div>
+            )}
+            <div style={{ marginTop:14, display:"flex", gap:8 }}>
+              <button className="scih-btn scih-btn-teal" onClick={() => { exportAuditPdf(viewAuditRecord); setViewAuditRecord(null); }}>📄 PDF</button>
+              <button className="scih-btn scih-btn-outline" onClick={() => { openEmailDialog(viewAuditRecord); setViewAuditRecord(null); }}>✉️ E-mail</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal e-mail auditoria */}
+      {scihEmailRecord && (
+        <div className="scih-modal-overlay" onClick={() => !scihEmailSending && setScihEmailRecord(null)}>
+          <div className="scih-modal" style={{ width:480, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div className="scih-modal-title">✉️ Enviar Auditoria por E-mail</div>
+            <p style={{ fontSize:12, color:"var(--text2)", marginBottom:16 }}>
+              Auditoria: <strong>{scihEmailRecord.setorNome}</strong> — {scihEmailRecord.data} ({scihEmailRecord.pct}% conformidade)
+            </p>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <label className="scih-label">Nome do Gestor (opcional)</label>
+                <input className="scih-input" placeholder="Ex: Dr. João Silva" value={scihEmailName} onChange={e => setScihEmailName(e.target.value)} />
+              </div>
+              <div>
+                <label className="scih-label">E-mail do Gestor *</label>
+                <input className="scih-input" type="email" placeholder="gestor@hospital.com.br" value={scihEmailTo} onChange={e => setScihEmailTo(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !scihEmailSending) handleSendAuditEmail(); }} />
+              </div>
+              <div>
+                <label className="scih-label">Cópia (CC) — separe por vírgula</label>
+                <input className="scih-input" type="text" placeholder="outro@hospital.com.br" value={scihEmailCc} onChange={e => setScihEmailCc(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:20, justifyContent:"flex-end" }}>
+              <button className="scih-btn scih-btn-outline" onClick={() => setScihEmailRecord(null)} disabled={scihEmailSending}>Cancelar</button>
+              <button className="scih-btn scih-btn-teal" onClick={handleSendAuditEmail} disabled={scihEmailSending}>
+                {scihEmailSending ? "Enviando…" : "✉️ Enviar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar auditoria */}
+      {editAuditRecord && (
+        <div className="scih-modal-overlay" onClick={() => setEditAuditRecord(null)}>
+          <div className="scih-modal" style={{ width:420, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div className="scih-modal-title">✏️ Editar Auditoria</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:20 }}>
+              <div>
+                <label className="scih-label">Auditor</label>
+                <input className="scih-input" value={editAuditForm.auditor} onChange={e => setEditAuditForm(p => ({ ...p, auditor: e.target.value }))} />
+              </div>
+              <div>
+                <label className="scih-label">Responsável do Setor</label>
+                <input className="scih-input" value={editAuditForm.respSetor} onChange={e => setEditAuditForm(p => ({ ...p, respSetor: e.target.value }))} />
+              </div>
+              <div>
+                <label className="scih-label">Tipo</label>
+                <select className="scih-select" style={{ width:"100%" }} value={editAuditForm.tipo} onChange={e => setEditAuditForm(p => ({ ...p, tipo: e.target.value }))}>
+                  {["Programada","Não Programada","Reinspeção"].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <button className="scih-btn scih-btn-outline" onClick={() => setEditAuditRecord(null)}>Cancelar</button>
+              <button className="scih-btn scih-btn-teal" onClick={saveEditAudit}>Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar exclusão */}
+      {deleteAuditId && (
+        <div className="scih-modal-overlay" onClick={() => setDeleteAuditId(null)}>
+          <div className="scih-modal" style={{ width:380, maxWidth:"95vw" }} onClick={e => e.stopPropagation()}>
+            <div className="scih-modal-title" style={{ color:"var(--red)" }}>🗑️ Excluir Auditoria</div>
+            <p style={{ fontSize:13, color:"var(--text2)", marginBottom:20 }}>Tem certeza que deseja excluir esta auditoria? Esta ação não pode ser desfeita.</p>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <button className="scih-btn scih-btn-outline" onClick={() => setDeleteAuditId(null)}>Cancelar</button>
+              <button className="scih-btn scih-btn-red" onClick={() => handleDeleteAudit(deleteAuditId)}>Excluir</button>
+            </div>
           </div>
         </div>
       )}

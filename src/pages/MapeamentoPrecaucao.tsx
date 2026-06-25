@@ -190,7 +190,35 @@ export default function MapeamentoPrecaucao() {
   const setMeta = (key: string, value: number | undefined) =>
     setMetas(prev => ({ ...prev, [key]: value }));
 
-  const exportComprehensivePDF = (pats: Patient[]) => {
+  async function fetchLogosForPdf(): Promise<{ hospitalLogo: { dataUrl: string; w: number; h: number } | null; scihLogos: Array<{ dataUrl: string; w: number; h: number }> }> {
+    if (!hospitalId) return { hospitalLogo: null, scihLogos: [] };
+    try {
+      const { data: logos } = await supabase.from("hospital_logos" as never).select("logo_type, storage_path, display_order").eq("hospital_id", hospitalId).order("display_order");
+      if (!(logos as any[])?.length) return { hospitalLogo: null, scihLogos: [] };
+      const getUrl = (path: string) => supabase.storage.from("hospital-logos").getPublicUrl(path).data.publicUrl;
+      const loadLogo = async (url: string) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          const dataUrl: string = await new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result as string); fr.onerror = reject; fr.readAsDataURL(blob); });
+          const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => { const img = new Image(); img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight }); img.onerror = reject; img.src = dataUrl; });
+          return { dataUrl, w: dims.w, h: dims.h };
+        } catch { return null; }
+      };
+      const ls = logos as any[];
+      const hospitalRec = ls.find(l => l.logo_type === "hospital");
+      const scihRecs = ls.filter(l => l.logo_type === "scih");
+      const [hospitalLogo, ...scihResults] = await Promise.all([
+        hospitalRec ? loadLogo(getUrl(hospitalRec.storage_path)) : Promise.resolve(null),
+        ...scihRecs.map((r: any) => loadLogo(getUrl(r.storage_path))),
+      ]);
+      return { hospitalLogo, scihLogos: (scihResults as any[]).filter((l): l is { dataUrl: string; w: number; h: number } => l !== null) };
+    } catch { return { hospitalLogo: null, scihLogos: [] }; }
+  }
+
+  const exportComprehensivePDF = async (pats: Patient[]) => {
+    const { hospitalLogo, scihLogos } = await fetchLogosForPdf();
     const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4" });
     const PW = pdf.internal.pageSize.getWidth();
     const PH = pdf.internal.pageSize.getHeight();
@@ -376,6 +404,23 @@ export default function MapeamentoPrecaucao() {
     pdf.text("Controle de Infecção Hospitalar · ANVISA", MG, 55);
     pdf.setFontSize(9); pdf.setTextColor(160, 205, 235);
     pdf.text(`Gerado em ${dateStr} às ${timeStr}`, PW - MG, 33, { align: "right" });
+
+    // Hospital/SCIH logos in header (right-aligned, bottom area of NAVY bar)
+    {
+      let lx = PW - MG;
+      const lh = 16;
+      scihLogos.slice(0, 2).reverse().forEach(logo => {
+        const lw = (logo.w / logo.h) * lh;
+        lx -= lw;
+        pdf.addImage(logo.dataUrl, "PNG", lx, 42, lw, lh);
+        lx -= 4;
+      });
+      if (hospitalLogo) {
+        const lw = (hospitalLogo.w / hospitalLogo.h) * lh;
+        lx -= lw;
+        pdf.addImage(hospitalLogo.dataUrl, "PNG", lx, 42, lw, lh);
+      }
+    }
 
     let y = 74;
     y = kpiRow([
