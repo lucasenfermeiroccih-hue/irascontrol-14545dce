@@ -797,10 +797,10 @@ export default function AdminSettings() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmUserAction?.action === "delete"
-                ? `Excluir permanentemente ${confirmUserAction.user.profile?.full_name || "este usuário"}? Esta ação não pode ser desfeita.`
+                ? `Excluir permanentemente ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? Esta ação não pode ser desfeita.`
                 : confirmUserAction?.action === "deactivate"
-                ? `Desativar ${confirmUserAction.user.profile?.full_name || "este usuário"}? O acesso ao sistema será bloqueado.`
-                : `Reativar ${confirmUserAction.user.profile?.full_name || "este usuário"}? O acesso ao sistema será restaurado.`}
+                ? `Desativar ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? O acesso ao sistema será bloqueado.`
+                : `Reativar ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? O acesso ao sistema será restaurado.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
