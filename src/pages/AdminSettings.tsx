@@ -162,7 +162,7 @@ export default function AdminSettings() {
     if (hospital) {
       setHospitalData(hospital);
       const ns = hospital.notification_settings;
-      if (ns) setNotif({ ...DEFAULT_NOTIF, ...ns });
+      if (ns && typeof ns === "object" && !Array.isArray(ns)) setNotif({ ...DEFAULT_NOTIF, ...(ns as any) });
     }
     if (sectorData) setSectors(sectorData);
     setLoading(false);
@@ -335,7 +335,7 @@ export default function AdminSettings() {
   const handleSaveNotif = async () => {
     if (!hospitalId) return;
     setNotifSaving(true);
-    const { error } = await supabase.from("hospitals").update({ notification_settings: notif }).eq("id", hospitalId);
+    const { error } = await supabase.from("hospitals").update({ notification_settings: notif as any }).eq("id", hospitalId);
     setNotifSaving(false);
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Preferências de notificação salvas!");
@@ -797,10 +797,10 @@ export default function AdminSettings() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmUserAction?.action === "delete"
-                ? `Excluir permanentemente ${confirmUserAction.user.profile?.full_name || "este usuário"}? Esta ação não pode ser desfeita.`
+                ? `Excluir permanentemente ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? Esta ação não pode ser desfeita.`
                 : confirmUserAction?.action === "deactivate"
-                ? `Desativar ${confirmUserAction.user.profile?.full_name || "este usuário"}? O acesso ao sistema será bloqueado.`
-                : `Reativar ${confirmUserAction.user.profile?.full_name || "este usuário"}? O acesso ao sistema será restaurado.`}
+                ? `Desativar ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? O acesso ao sistema será bloqueado.`
+                : `Reativar ${confirmUserAction?.user?.profile?.full_name || "este usuário"}? O acesso ao sistema será restaurado.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
