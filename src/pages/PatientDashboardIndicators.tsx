@@ -303,13 +303,28 @@ const PatientDashboardIndicators = () => {
         const patEnd = p.discharge_date ? parseLocalDate(p.discharge_date) : new Date();
         if (!patEnd) return;
 
-        // Monta lista de intervalos em que o dispositivo estava ativo
+        // Monta lista de intervalos em que o dispositivo estava ativo.
+        // Datas com ano < 2000 indicam erro de digitação (ex: "0206-03-19", "1990-07-14"):
+        //   - Inserção com ano inválido → usa data de admissão como início
+        //   - Retirada com ano inválido ou retirada anterior à inserção → trata como ativo (sem retirada)
         const ranges: Array<{ s: Date; e: Date }> = [];
         const addRange = (ins: string | null | undefined, rem: string | null | undefined) => {
           if (!ins) return;
-          const s = parseLocalDate(ins);
-          if (!s) return;
-          const e = (rem && rem !== "") ? (parseLocalDate(rem) ?? new Date()) : new Date();
+          const rawS = parseLocalDate(ins);
+          if (!rawS) return;
+          const s = rawS.getFullYear() >= 2000 ? rawS : patStart;
+
+          let e: Date;
+          if (rem && rem !== "") {
+            const rawE = parseLocalDate(rem);
+            if (!rawE || rawE.getFullYear() < 2000 || rawE < s) {
+              e = new Date(); // data inválida ou intervalo invertido → considera ativo
+            } else {
+              e = rawE;
+            }
+          } else {
+            e = new Date();
+          }
           ranges.push({ s, e });
         };
 
