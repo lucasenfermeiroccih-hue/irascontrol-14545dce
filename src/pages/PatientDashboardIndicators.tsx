@@ -270,49 +270,88 @@ const PatientDashboardIndicators = () => {
 
     // (periods já calculados acima)
 
-
+    // Totaliza paciente-dia usando admission_date (internação hospitalar, não apenas UTI)
     const totalPatientDays = filteredPatients.reduce(
-      (total, patient) => total + countDistinctCivilDaysInPeriods(getPatientPeriodStart(patient), patient.discharge_date, periods),
+      (total, patient) => total + countDistinctCivilDaysInPeriods(patient.admission_date, patient.discharge_date, periods),
       0,
     );
 
-    // Dispositivo-dias: consolida por paciente×dia entre patient_devices e clinical_data.dispInvasivos
-    // para evitar dupla contagem (mesma inserção em duas fontes ou sobreposição inserção/nova inserção).
-    // Suporta tanto o formato legado (novaInsercao/novaRetirada) quanto o formato atual (Trocas[]).
-    const calcDeviceDays = (type: string, insKey: string, remKey: string, novaInsKey: string, novaRemKey: string) => {
+    // Pré-computa todos os dias do período selecionado (evita recalcular por paciente)
+    const allPeriodDays: Date[] = [];
+    periods.forEach(({ start, end }) => {
+      const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const last   = new Date(end.getFullYear(),   end.getMonth(),   end.getDate());
+      while (cursor <= last) { allPeriodDays.push(new Date(cursor)); cursor.setDate(cursor.getDate() + 1); }
+    });
+
+    // Conta dispositivo-dias por paciente×dia dentro do período.
+    // Usa admission_date (não icu_admission_date) para não perder dias de dispositivo
+    // inseridos antes da entrada na UTI.
+    // Suporta: patient_devices table, formato legado (NovaInsercao/NovaRetirada), formato atual (Trocas[]).
+    const calcDeviceDays = (
+      type: string,
+      insKey: string, remKey: string,
+      novaInsKey: string, novaRemKey: string,
+    ): { total: number; perPatient: Array<{ id: string; name: string; days: number }> } => {
       const trocasKey = insKey.replace("Insercao", "Trocas");
       let total = 0;
-      filteredPatients.forEach(p => {
-        const patientDays = new Set<string>();
-        collectDaysInPeriods(getPatientPeriodStart(p), p.discharge_date, periods, patientDays);
+      const perPatient: Array<{ id: string; name: string; days: number }> = [];
 
-        const occupiedDays = new Set<string>();
+      filteredPatients.forEach(p => {
+        const patStart = parseLocalDate(p.admission_date);
+        if (!patStart) return;
+        const patEnd = p.discharge_date ? parseLocalDate(p.discharge_date) : new Date();
+        if (!patEnd) return;
+
+        // Monta lista de intervalos em que o dispositivo estava ativo
+        const ranges: Array<{ s: Date; e: Date }> = [];
+        const addRange = (ins: string | null | undefined, rem: string | null | undefined) => {
+          if (!ins) return;
+          const s = parseLocalDate(ins);
+          if (!s) return;
+          const e = (rem && rem !== "") ? (parseLocalDate(rem) ?? new Date()) : new Date();
+          ranges.push({ s, e });
+        };
+
+        // Tabela patient_devices
         filteredDevices
           .filter(d => d.patient_id === p.id && d.device_type === type)
-          .forEach(dev => {
-            collectDaysInPeriods(dev.insertion_date, dev.removal_date, periods, occupiedDays);
-          });
+          .forEach(dev => addRange(dev.insertion_date, dev.removal_date));
+
+        // clinical_data.dispInvasivos
         const di = p.clinical_data?.dispInvasivos;
         if (di) {
-          // Período inicial de inserção
-          collectDaysInPeriods(di[insKey], di[remKey], periods, occupiedDays);
-          // Formato legado: novaInsercao / novaRetirada (campo único)
-          collectDaysInPeriods(di[novaInsKey], di[novaRemKey], periods, occupiedDays);
-          // Formato atual: array de trocas [{insercao, retirada}, ...]
-          const trocas: Array<{ insercao: string; retirada: string }> = Array.isArray(di[trocasKey]) ? di[trocasKey] : [];
-          trocas.forEach(t => {
-            if (t?.insercao) collectDaysInPeriods(t.insercao, t.retirada || null, periods, occupiedDays);
-          });
+          addRange(di[insKey],      di[remKey]);
+          addRange(di[novaInsKey],  di[novaRemKey]);
+          const trocas: Array<{ insercao: string; retirada: string }> =
+            Array.isArray(di[trocasKey]) ? di[trocasKey] : [];
+          trocas.forEach(t => addRange(t.insercao, t.retirada));
         }
 
-        total += intersectDaySets(patientDays, occupiedDays).size;
+        if (ranges.length === 0) return;
+
+        // Conta cada dia do período em que o paciente estava internado E com o dispositivo
+        let pDays = 0;
+        allPeriodDays.forEach(day => {
+          if (day < patStart || day > patEnd) return;
+          if (ranges.some(r => day >= r.s && day <= r.e)) pDays++;
+        });
+
+        if (pDays > 0) {
+          total += pDays;
+          perPatient.push({ id: p.id, name: p.full_name, days: pDays });
+        }
       });
-      return total;
+
+      return { total, perPatient };
     };
 
-    const cvcDays = calcDeviceDays("cvc", "cvcInsercao", "cvcRetirada", "cvcNovaInsercao", "cvcNovaRetirada");
-    const svuDays = calcDeviceDays("svu", "svuInsercao", "svuRetirada", "svuNovaInsercao", "svuNovaRetirada");
-    const vmDays = calcDeviceDays("vm", "vmInsercao", "vmRetirada", "vmNovaInsercao", "vmNovaRetirada");
+    const cvcResult = calcDeviceDays("cvc", "cvcInsercao", "cvcRetirada", "cvcNovaInsercao", "cvcNovaRetirada");
+    const svuResult = calcDeviceDays("svu", "svuInsercao", "svuRetirada", "svuNovaInsercao", "svuNovaRetirada");
+    const vmResult  = calcDeviceDays("vm",  "vmInsercao",  "vmRetirada",  "vmNovaInsercao",  "vmNovaRetirada");
+    const cvcDays = cvcResult.total;
+    const svuDays = svuResult.total;
+    const vmDays  = vmResult.total;
 
 
     // Antibióticos: tabela antimicrobial_prescriptions + clinical_data.antibioticos[]
@@ -420,7 +459,13 @@ const PatientDashboardIndicators = () => {
       .sort((a, b) => b.value - a.value)
       .slice(0, 15);
 
-    return { specialtyData, deaths, discharges, totalPatientDays, cvcDays, svuDays, vmDays, abCount, extubations, totalAdmitted: admittedInMonth.length, outcomeData, topAntibiotics, topOrganisms };
+    return {
+      specialtyData, deaths, discharges, totalPatientDays, cvcDays, svuDays, vmDays,
+      cvcBreakdown: cvcResult.perPatient,
+      svuBreakdown: svuResult.perPatient,
+      vmBreakdown:  vmResult.perPatient,
+      abCount, extubations, totalAdmitted: admittedInMonth.length, outcomeData, topAntibiotics, topOrganisms,
+    };
   }, [filteredPatients, devices, prescriptions, labResults, month, year, currentYear]);
 
   if (loading || ctxLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -652,6 +697,12 @@ const PatientDashboardIndicators = () => {
             <DensityCard title="Densidade VM" deviceDays={indicators.vmDays} patientDays={indicators.totalPatientDays} icon={Wind} color="text-blue-600" />
           </div>
 
+          <DeviceBreakdownCard
+            cvcBreakdown={indicators.cvcBreakdown}
+            svuBreakdown={indicators.svuBreakdown}
+            vmBreakdown={indicators.vmBreakdown}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <TopRankCard
               chartRef={chartRefs.topAntibiotics}
@@ -853,6 +904,81 @@ const PatientDashboardIndicators = () => {
     </div>
   );
 };
+
+function DeviceBreakdownCard({
+  cvcBreakdown, svuBreakdown, vmBreakdown,
+}: {
+  cvcBreakdown: Array<{ id: string; name: string; days: number }>;
+  svuBreakdown: Array<{ id: string; name: string; days: number }>;
+  vmBreakdown:  Array<{ id: string; name: string; days: number }>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"cvc" | "svu" | "vm">("cvc");
+
+  const data = { cvc: cvcBreakdown, svu: svuBreakdown, vm: vmBreakdown };
+  const labels = { cvc: "CVC", svu: "SVD", vm: "VM" };
+  const totals = { cvc: cvcBreakdown.reduce((s, r) => s + r.days, 0), svu: svuBreakdown.reduce((s, r) => s + r.days, 0), vm: vmBreakdown.reduce((s, r) => s + r.days, 0) };
+  const rows = data[tab].slice().sort((a, b) => b.days - a.days);
+
+  return (
+    <Card className="border-muted">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-primary" />
+            Detalhamento por Paciente — Dias de Dispositivo
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setOpen(v => !v)} className="h-7 text-xs">
+            {open ? "Ocultar" : "Ver detalhes"}
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      {open && (
+        <CardContent>
+          <div className="flex gap-2 mb-3">
+            {(["cvc", "svu", "vm"] as const).map(k => (
+              <Button
+                key={k}
+                variant={tab === k ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => setTab(k)}
+              >
+                {labels[k]} — {totals[k]} dias
+              </Button>
+            ))}
+          </div>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum paciente com {labels[tab]} no período.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-1.5 px-2 font-medium text-muted-foreground">Paciente</th>
+                    <th className="py-1.5 px-2 font-medium text-muted-foreground text-right">Dias {labels[tab]}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(r => (
+                    <tr key={r.id} className="border-b last:border-0 hover:bg-muted/40">
+                      <td className="py-1.5 px-2 truncate max-w-xs">{r.name}</td>
+                      <td className="py-1.5 px-2 text-right font-semibold">{r.days}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/30 font-bold">
+                    <td className="py-1.5 px-2">Total</td>
+                    <td className="py-1.5 px-2 text-right">{totals[tab]}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
   return (
