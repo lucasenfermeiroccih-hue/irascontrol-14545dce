@@ -1,11 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -13,18 +11,18 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
   History, Search, Edit2, FileText, Loader2, Bell, ArrowLeft,
-  Eye, Trash2, Clock, CheckCircle2, Paperclip, Upload, Download,
-  Printer, X, File, Image, FileCheck,
+  Eye, Trash2, Clock, CheckCircle2, Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import NotificationAttachmentsDialog from "@/components/NotificationAttachmentsDialog";
 
 const MES_OPTIONS = [
   "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
@@ -44,8 +42,6 @@ const STATUS_ICONS: Record<string, React.ElementType> = {
   retificada: Edit2,
   cancelada: Trash2,
 };
-
-const ACCEPTED_TYPES = "application/pdf,image/jpeg,image/png,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword";
 
 interface Notification {
   id: string;
@@ -72,31 +68,6 @@ interface HistoryEntry {
   created_at: string;
 }
 
-interface Attachment {
-  id: string;
-  notification_id: string;
-  file_name: string;
-  file_path: string;
-  file_size: number | null;
-  file_type: string | null;
-  description: string | null;
-  uploaded_at: string;
-}
-
-function formatBytes(bytes: number | null): string {
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fileIcon(type: string | null) {
-  if (!type) return File;
-  if (type === "application/pdf") return FileText;
-  if (type.startsWith("image/")) return Image;
-  return FileCheck;
-}
-
 export default function NotificacoesHistory() {
   const navigate = useNavigate();
   const { hospitalId } = useHospitalContext();
@@ -115,14 +86,8 @@ export default function NotificacoesHistory() {
   const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
   const [histLoading, setHistLoading] = useState(false);
 
-  // Attachment dialog
+  // Attachments dialog
   const [attachNotif, setAttachNotif] = useState<Notification | null>(null);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [attachLoading, setAttachLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [newDescription, setNewDescription] = useState("");
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -166,135 +131,6 @@ export default function NotificacoesHistory() {
     await loadHistory(n.id);
   }
 
-  async function loadAttachments(notifId: string) {
-    setAttachLoading(true);
-    const { data, error } = await (supabase.from("notification_attachments" as any)
-      .select("*")
-      .eq("notification_id", notifId)
-      .order("uploaded_at", { ascending: false }) as any);
-    if (error) toast.error("Erro ao carregar anexos: " + error.message);
-    else setAttachments((data || []) as Attachment[]);
-    setAttachLoading(false);
-  }
-
-  async function handleOpenAttachments(n: Notification) {
-    setAttachNotif(n);
-    setPendingFile(null);
-    setNewDescription("");
-    await loadAttachments(n.id);
-  }
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 52 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo: 50 MB.");
-      return;
-    }
-    setPendingFile(file);
-  }
-
-  async function handleUpload() {
-    if (!pendingFile || !attachNotif || !hospitalId) return;
-    setUploading(true);
-    try {
-      const ext = pendingFile.name.split(".").pop() || "";
-      const safeName = pendingFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${hospitalId}/${attachNotif.id}/${Date.now()}_${safeName}`;
-
-      const { error: storageError } = await supabase.storage
-        .from("notification-attachments")
-        .upload(filePath, pendingFile, { contentType: pendingFile.type, upsert: false });
-
-      if (storageError) throw storageError;
-
-      const { error: dbError } = await (supabase.from("notification_attachments" as any).insert({
-        notification_id: attachNotif.id,
-        hospital_id: hospitalId,
-        file_name: pendingFile.name,
-        file_path: filePath,
-        file_size: pendingFile.size,
-        file_type: pendingFile.type,
-        description: newDescription.trim() || null,
-      }) as any);
-
-      if (dbError) {
-        await supabase.storage.from("notification-attachments").remove([filePath]);
-        throw dbError;
-      }
-
-      toast.success("Arquivo anexado com sucesso!");
-      setPendingFile(null);
-      setNewDescription("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      await loadAttachments(attachNotif.id);
-    } catch (e: any) {
-      toast.error("Erro ao anexar arquivo: " + e.message);
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleView(attachment: Attachment) {
-    const { data, error } = await supabase.storage
-      .from("notification-attachments")
-      .createSignedUrl(attachment.file_path, 300);
-    if (error || !data?.signedUrl) {
-      toast.error("Erro ao abrir arquivo.");
-      return;
-    }
-    window.open(data.signedUrl, "_blank");
-  }
-
-  async function handlePrint(attachment: Attachment) {
-    const { data, error } = await supabase.storage
-      .from("notification-attachments")
-      .createSignedUrl(attachment.file_path, 300);
-    if (error || !data?.signedUrl) {
-      toast.error("Erro ao preparar impressão.");
-      return;
-    }
-    // PDFs and images: open in new window and trigger print
-    const win = window.open(data.signedUrl, "_blank");
-    if (win) {
-      win.addEventListener("load", () => {
-        try { win.print(); } catch { /* browser may block — user can print from the tab */ }
-      });
-    }
-  }
-
-  async function handleDownload(attachment: Attachment) {
-    const { data, error } = await supabase.storage
-      .from("notification-attachments")
-      .createSignedUrl(attachment.file_path, 300);
-    if (error || !data?.signedUrl) {
-      toast.error("Erro ao baixar arquivo.");
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = data.signedUrl;
-    a.download = attachment.file_name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  async function handleDeleteAttachment(attachment: Attachment) {
-    if (!confirm(`Excluir o arquivo "${attachment.file_name}"?`)) return;
-    const { error: storageErr } = await supabase.storage
-      .from("notification-attachments")
-      .remove([attachment.file_path]);
-    if (storageErr) { toast.error("Erro ao excluir do storage: " + storageErr.message); return; }
-
-    const { error: dbErr } = await (supabase.from("notification_attachments" as any)
-      .delete()
-      .eq("id", attachment.id) as any);
-    if (dbErr) { toast.error("Erro ao excluir registro: " + dbErr.message); return; }
-
-    toast.success("Arquivo excluído.");
-    setAttachments(prev => prev.filter(a => a.id !== attachment.id));
-  }
-
   async function handleGeneratePdf(n: Notification) {
     try {
       toast.loading("Gerando relatório PDF...", { id: "pdf-toast" });
@@ -330,6 +166,11 @@ export default function NotificacoesHistory() {
     if (error) { toast.error(error.message); return; }
     toast.success("Notificação cancelada.");
     loadAll();
+  }
+
+  function attachLabel(n: Notification) {
+    const nome = n.notification_types?.nome || "Notificação";
+    return n.numero ? `${nome} #${n.numero}` : nome;
   }
 
   const currentYear = new Date().getFullYear();
@@ -444,14 +285,10 @@ export default function NotificacoesHistory() {
                         <div className="text-xs font-medium">{nt?.nome || n.type_id}</div>
                         <div className="text-xs text-muted-foreground">{nt?.fonte}</div>
                       </TableCell>
-                      <TableCell className="text-xs">
-                        {n.mes_vigilancia} {n.ano_vigilancia}
-                      </TableCell>
+                      <TableCell className="text-xs">{n.mes_vigilancia} {n.ano_vigilancia}</TableCell>
                       <TableCell className="text-xs">
                         {n.setor || n.paciente_nome || "—"}
-                        {n.microrganismo && (
-                          <div className="text-muted-foreground">{n.microrganismo}</div>
-                        )}
+                        {n.microrganismo && <div className="text-muted-foreground">{n.microrganismo}</div>}
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_COLORS[n.status] || ""}`}>
@@ -464,49 +301,28 @@ export default function NotificacoesHistory() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Ver/Editar"
-                            onClick={() => navigate(`/notificacoes/${n.id}/editar`)}
-                          >
+                          <Button size="sm" variant="ghost" title="Ver/Editar" onClick={() => navigate(`/notificacoes/${n.id}/editar`)}>
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Histórico de ações"
-                            onClick={() => handleOpenHistory(n)}
-                          >
+                          <Button size="sm" variant="ghost" title="Histórico de ações" onClick={() => handleOpenHistory(n)}>
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            title="Anexos enviados à ANVISA"
-                            onClick={() => handleOpenAttachments(n)}
+                            title="Anexos ANVISA"
                             className="text-blue-600 hover:text-blue-700"
+                            onClick={() => setAttachNotif(n)}
                           >
                             <Paperclip className="h-3.5 w-3.5" />
                           </Button>
                           {n.status === "finalizada" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Gerar PDF"
-                              onClick={() => handleGeneratePdf(n)}
-                            >
+                            <Button size="sm" variant="ghost" title="Gerar PDF" onClick={() => handleGeneratePdf(n)}>
                               <FileText className="h-3.5 w-3.5" />
                             </Button>
                           )}
                           {n.status !== "cancelada" && n.status !== "finalizada" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              title="Cancelar"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleCancel(n)}
-                            >
+                            <Button size="sm" variant="ghost" title="Cancelar" className="text-destructive hover:text-destructive" onClick={() => handleCancel(n)}>
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
@@ -551,9 +367,7 @@ export default function NotificacoesHistory() {
                           {format(new Date(h.created_at), "dd/MM HH:mm", { locale: ptBR })}
                         </span>
                       </div>
-                      {h.observacao && (
-                        <p className="text-xs text-muted-foreground mt-1">{h.observacao}</p>
-                      )}
+                      {h.observacao && <p className="text-xs text-muted-foreground mt-1">{h.observacao}</p>}
                     </div>
                   </div>
                 ))
@@ -563,162 +377,16 @@ export default function NotificacoesHistory() {
         </DialogContent>
       </Dialog>
 
-      {/* Attachments dialog */}
-      <Dialog open={!!attachNotif} onOpenChange={o => { if (!o) { setAttachNotif(null); setPendingFile(null); setNewDescription(""); } }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Paperclip className="h-4 w-4 text-blue-600" />
-              Anexos — {attachNotif?.notification_types?.nome || "Notificação"}{attachNotif?.numero ? ` #${attachNotif.numero}` : ""}
-            </DialogTitle>
-          </DialogHeader>
-
-          {/* Upload area */}
-          <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
-            <p className="text-sm font-medium">Anexar arquivo enviado à ANVISA</p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ACCEPTED_TYPES}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="notif-file-input"
-                />
-                <label
-                  htmlFor="notif-file-input"
-                  className="flex items-center justify-center gap-2 border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                >
-                  {pendingFile ? (
-                    <div className="flex items-center gap-2 text-sm">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="font-medium truncate max-w-xs">{pendingFile.name}</span>
-                      <span className="text-muted-foreground shrink-0">({formatBytes(pendingFile.size)})</span>
-                      <button
-                        type="button"
-                        onClick={e => { e.preventDefault(); setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                        className="ml-1 text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-center text-sm text-muted-foreground">
-                      <Upload className="h-5 w-5 mx-auto mb-1" />
-                      Clique para selecionar um arquivo
-                      <p className="text-xs mt-0.5">PDF, imagem ou Word — máx. 50 MB</p>
-                    </div>
-                  )}
-                </label>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Descrição (opcional)</Label>
-              <Textarea
-                placeholder="Ex: Notificação IRAS enviada via SIVEP-Gripe em 29/06/2026"
-                value={newDescription}
-                onChange={e => setNewDescription(e.target.value)}
-                rows={2}
-                className="resize-none text-sm"
-              />
-            </div>
-            <Button
-              onClick={handleUpload}
-              disabled={!pendingFile || uploading}
-              className="w-full gap-2"
-            >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? "Enviando..." : "Salvar Anexo"}
-            </Button>
-          </div>
-
-          {/* Existing attachments */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-green-600" />
-              Arquivos salvos
-              {attachments.length > 0 && (
-                <Badge variant="secondary" className="text-xs">{attachments.length}</Badge>
-              )}
-            </p>
-
-            {attachLoading ? (
-              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />Carregando anexos…
-              </div>
-            ) : attachments.length === 0 ? (
-              <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg">
-                <Paperclip className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                Nenhum arquivo anexado ainda.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {attachments.map(att => {
-                  const Icon = fileIcon(att.file_type);
-                  return (
-                    <div key={att.id} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/40 transition-colors">
-                      <div className="p-1.5 rounded bg-primary/10 shrink-0 mt-0.5">
-                        <Icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{att.file_name}</p>
-                        {att.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{att.description}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {formatBytes(att.file_size)} · {format(new Date(att.uploaded_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Visualizar"
-                          onClick={() => handleView(att)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Imprimir"
-                          onClick={() => handlePrint(att)}
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Baixar"
-                          onClick={() => handleDownload(att)}
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          title="Excluir"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteAttachment(att)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setAttachNotif(null); setPendingFile(null); setNewDescription(""); }}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Attachments dialog (shared component) */}
+      {attachNotif && hospitalId && (
+        <NotificationAttachmentsDialog
+          open={!!attachNotif}
+          onClose={() => setAttachNotif(null)}
+          notificationId={attachNotif.id}
+          notificationLabel={attachLabel(attachNotif)}
+          hospitalId={hospitalId}
+        />
+      )}
     </div>
   );
 }

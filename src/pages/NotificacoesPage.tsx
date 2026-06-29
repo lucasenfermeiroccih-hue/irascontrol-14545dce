@@ -9,13 +9,14 @@ import {
 } from "@/components/ui/table";
 import {
   Bell, Search, Plus, Activity, AlertTriangle, Droplets, Scissors,
-  Baby, ShieldAlert, FileText, BarChart3, History, Loader2, Eye,
+  Baby, ShieldAlert, FileText, BarChart3, History, Loader2, Eye, Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import NotificationAttachmentsDialog from "@/components/NotificationAttachmentsDialog";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Bell, Activity, AlertTriangle, Droplets, Scissors, Baby, ShieldAlert, FileText,
@@ -60,6 +61,7 @@ export default function NotificacoesPage() {
   const [hospitalType, setHospitalType] = useState("geral");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [attachItem, setAttachItem] = useState<RecentNotif | null>(null);
 
   useEffect(() => {
     if (!hospitalId) return;
@@ -221,6 +223,17 @@ export default function NotificacoesPage() {
         </div>
       )}
 
+      {/* Attachments dialog */}
+      {attachItem && hospitalId && (
+        <NotificationAttachmentsDialog
+          open={!!attachItem}
+          onClose={() => setAttachItem(null)}
+          notificationId={attachItem.id}
+          notificationLabel={(attachItem.notification_types as any)?.nome || "Notificação"}
+          hospitalId={hospitalId}
+        />
+      )}
+
       {/* Recent notifications */}
       {recent.length > 0 && (
         <div>
@@ -235,7 +248,7 @@ export default function NotificacoesPage() {
                     <TableHead>Período</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead />
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,10 +265,21 @@ export default function NotificacoesPage() {
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(r.created_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="ghost" onClick={() => navigate(`/notificacoes/${r.id}/editar`)}>
-                          <Eye className="h-3 w-3" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button size="sm" variant="ghost" title="Ver/Editar" onClick={() => navigate(`/notificacoes/${r.id}/editar`)}>
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Anexos ANVISA"
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => setAttachItem(r)}
+                          >
+                            <Paperclip className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
