@@ -248,14 +248,6 @@ export default function SCIHAuditModule() {
       });
   }, [hospitalId]);
 
-  useEffect(() => {
-    if (!viewAuditRecord?.photoUrls?.length) { setViewAuditPhotoUrls([]); return; }
-    Promise.all(
-      viewAuditRecord.photoUrls.map(path =>
-        supabase.storage.from("audit-photos").createSignedUrl(path, 300).then(r => r.data?.signedUrl || "")
-      )
-    ).then(urls => setViewAuditPhotoUrls(urls.filter(Boolean)));
-  }, [viewAuditRecord]);
 
   const saveData = useCallback(async (newData: AppData) => {
     if (!hospitalId) return;
