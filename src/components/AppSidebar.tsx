@@ -141,6 +141,7 @@ export function AppSidebar() {
   const { user, isReady } = useAuthReady();
   const [isAdmin, setIsAdmin] = useState(false);
   const [hospitalName, setHospitalName] = useState("");
+  const [hospitalType, setHospitalType] = useState("");
   const [multiHospital, setMultiHospital] = useState(false);
   const [installedTools, setInstalledTools] = useState<InstalledTool[]>([]);
 
@@ -158,8 +159,8 @@ export function AppSidebar() {
 
       const selectedId = getSelectedHospitalId(user.id);
       if (selectedId) {
-        const { data: hosp } = await supabase.from("hospitals").select("name").eq("id", selectedId).maybeSingle();
-        if (hosp) setHospitalName(hosp.name);
+        const { data: hosp } = await supabase.from("hospitals").select("name, type").eq("id", selectedId).maybeSingle();
+        if (hosp) { setHospitalName(hosp.name); setHospitalType(hosp.type ?? ""); }
 
         const { data: installs } = await supabase
           .from("hospital_tool_installations")
@@ -215,22 +216,24 @@ export function AppSidebar() {
         {/* Geral → Relatórios */}
         {beforeIA.map(renderSection)}
 
-        {/* Maternidade */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Maternidade</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.pathname === "/maternidade"}>
-                  <NavLink to="/maternidade" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <Baby className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
-                    {!collapsed && <span>Módulo Maternidade</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Maternidade — visível somente para hospitais do tipo maternidade */}
+        {hospitalType === "maternidade" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Maternidade</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.pathname === "/maternidade"}>
+                    <NavLink to="/maternidade" className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <Baby className="mr-2 h-4 w-4 shrink-0 text-pink-500" />
+                      {!collapsed && <span>Módulo Maternidade</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Qualidade — acima de IA */}
         <SidebarGroup>

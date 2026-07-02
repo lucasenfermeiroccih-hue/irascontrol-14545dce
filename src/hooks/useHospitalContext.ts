@@ -7,6 +7,7 @@ export function useHospitalContext() {
   const { user, isReady } = useAuthReady();
   const [hospitalId, setHospitalId] = useState<string | null>(null);
   const [hospitalName, setHospitalName] = useState<string>("");
+  const [hospitalType, setHospitalType] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,12 +46,13 @@ export function useHospitalContext() {
 
       const { data: hospital } = await supabase
         .from("hospitals")
-        .select("name")
+        .select("name, type")
         .eq("id", resolvedHospitalId)
         .single();
 
       if (hospital) {
         setHospitalName(hospital.name);
+        setHospitalType(hospital.type ?? "");
       }
 
       setLoading(false);
@@ -58,5 +60,5 @@ export function useHospitalContext() {
     fetch();
   }, [user, isReady]);
 
-  return { hospitalId, hospitalName, userId: user?.id ?? null, loading };
+  return { hospitalId, hospitalName, hospitalType, userId: user?.id ?? null, loading };
 }
