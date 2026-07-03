@@ -318,8 +318,9 @@ export default function AdminSettings() {
   const handleSaveHospital = async () => {
     if (!hospitalId || !hospitalData) return;
     const { error } = await supabase.from("hospitals").update({
-      name: hospitalData.name, cnes: hospitalData.cnes, type: hospitalData.type,
-      bed_count: hospitalData.bed_count, contact_email: hospitalData.contact_email,
+      name: hospitalData.name, cnes: hospitalData.cnes, cnpj: hospitalData.cnpj,
+      type: hospitalData.type, bed_count: hospitalData.bed_count,
+      contact_email: hospitalData.contact_email,
     }).eq("id", hospitalId);
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Dados da instituição salvos");
@@ -444,6 +445,8 @@ export default function AdminSettings() {
                     <Input value={hospitalData.name || ""} onChange={e => setHospitalData((h: any) => ({ ...h, name: e.target.value }))} /></div>
                   <div className="space-y-2"><Label>CNES</Label>
                     <Input value={hospitalData.cnes || ""} onChange={e => setHospitalData((h: any) => ({ ...h, cnes: e.target.value }))} /></div>
+                  <div className="space-y-2"><Label>CNPJ</Label>
+                    <Input value={hospitalData.cnpj || ""} onChange={e => setHospitalData((h: any) => ({ ...h, cnpj: e.target.value }))} placeholder="00.000.000/0000-00" /></div>
                   <div className="space-y-2"><Label>Tipo</Label>
                     <Select value={hospitalData.type || "geral"} onValueChange={v => setHospitalData((h: any) => ({ ...h, type: v }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>

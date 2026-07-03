@@ -766,7 +766,7 @@ export function DynamicNotificationForm({
                           campo={campo}
                           value={topVals[campo.key]}
                           onChange={val => setTop(campo.key, val)}
-                          disabled={disabled || !!campo.origem}
+                          disabled={disabled || (!!campo.origem && !!topVals[campo.key])}
                           prefillValue={campo.preencher_de ? prefillData[campo.key] : undefined}
                         />
                       </div>
