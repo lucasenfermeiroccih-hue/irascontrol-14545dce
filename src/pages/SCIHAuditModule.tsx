@@ -129,6 +129,13 @@ const SCIH_CSS = `
   .scih-sector-grid{grid-template-columns:repeat(2,1fr);}
   .scih-tab-btn span:not(.scih-tab-icon){display:none;}
 }
+.scih-modal-xl{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:28px;width:820px;max-width:96vw;max-height:92vh;overflow-y:auto;}
+.scih-md-preview{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:20px;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;overflow-x:auto;max-height:500px;overflow-y:auto;}
+.scih-report-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.scih-btn-blue{background:var(--blue);color:#fff;}
+.scih-checkbox-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;}
+.scih-checkbox-row input{width:15px;height:15px;cursor:pointer;accent-color:var(--teal);}
+@media (max-width:600px){.scih-report-grid{grid-template-columns:1fr;}}
 `;
 
 // ─── SECTOR ICON MAP ─────────────────────────────────────────────────────────
@@ -210,6 +217,25 @@ function uid(): string {
   return Math.random().toString(36).slice(2,10);
 }
 
+// ─── AUDIT TECHNICAL CONCEPTS ────────────────────────────────────────────────
+
+function getAuditTechnicalConcept(auditType: string): string {
+  const n = auditType.toLowerCase();
+  if (n.includes("higiene") || n.includes("higieniz") || n.includes("mão") || n.includes("mao"))
+    return "A auditoria de higiene das mãos avalia a adesão dos profissionais aos cinco momentos preconizados pela OMS, à técnica correta de higienização e à ausência de adornos, sendo uma medida essencial para prevenção de IRAS, segurança do paciente e redução da transmissão cruzada.";
+  if (n.includes("precau"))
+    return "A auditoria de precauções avalia a adesão às medidas de barreira, isolamento, uso correto de EPIs e organização assistencial para reduzir o risco de transmissão de microrganismos no ambiente hospitalar, incluindo precauções padrão, por contato, gotículas e aerossóis.";
+  if (n.includes("limpeza") || n.includes("higienização ambiental") || n.includes("higienizacao ambiental"))
+    return "A auditoria de limpeza e higienização ambiental avalia a execução correta das rotinas de limpeza, desinfecção, identificação de áreas críticas, disponibilidade de insumos e conformidade com os protocolos institucionais, prevenindo a contaminação ambiental como fonte de IRAS.";
+  if (n.includes("bundle") || n.includes("cvc") || n.includes("cateter"))
+    return "A auditoria de bundles avalia a adesão às medidas comprovadas de prevenção de infecções associadas a dispositivos invasivos, como CVCs, sondas vesicais e ventilação mecânica, baseadas em evidências científicas e protocolos nacionais e internacionais.";
+  if (n.includes("epi") || n.includes("equipamento de proteção"))
+    return "A auditoria de EPI avalia o uso correto e sistemático dos equipamentos de proteção individual pelos profissionais de saúde conforme o risco da atividade assistencial, em conformidade com a NR 32 e os protocolos de biossegurança institucionais.";
+  if (n.includes("antimicrobiano") || n.includes("antibiotico") || n.includes("antibiótico"))
+    return "A auditoria de uso de antimicrobianos avalia a adequação das prescrições ao perfil microbiológico local, o cumprimento dos protocolos de antibioticoterapia e a conformidade com o programa de stewardship, visando à redução da resistência bacteriana e à segurança do paciente.";
+  return "A auditoria de processos avalia a conformidade das práticas assistenciais e operacionais em relação aos protocolos institucionais, permitindo identificar fragilidades, riscos e oportunidades de melhoria contínua, contribuindo para a segurança do paciente e a qualidade assistencial.";
+}
+
 // ─── COMPONENT ──────────────────────────────────────────────────────────────
 
 type Page = "dashboard"|"setores"|"checklist"|"auditorias"|"cronograma"|"plano"|"kanban"|"swot"|"risco"|"relatorio"|"boletim";
@@ -229,7 +255,7 @@ const NAV: { key: Page; label: string; icon: string }[] = [
 ];
 
 export default function SCIHAuditModule() {
-  const { hospitalId } = useHospitalContext();
+  const { hospitalId, hospitalName } = useHospitalContext();
 
   // ── persistence ──
   const [appData, setAppDataRaw] = useState<AppData>(EMPTY_DATA);
@@ -333,6 +359,24 @@ export default function SCIHAuditModule() {
   const [scihEmailCc, setScihEmailCc] = useState("");
   const [scihEmailName, setScihEmailName] = useState("");
   const [scihEmailSending, setScihEmailSending] = useState(false);
+
+  // ── manager report state ──
+  const [showManagerReportModal, setShowManagerReportModal] = useState(false);
+  const [showManagerReportPreview, setShowManagerReportPreview] = useState(false);
+  const [managerReportCopied, setManagerReportCopied] = useState(false);
+  const [managerReportMarkdown, setManagerReportMarkdown] = useState("");
+  const [managerReportForm, setManagerReportForm] = useState({
+    hospitalName: "",
+    sectorKey: "scih",
+    auditType: "Programada",
+    periodStart: todayISO().slice(0,7) + "-01",
+    periodEnd: todayISO(),
+    managerName: "",
+    managerEmail: "",
+    technicalResponsible: "",
+    includeComparative: false,
+    includeActionPlan: true,
+  });
 
   // ─── COMPUTED ─────────────────────────────────────────────────────────────
 
@@ -507,6 +551,356 @@ Regras:
     } finally {
       setAiLoading(false);
     }
+  }
+
+  // ─── MANAGER REPORT GENERATION ────────────────────────────────────────────
+
+  function calcManagerReportMetrics(sectorKey: string, auditType: string, start: string, end: string) {
+    const parseDate = (d: string) => {
+      if (!d) return new Date(0);
+      const parts = d.split("/");
+      if (parts.length === 3) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      return new Date(d);
+    };
+    const startD = new Date(start);
+    const endD = new Date(end + "T23:59:59");
+    const sectorName = CHECKLISTS_DATA[sectorKey]?.nome ?? sectorKey;
+
+    const audits = appData.historico.filter(h => {
+      const hDate = parseDate(h.data);
+      const matchSetor = h.setorKey === sectorKey || h.setorNome.toLowerCase().includes(sectorName.toLowerCase());
+      const matchTipo = !auditType || auditType === "Todos" || h.tipo === auditType;
+      return matchSetor && matchTipo && hDate >= startD && hDate <= endD;
+    });
+
+    const totalAuditorias = audits.length;
+    const totalItens = audits.reduce((s, h) => s + (h.total || 0), 0);
+    const itensNaoConformes = audits.reduce((s, h) => s + (h.ncCount || 0), 0);
+    const itensConformes = totalItens - itensNaoConformes;
+    const conformidadeGeral = totalAuditorias > 0
+      ? Math.round(audits.reduce((s, h) => s + h.pct, 0) / totalAuditorias)
+      : 0;
+    const taxaNaoConformidade = 100 - conformidadeGeral;
+
+    const auditIds = new Set(audits.map(h => h.id));
+    const ncsDoSetor = appData.ncs.filter(n => {
+      const matchSetor = n.setorKey === sectorKey || n.setor.toLowerCase().includes(sectorName.toLowerCase());
+      const hDate = parseDate(n.data);
+      return matchSetor && hDate >= startD && hDate <= endD;
+    });
+
+    const topNaoConformidades = ncsDoSetor
+      .filter(n => n.sev === "Crítica" || n.sev === "Maior")
+      .slice(0, 5)
+      .map(n => n.pergunta.slice(0, 100));
+
+    const topConformidades = (CHECKLISTS_DATA[sectorKey]?.grupos ?? [])
+      .flatMap(g => g.itens)
+      .filter(item => !ncsDoSetor.some(n => n.pergunta === item))
+      .slice(0, 5);
+
+    const naoConformidadesPorCategoria: Record<string, number> = {};
+    ncsDoSetor.forEach(n => {
+      naoConformidadesPorCategoria[n.sev] = (naoConformidadesPorCategoria[n.sev] || 0) + 1;
+    });
+
+    const conformidadePorCategoria: Record<string, number> = {};
+    (CHECKLISTS_DATA[sectorKey]?.grupos ?? []).forEach(g => {
+      const ncNomes = ncsDoSetor.map(n => n.pergunta);
+      const conf = g.itens.filter(i => !ncNomes.includes(i)).length;
+      const total = g.itens.length;
+      conformidadePorCategoria[g.grupo] = total > 0 ? Math.round((conf / total) * 100) : 100;
+    });
+
+    const conformidadePorProfissao: Record<string, number> = {};
+    audits.forEach(h => {
+      if (!h.respSetor || h.respSetor === "—") return;
+      if (!conformidadePorProfissao[h.respSetor]) conformidadePorProfissao[h.respSetor] = 0;
+      conformidadePorProfissao[h.respSetor] = Math.round((conformidadePorProfissao[h.respSetor] + h.pct) / 2);
+    });
+
+    const auditoriasPorAuditor: Record<string, number> = {};
+    audits.forEach(h => {
+      if (!h.auditor || h.auditor === "—") return;
+      auditoriasPorAuditor[h.auditor] = (auditoriasPorAuditor[h.auditor] || 0) + 1;
+    });
+
+    const totalProfissionaisObservados = new Set(audits.map(h => h.respSetor).filter(r => r && r !== "—")).size;
+    const totalAuditores = new Set(audits.map(h => h.auditor).filter(a => a && a !== "—")).size;
+
+    const classificacao = conformidadeGeral >= 95 ? "Excelente"
+      : conformidadeGeral >= 85 ? "Bom"
+      : conformidadeGeral >= 70 ? "Regular"
+      : "Crítico";
+
+    const statusCor = conformidadeGeral >= 85 ? "verde"
+      : conformidadeGeral >= 70 ? "amarelo"
+      : "vermelho";
+
+    const baixaAmostragem = totalAuditorias < 3;
+    const qualidadeRegistro = audits.filter(h => h.auditor && h.auditor !== "—").length >= totalAuditorias * 0.8
+      ? "Boa" : audits.filter(h => h.auditor && h.auditor !== "—").length >= totalAuditorias * 0.5
+      ? "Regular" : "Insuficiente";
+
+    const tendencia: "Melhorando" | "Estável" | "Piorando" | "Sem histórico" =
+      audits.length < 2 ? "Sem histórico"
+      : audits[audits.length - 1].pct > audits[0].pct ? "Piorando"
+      : audits[audits.length - 1].pct < audits[0].pct ? "Melhorando"
+      : "Estável";
+
+    return {
+      totalAuditorias, totalItens, itensConformes, itensNaoConformes,
+      conformidadeGeral, taxaNaoConformidade, totalProfissionaisObservados,
+      totalAuditores, classificacao, statusCor, topConformidades,
+      topNaoConformidades, naoConformidadesPorCategoria, conformidadePorCategoria,
+      conformidadePorProfissao, auditoriasPorAuditor, tendencia,
+      baixaAmostragem, qualidadeRegistro,
+    };
+  }
+
+  function buildManagerReportMarkdown(form: typeof managerReportForm): string {
+    const sectorName = CHECKLISTS_DATA[form.sectorKey]?.nome ?? form.sectorKey;
+    const m = calcManagerReportMetrics(form.sectorKey, form.auditType, form.periodStart, form.periodEnd);
+    const hospName = form.hospitalName || hospitalName || "Hospital/Unidade";
+    const generatedAt = new Date().toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
+
+    const formatDate = (d: string) => {
+      if (!d) return "—";
+      const [y, mo, day] = d.split("-");
+      return `${day}/${mo}/${y}`;
+    };
+
+    const principalPositivo = m.topConformidades[0]?.slice(0, 80) ?? "conformidade nos processos avaliados";
+    const principalNegativo = m.topNaoConformidades[0]?.slice(0, 80) ?? "pontos de atenção identificados";
+    const prioridade = m.conformidadeGeral < 70 ? "intervenção imediata e reauditoria urgente"
+      : m.conformidadeGeral < 85 ? "implantação de plano de melhoria e monitoramento sistemático"
+      : m.conformidadeGeral < 95 ? "ajustes pontuais e capacitação continuada"
+      : "manutenção das práticas e vigilância contínua";
+
+    const pontosPositivos = m.topConformidades.length > 0
+      ? m.topConformidades.map(c => `- ${c}`).join("\n")
+      : "- Nenhum ponto positivo específico identificado neste período.";
+
+    const pontosNegativos = m.topNaoConformidades.length > 0
+      ? m.topNaoConformidades.map(c => `- ${c}`).join("\n")
+      : "- Nenhuma não conformidade registrada neste período.";
+
+    const melhoriasAlta = Object.entries(m.naoConformidadesPorCategoria)
+      .filter(([cat]) => cat === "Crítica")
+      .flatMap(() => m.topNaoConformidades.slice(0, 3).map(nc => `- **[Crítica]** ${nc}`))
+      .join("\n") || "- Nenhuma não conformidade crítica registrada.";
+
+    const melhoriasMedia = Object.entries(m.naoConformidadesPorCategoria)
+      .filter(([cat]) => cat === "Maior")
+      .flatMap(() => m.topNaoConformidades.slice(3, 6).map(nc => `- **[Maior]** ${nc}`))
+      .join("\n") || "- Nenhuma não conformidade de prioridade média registrada.";
+
+    const melhoriasBaixa = Object.entries(m.naoConformidadesPorCategoria)
+      .filter(([cat]) => cat === "Menor")
+      .flatMap(() => m.topNaoConformidades.slice(6, 9).map(nc => `- **[Menor]** ${nc}`))
+      .join("\n") || "- Nenhuma não conformidade de baixa prioridade registrada.";
+
+    const causaProvavel = m.topNaoConformidades.length > 0
+      ? m.topNaoConformidades.slice(0, 3).map(nc =>
+          `- **${nc.slice(0,60)}**: Provável causa — falha de capacitação, ausência de supervisão ou indisponibilidade de insumos.`
+        ).join("\n")
+      : "- Sem não conformidades registradas que justifiquem análise de causa.";
+
+    const riscoAssistencial = m.conformidadeGeral < 70
+      ? "O nível de conformidade identificado representa **risco assistencial elevado**, com potencial impacto direto na segurança do paciente. Recomenda-se intervenção imediata."
+      : m.conformidadeGeral < 85
+      ? "O nível de conformidade representa **risco assistencial moderado**. As fragilidades identificadas devem ser corrigidas com prioridade e monitoradas até atingir a meta institucional."
+      : "O nível de conformidade está dentro do padrão aceitável, representando **baixo risco assistencial**. Mantenha a vigilância e o monitoramento contínuo.";
+
+    const planoAcaoLinhas = form.includeActionPlan
+      ? (() => {
+          const planos = appData.planos.filter(p => p.status !== "Encerrado").slice(0, 5);
+          if (planos.length > 0) {
+            return planos.map(p =>
+              `| ${p.what.slice(0,40)} | ${p.why.slice(0,40)} | ${p.where.slice(0,20)} | ${p.who.slice(0,20)} | ${p.when} | ${p.how.slice(0,40)} | ${p.status} |`
+            ).join("\n");
+          }
+          return m.topNaoConformidades.slice(0, 3).map(nc =>
+            `| Reforçar conformidade: ${nc.slice(0,30)} | Reduzir risco assistencial | ${sectorName} | Gestor + SCIH/CCIH | Até 15 dias | Treinamento em serviço e reauditoria | Sugerido |`
+          ).join("\n") || "| — | — | — | — | — | — | — |";
+        })()
+      : "| — | — | — | — | — | — | — |";
+
+    const observacoesAuditor = appData.historico
+      .filter(h => (h.setorKey === form.sectorKey || h.setorNome === sectorName) && h.relatorioIA)
+      .slice(0, 3)
+      .map(h => `**Auditoria ${h.data} (${h.tipo}):** ${(h.relatorioIA ?? "").slice(0, 200)}`)
+      .join("\n\n") || "> Nenhuma observação adicional registrada pelos auditores no período.";
+
+    const comparativo = form.includeComparative && m.tendencia !== "Sem histórico"
+      ? `O setor apresentou tendência de **${m.tendencia}** em relação ao período anterior. Conformidade atual: **${m.conformidadeGeral}%**.`
+      : "> Comparativo não disponível para o período selecionado.";
+
+    const nivelMaturidade = m.conformidadeGeral >= 95 && appData.planos.length > 0 ? "Nível 4 — Gerenciado"
+      : m.conformidadeGeral >= 85 ? "Nível 3 — Definido"
+      : m.conformidadeGeral >= 70 ? "Nível 2 — Repetitivo"
+      : "Nível 1 — Inicial";
+
+    const pendencias = m.baixaAmostragem
+      ? `- ⚠️ **Baixa amostragem**: apenas ${m.totalAuditorias} auditoria(s) no período. Recomenda-se ampliar a frequência de auditorias.\n`
+      : "";
+    const pendenciasCompleto = pendencias
+      + (m.qualidadeRegistro !== "Boa" ? `- ⚠️ **Qualidade de registro ${m.qualidadeRegistro}**: registros incompletos dificultam análise. Orientar os auditores sobre preenchimento adequado.\n` : "")
+      + (m.topNaoConformidades.length > 0 ? `- Encaminhar plano de ação ao gestor do setor até 5 dias úteis.\n- Agendar reauditoria em até 30 dias para verificar efetividade das ações corretivas.\n` : "")
+      || "- Sem pendências críticas identificadas.";
+
+    const recomendacoes = m.conformidadeGeral >= 95
+      ? `1. Manter as boas práticas identificadas e celebrar os resultados com a equipe.\n2. Implantar programa de vigilância contínua para sustentação dos resultados.\n3. Compartilhar as boas práticas com outros setores do hospital.`
+      : m.conformidadeGeral >= 85
+      ? `1. Realizar ajustes pontuais nos itens com não conformidade.\n2. Promover capacitação dirigida nas categorias com menor conformidade.\n3. Reauditar em 30 dias para verificar efetividade das ações corretivas.`
+      : m.conformidadeGeral >= 70
+      ? `1. Implantar plano de melhoria abrangendo todas as NCs identificadas.\n2. Aumentar frequência das auditorias para monitoramento semanal.\n3. Envolver o gestor do setor na definição de metas e prazos.`
+      : `1. **INTERVENÇÃO IMEDIATA**: acionar gestão e SCIH/CCIH para reunião de urgência.\n2. Reauditar em até 15 dias.\n3. Implantar supervisão diária até atingir conformidade mínima de 70%.\n4. Notificar a direção assistencial sobre o risco assistencial identificado.`;
+
+    const confPorCatTable = Object.entries(m.conformidadePorCategoria)
+      .map(([cat, val]) => `| ${cat.slice(0,50)} | ${val}% |`)
+      .join("\n") || "| — | — |";
+
+    return `# Relatório de Auditoria de Processos
+
+## 1. Identificação
+
+| Campo | Informação |
+|---|---|
+| Hospital/Unidade | ${hospName} |
+| Setor avaliado | ${sectorName} |
+| Tipo de auditoria | ${form.auditType} |
+| Período analisado | ${formatDate(form.periodStart)} a ${formatDate(form.periodEnd)} |
+| Gestor destinatário | ${form.managerName || "—"} |
+| E-mail do gestor | ${form.managerEmail || "—"} |
+| Responsável técnico | ${form.technicalResponsible || "—"} |
+| Data de emissão | ${generatedAt} |
+
+## 2. Sumário executivo
+
+No período analisado, o setor **${sectorName}** apresentou **${m.totalAuditorias} auditoria(s) de processos**, com conformidade geral de **${m.conformidadeGeral}%**. O desempenho foi classificado como **${m.classificacao}**.
+
+O principal ponto positivo identificado foi **${principalPositivo}**. A principal fragilidade encontrada foi **${principalNegativo}**.
+
+A prioridade de intervenção para o próximo ciclo é **${prioridade}**.
+
+${m.baixaAmostragem ? "> ⚠️ **Atenção**: baixa amostragem no período. Os resultados devem ser interpretados com cautela." : ""}
+
+## 3. Conceito técnico do indicador auditado
+
+${getAuditTechnicalConcept(form.auditType)}
+
+## 4. Indicadores principais
+
+| Indicador | Resultado |
+|---|---:|
+| Total de auditorias realizadas | ${m.totalAuditorias} |
+| Total de itens avaliados | ${m.totalItens} |
+| Itens conformes | ${m.itensConformes} |
+| Itens não conformes | ${m.itensNaoConformes} |
+| Conformidade geral | ${m.conformidadeGeral}% |
+| Taxa de não conformidade | ${m.taxaNaoConformidade}% |
+| Profissionais observados | ${m.totalProfissionaisObservados} |
+| Auditores envolvidos | ${m.totalAuditores} |
+| Classificação do desempenho | ${m.classificacao} |
+| Qualidade do registro | ${m.qualidadeRegistro} |
+| Tendência | ${m.tendencia} |
+
+## 5. Classificação do desempenho
+
+A classificação do setor foi **${m.classificacao}**.
+
+Critério utilizado:
+
+- Excelente: ≥ 95% de conformidade.
+- Bom: 85% a 94,9%.
+- Regular: 70% a 84,9%.
+- Crítico: < 70%.
+
+## 6. Conformidade por categoria
+
+| Categoria | Conformidade |
+|---|---:|
+${confPorCatTable}
+
+## 7. Pontos positivos
+
+${pontosPositivos}
+
+## 8. Pontos negativos
+
+${pontosNegativos}
+
+## 9. Pontos de melhoria
+
+### 9.1 Prioridade alta
+
+${melhoriasAlta}
+
+### 9.2 Prioridade média
+
+${melhoriasMedia}
+
+### 9.3 Prioridade baixa
+
+${melhoriasBaixa}
+
+## 10. Análise de causa provável
+
+${causaProvavel}
+
+## 11. Risco assistencial
+
+${riscoAssistencial}
+
+## 12. Plano de melhoria 5W2H
+
+| O que será feito? | Por quê? | Onde? | Quem? | Quando? | Como? | Status |
+|---|---|---|---|---|---|---|
+${planoAcaoLinhas}
+
+## 13. Observações do auditor
+
+${observacoesAuditor}
+
+## 14. Comparativo com período anterior
+
+${comparativo}
+
+## 15. Maturidade do setor
+
+O setor foi classificado no nível **${nivelMaturidade}** de maturidade operacional.
+
+Critérios considerados:
+
+- Percentual de conformidade.
+- Recorrência de não conformidades.
+- Existência de plano de ação.
+- Cumprimento de prazos.
+- Evolução em relação ao período anterior.
+
+## 16. Pendências e encaminhamentos
+
+${pendenciasCompleto}
+
+## 17. Recomendações técnicas
+
+${recomendacoes}
+
+## 18. Conclusão
+
+Conclui-se que o setor **${sectorName}** apresenta desempenho **${m.classificacao}** no processo auditado, com conformidade geral de **${m.conformidadeGeral}%**.
+
+Apesar dos pontos positivos identificados, as não conformidades relacionadas a **${principalNegativo}** devem ser priorizadas pelo gestor, com implantação de plano de ação, monitoramento sistemático e reauditoria no próximo ciclo.
+
+## 19. Ciência e assinatura
+
+| Responsável | Nome | Assinatura/Data |
+|---|---|---|
+| Gestor do setor | ${form.managerName || "___________________"} |  |
+| SCIH/CCIH | ${form.technicalResponsible || "___________________"} |  |
+| Direção assistencial |  |  |
+`;
   }
 
   // ─── ACTIONS ──────────────────────────────────────────────────────────────
@@ -1648,8 +2042,22 @@ Regras:
   function renderRelatorio() {
     return (
       <div>
-        <div className="scih-page-title">Relatório Geral</div>
-        <div className="scih-page-sub">Panorama consolidado de todas as auditorias realizadas</div>
+        <div className="scih-row scih-mb" style={{ marginBottom:20 }}>
+          <div>
+            <div className="scih-page-title">Relatório Geral</div>
+            <div className="scih-page-sub">Panorama consolidado de todas as auditorias realizadas</div>
+          </div>
+          <button
+            className="scih-btn scih-btn-teal"
+            style={{ flexShrink:0 }}
+            onClick={() => {
+              setManagerReportForm(f => ({ ...f, hospitalName: hospitalName || "" }));
+              setShowManagerReportModal(true);
+            }}
+          >
+            📋 Gerar relatório do gestor
+          </button>
+        </div>
 
         <div className="scih-grid3 scih-mb">
           <div className="scih-card">
@@ -1806,6 +2214,155 @@ Regras:
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ─── MANAGER REPORT MODAL ─────────────────────────────────────────────────
+
+  function renderManagerReportModal() {
+    if (!showManagerReportModal) return null;
+    const f = managerReportForm;
+    const setF = (patch: Partial<typeof managerReportForm>) =>
+      setManagerReportForm(prev => ({ ...prev, ...patch }));
+    const sectorOptions = Object.entries(CHECKLISTS_DATA).map(([k, v]) => ({ key: k, nome: v.nome }));
+
+    return (
+      <div className="scih-modal-overlay" onClick={() => setShowManagerReportModal(false)}>
+        <div className="scih-modal-xl" onClick={e => e.stopPropagation()}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+            <div className="scih-modal-title" style={{ margin:0 }}>📋 Gerar Relatório do Gestor</div>
+            <button className="scih-btn scih-btn-outline" style={{ fontSize:11 }} onClick={() => setShowManagerReportModal(false)}>✕ Fechar</button>
+          </div>
+
+          <div className="scih-report-grid">
+            <div>
+              <label className="scih-label">Hospital/Unidade</label>
+              <input className="scih-input" value={f.hospitalName} onChange={e => setF({ hospitalName: e.target.value })} placeholder="Nome do hospital" />
+            </div>
+            <div>
+              <label className="scih-label">Setor</label>
+              <select className="scih-select" style={{ width:"100%" }} value={f.sectorKey} onChange={e => setF({ sectorKey: e.target.value })}>
+                {sectorOptions.map(s => <option key={s.key} value={s.key}>{s.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="scih-label">Período inicial</label>
+              <input type="date" className="scih-input" value={f.periodStart} onChange={e => setF({ periodStart: e.target.value })} />
+            </div>
+            <div>
+              <label className="scih-label">Período final</label>
+              <input type="date" className="scih-input" value={f.periodEnd} onChange={e => setF({ periodEnd: e.target.value })} />
+            </div>
+            <div>
+              <label className="scih-label">Tipo de auditoria</label>
+              <select className="scih-select" style={{ width:"100%" }} value={f.auditType} onChange={e => setF({ auditType: e.target.value })}>
+                {["Programada","Não programada","Supervisão","Reauditoria","Todos"].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="scih-label">Nome do gestor</label>
+              <input className="scih-input" value={f.managerName} onChange={e => setF({ managerName: e.target.value })} placeholder="Ex.: Enf.ª Maria Silva" />
+            </div>
+            <div>
+              <label className="scih-label">E-mail do gestor</label>
+              <input type="email" className="scih-input" value={f.managerEmail} onChange={e => setF({ managerEmail: e.target.value })} placeholder="gestor@hospital.com" />
+            </div>
+            <div>
+              <label className="scih-label">Responsável técnico (SCIH/CCIH)</label>
+              <input className="scih-input" value={f.technicalResponsible} onChange={e => setF({ technicalResponsible: e.target.value })} placeholder="Ex.: Dr. João Lima" />
+            </div>
+          </div>
+
+          <div style={{ display:"flex", gap:24, marginTop:14 }}>
+            <label className="scih-checkbox-row">
+              <input type="checkbox" checked={f.includeComparative} onChange={e => setF({ includeComparative: e.target.checked })} />
+              Incluir comparativo com período anterior
+            </label>
+            <label className="scih-checkbox-row">
+              <input type="checkbox" checked={f.includeActionPlan} onChange={e => setF({ includeActionPlan: e.target.checked })} />
+              Incluir plano de ação
+            </label>
+          </div>
+
+          <div className="scih-flex scih-mt" style={{ marginTop:20 }}>
+            <button className="scih-btn scih-btn-teal" onClick={() => {
+              const md = buildManagerReportMarkdown(managerReportForm);
+              setManagerReportMarkdown(md);
+              setShowManagerReportModal(false);
+              setShowManagerReportPreview(true);
+              setManagerReportCopied(false);
+            }}>
+              ✨ Gerar relatório
+            </button>
+            <button className="scih-btn scih-btn-outline" onClick={() => setShowManagerReportModal(false)}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderManagerReportPreview() {
+    if (!showManagerReportPreview) return null;
+    const sectorName = CHECKLISTS_DATA[managerReportForm.sectorKey]?.nome ?? managerReportForm.sectorKey;
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(managerReportMarkdown).then(() => {
+        setManagerReportCopied(true);
+        setTimeout(() => setManagerReportCopied(false), 2500);
+      });
+    };
+
+    const handleDownload = () => {
+      const blob = new Blob([managerReportMarkdown], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-gestor-${sectorName.toLowerCase().replace(/\s+/g,"-")}-${managerReportForm.periodEnd}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    return (
+      <div className="scih-modal-overlay" onClick={() => setShowManagerReportPreview(false)}>
+        <div className="scih-modal-xl" style={{ width:900 }} onClick={e => e.stopPropagation()}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div>
+              <div className="scih-modal-title" style={{ margin:0 }}>📄 Relatório do Gestor — {sectorName}</div>
+              <div style={{ fontSize:12, color:"var(--text2)", marginTop:4 }}>
+                {managerReportForm.periodStart} a {managerReportForm.periodEnd}
+              </div>
+            </div>
+            <button className="scih-btn scih-btn-outline" style={{ fontSize:11 }} onClick={() => setShowManagerReportPreview(false)}>✕ Fechar</button>
+          </div>
+
+          <div style={{ background:"rgba(26,158,117,.08)", border:"1px solid rgba(26,158,117,.3)", borderRadius:8, padding:"10px 14px", marginBottom:14, fontSize:12, color:"#1a9e75" }}>
+            ✅ Relatório gerado com sucesso. Copie o Markdown ou baixe o arquivo <code>.md</code> para usar externamente.
+          </div>
+
+          <div className="scih-md-preview">{managerReportMarkdown}</div>
+
+          <div className="scih-flex scih-mt" style={{ flexWrap:"wrap", gap:10, marginTop:16 }}>
+            <button className="scih-btn scih-btn-teal" onClick={handleCopy}>
+              {managerReportCopied ? "✓ Copiado!" : "📋 Copiar Markdown"}
+            </button>
+            <button className="scih-btn scih-btn-outline" onClick={handleDownload}>
+              ⬇️ Baixar .md
+            </button>
+            <button className="scih-btn scih-btn-outline" style={{ opacity:0.5, cursor:"not-allowed" }} disabled title="Em breve">
+              📑 Preparar PDF
+            </button>
+            <button className="scih-btn scih-btn-outline" style={{ opacity:0.5, cursor:"not-allowed" }} disabled title="Em breve">
+              ✉️ Enviar por e-mail
+            </button>
+            <button className="scih-btn scih-btn-outline" style={{ marginLeft:"auto" }} onClick={() => {
+              setShowManagerReportPreview(false);
+              setShowManagerReportModal(true);
+            }}>
+              ← Editar filtros
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -2065,6 +2622,11 @@ Regras:
           </div>
         </div>
       )}
+
+      {/* Modais do relatório do gestor */}
+      {renderManagerReportModal()}
+      {renderManagerReportPreview()}
+
         {/* Tabs horizontais */}
         <div className="scih-tabs">
           {NAV.map(n => (
