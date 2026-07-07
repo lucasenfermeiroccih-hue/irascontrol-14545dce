@@ -23,6 +23,7 @@ import YearComparisonChart from "@/components/YearComparisonChart";
 import { useAuditDashboard } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
+import { AuditManagerReportButton } from "@/modules/audits/reports/AuditManagerReportButton";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function DashboardHygiene() {
-  const { hospitalId } = useHospitalContext();
+  const { hospitalId, hospitalName } = useHospitalContext();
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
@@ -479,6 +480,7 @@ export default function DashboardHygiene() {
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
             <Download className="h-4 w-4 mr-1" />PDF
           </Button>
+          <AuditManagerReportButton hospitalId={hospitalId || ""} hospitalName={hospitalName} availableSectors={buildSectorOptions(allAudits)} defaultAuditType="hand_hygiene" />
           <DashboardAIInsights generateInsights={() => {
             const ins: string[] = [];
             ins.push(`📊 Taxa de adesão de ${fStats.adhesionRate}% com ${fStats.totalAudits} formulários analisados.`);

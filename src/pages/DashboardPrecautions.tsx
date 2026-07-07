@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import ChartActions from "@/components/ChartActions";
 import DashboardAIInsights from "@/components/DashboardAIInsights";
+import { AuditManagerReportButton } from "@/modules/audits/reports/AuditManagerReportButton";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
@@ -164,7 +165,7 @@ function okrStatus(current: number, target: number): OKRStatus {
 // ─── Main Component ───────────────────────────────────────────
 export default function DashboardPrecautions() {
   const navigate = useNavigate();
-  const { hospitalId, userId, loading: ctxLoading } = useHospitalContext();
+  const { hospitalId, hospitalName, userId, loading: ctxLoading } = useHospitalContext();
   const [records, setRecords] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -677,6 +678,7 @@ export default function DashboardPrecautions() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <AuditManagerReportButton hospitalId={hospitalId || ""} hospitalName={hospitalName} availableSectors={uniqueSectors} defaultAuditType="precaution" />
           <DashboardAIInsights generateInsights={() => {
             const ins: string[] = [];
             ins.push(`📊 ${stats.totalRecords} auditorias com ${stats.pctConformidade}% de conformidade.`);

@@ -23,6 +23,7 @@ import { useAuditDashboard } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
 import { toast } from "sonner";
+import { AuditManagerReportButton } from "@/modules/audits/reports/AuditManagerReportButton";
 
 // ─── Ishikawa Diagram ─────────────────────────────────────────────────────────
 
@@ -276,7 +277,7 @@ function sectorColor(compliance: number) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function DashboardInfectionControl() {
-  const { hospitalId } = useHospitalContext();
+  const { hospitalId, hospitalName } = useHospitalContext();
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
@@ -431,6 +432,7 @@ export default function DashboardInfectionControl() {
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
             <Download className="h-4 w-4 mr-1" />PDF
           </Button>
+          <AuditManagerReportButton hospitalId={hospitalId || ""} hospitalName={hospitalName} availableSectors={buildSectorOptions(allAudits)} defaultAuditType="infection_control" />
           <DashboardAIInsights
             generateInsights={() => {
               const ins: string[] = [];

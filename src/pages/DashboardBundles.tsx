@@ -14,6 +14,7 @@ import { useAuditDashboard } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
 import { useState } from "react";
+import { AuditManagerReportButton } from "@/modules/audits/reports/AuditManagerReportButton";
 
 function getStatusBadge(status: string) {
   if (status === "Crítico") return <Badge variant="destructive">{status}</Badge>;
@@ -22,7 +23,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function DashboardBundles() {
-  const { hospitalId } = useHospitalContext();
+  const { hospitalId, hospitalName } = useHospitalContext();
   const [dia, setDia] = useState<string[]>([]);
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
@@ -63,8 +64,9 @@ export default function DashboardBundles() {
           <h1 className="text-xl md:text-2xl font-bold">Dashboard — Bundles CVC/SVD</h1>
           <p className="text-sm text-muted-foreground">Indicadores de conformidade de dispositivos invasivos</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleExportPdf}><Download className="h-4 w-4 mr-1" />PDF</Button>
+          <AuditManagerReportButton hospitalId={hospitalId || ""} hospitalName={hospitalName} availableSectors={buildSectorOptions(allAudits)} defaultAuditType="bundles" />
           <DashboardAIInsights generateInsights={() => {
           const ins: string[] = [];
           ins.push(`📊 Conformidade geral de ${stats.avgCompliance}% com ${stats.totalAudits} auditorias.`);

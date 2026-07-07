@@ -24,6 +24,7 @@ import ChartActions from "@/components/ChartActions";
 import { useAuditDashboard as useAudit } from "@/hooks/useAuditDashboard";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import { exportPdf } from "@/lib/pdf-export";
+import { AuditManagerReportButton } from "@/modules/audits/reports/AuditManagerReportButton";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ function sectorColor(c: number) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function DashboardStructure() {
-  const { hospitalId } = useHospitalContext();
+  const { hospitalId, hospitalName } = useHospitalContext();
   const [dia, setDia]     = useState<string[]>([]);
   const [mes, setMes]     = useState<string[]>([]);
   const [ano, setAno]     = useState<string[]>([]);
@@ -498,6 +499,7 @@ export default function DashboardStructure() {
           <Button variant="outline" size="sm" onClick={handleExportPdf}>
             <Download className="h-4 w-4 mr-1" />PDF
           </Button>
+          <AuditManagerReportButton hospitalId={hospitalId || ""} hospitalName={hospitalName} availableSectors={buildSectorOptions(allAudits)} defaultAuditType="cti_infrastructure" />
           <DashboardAIInsights generateInsights={() => {
             const ins: string[] = [];
             ins.push(`🏥 Conformidade estrutural de ${fStats.avgCompliance}% em ${fStats.totalAudits} auditorias de ${fStats.sectorData.length} setores.`);
