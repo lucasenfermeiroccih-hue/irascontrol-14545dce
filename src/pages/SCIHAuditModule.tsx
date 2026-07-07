@@ -352,6 +352,8 @@ export default function SCIHAuditModule() {
   const [selectedHistIds, setSelectedHistIds] = useState<Set<string>>(new Set());
   const [scihBulkEmailOpen, setScihBulkEmailOpen] = useState(false);
   const [scihBulkProgress, setScihBulkProgress] = useState("");
+  const [bulkPdfExporting, setBulkPdfExporting] = useState(false);
+  const [bulkPdfProgress, setBulkPdfProgress] = useState("");
   const [editAuditRecord, setEditAuditRecord] = useState<AuditRecord | null>(null);
   const [editAuditForm, setEditAuditForm] = useState<{ auditor: string; respSetor: string; tipo: string }>({ auditor: "", respSetor: "", tipo: "" });
   const [scihEmailRecord, setScihEmailRecord] = useState<AuditRecord | null>(null);
@@ -1487,6 +1489,94 @@ Apesar dos pontos positivos identificados, as não conformidades relacionadas a 
     alert(`${ok} de ${selected.length} auditoria(s) enviada(s) com sucesso!`);
   }
 
+  async function handleBulkExportPdf() {
+    const selected = appData.historico.filter(h => selectedHistIds.has(h.id!));
+    if (selected.length === 0) return;
+    setBulkPdfExporting(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { hospitalLogo, scihLogos } = await fetchLogosForPdf();
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const PW = doc.internal.pageSize.getWidth();
+      const PH = doc.internal.pageSize.getHeight();
+      const MG = 14;
+
+      selected.forEach((record, idx) => {
+        setBulkPdfProgress(`Gerando ${idx + 1} de ${selected.length}…`);
+        if (idx > 0) doc.addPage();
+
+        // Cabeçalho
+        doc.setFillColor(15, 76, 117); doc.rect(0, 0, PW, 42, "F");
+        doc.setFillColor(13, 148, 136); doc.rect(0, 0, PW, 2.5, "F"); doc.rect(0, 42, PW, 2.5, "F");
+        let logoX = MG;
+        if (hospitalLogo) { const lh = 14, lw = (hospitalLogo.w / hospitalLogo.h) * lh; doc.addImage(hospitalLogo.dataUrl, "PNG", logoX, 7, lw, lh); logoX += lw + 6; }
+        scihLogos.slice(0, 2).forEach(lg => { const lh = 14, lw = (lg.w / lg.h) * lh; doc.addImage(lg.dataUrl, "PNG", logoX, 7, lw, lh); logoX += lw + 4; });
+        doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
+        doc.text("Relatório de Auditoria SCIH/CCIH", PW - MG, 14, { align: "right" });
+        doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(160, 205, 235);
+        doc.text(`${record.setorNome} · ${record.data}`, PW - MG, 21, { align: "right" });
+        doc.text(`Auditoria ${record.tipo} · Auditor: ${record.auditor}`, PW - MG, 28, { align: "right" });
+        doc.text(`Pág. ${idx + 1} de ${selected.length}`, PW - MG, 35, { align: "right" });
+
+        let y = 54;
+        const pct = record.pct;
+        const col: [number,number,number] = pct >= 70 ? [26,158,117] : pct >= 50 ? [212,160,23] : [218,54,51];
+        doc.setFillColor(245,245,245); doc.rect(MG, y, PW - MG*2, 26, "F");
+        doc.setFillColor(...col); doc.rect(MG, y, 3, 26, "F");
+        doc.setFont("helvetica", "bold"); doc.setFontSize(26); doc.setTextColor(...col);
+        doc.text(`${pct}%`, MG + 10, y + 17);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(100,100,100);
+        doc.text("Conformidade", MG + 10, y + 23);
+        doc.setFontSize(10); doc.setTextColor(50,50,50);
+        doc.text(`Auditor: ${record.auditor}`, MG + 50, y + 10);
+        doc.text(`Resp. Setor: ${record.respSetor}`, MG + 50, y + 17);
+        doc.text(`Tipo: ${record.tipo}   NCs: ${record.ncCount}`, MG + 50, y + 23);
+        y += 34;
+
+        const ncsAudit = appData.ncs.filter(n => n.data === record.data && n.setor === record.setorNome);
+        if (ncsAudit.length > 0) {
+          doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15,76,117);
+          doc.text("Não Conformidades", MG, y);
+          doc.setDrawColor(15,76,117); doc.setLineWidth(0.4); doc.line(MG, y+2, PW-MG, y+2); y += 8;
+          ncsAudit.forEach((nc, i) => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            doc.setFillColor(i%2===0?250:244, i%2===0?250:244, i%2===0?250:244);
+            doc.rect(MG, y-4, PW-MG*2, 8, "F");
+            const sevCol: [number,number,number] = nc.sev === "Crítica" ? [218,54,51] : nc.sev === "Maior" ? [212,160,23] : [26,158,117];
+            doc.setFillColor(...sevCol); doc.rect(MG, y-4, 3, 8, "F");
+            doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(40,40,40);
+            const perg = nc.pergunta.length > 72 ? nc.pergunta.slice(0, 72) + "…" : nc.pergunta;
+            doc.text(`${i+1}. ${perg}`, MG+5, y);
+            doc.setTextColor(...sevCol); doc.text(nc.sev, PW-MG, y, { align:"right" }); y += 9;
+          });
+        }
+
+        if (record.relatorioIA) {
+          if (y > 240) { doc.addPage(); y = 20; }
+          y += 4;
+          doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15,76,117);
+          doc.text("Análise & Plano de Ação (IA)", MG, y);
+          doc.setDrawColor(15,76,117); doc.setLineWidth(0.4); doc.line(MG, y+2, PW-MG, y+2); y += 8;
+          doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(50,50,50);
+          const lines = doc.splitTextToSize(record.relatorioIA, PW - MG*2);
+          lines.forEach((line: string) => { if (y > 278) { doc.addPage(); y = 20; } doc.text(line, MG, y); y += 5; });
+        }
+
+        // Rodapé da página
+        doc.setFillColor(245,245,245); doc.rect(0, PH-8, PW, 8, "F");
+        doc.setFont("helvetica", "normal"); doc.setFontSize(6.5); doc.setTextColor(130,130,130);
+        doc.text(`IRAS Control · SCIH/CCIH · ${new Date().toLocaleString("pt-BR")}`, MG, PH-2);
+      });
+
+      doc.save(`auditorias-scih-${selected.length}-registros-${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (e: any) {
+      alert("Erro ao gerar PDF: " + (e?.message || "erro desconhecido"));
+    } finally {
+      setBulkPdfExporting(false);
+      setBulkPdfProgress("");
+    }
+  }
+
   function handleDeleteAudit(id: string) {
     setAppData(prev => ({ ...prev, historico: prev.historico.filter(h => h.id !== id) }));
     setDeleteAuditId(null);
@@ -1820,33 +1910,47 @@ Apesar dos pontos positivos identificados, as não conformidades relacionadas a 
 
         {auditTab === "historico" && (
           <div className="scih-card" style={{ padding:0 }}>
-            {selectedHistIds.size > 0 && (
-              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"rgba(13,148,136,.1)", borderBottom:"1px solid var(--border)" }}>
-                <span style={{ fontSize:13, color:"var(--text)", fontWeight:500 }}>{selectedHistIds.size} auditoria(s) selecionada(s)</span>
-                <button className="scih-btn scih-btn-teal" style={{ fontSize:12, padding:"4px 12px", marginLeft:"auto" }}
-                  onClick={() => { setScihEmailTo(""); setScihEmailCc(""); setScihEmailName(""); setScihBulkEmailOpen(true); }}>
-                  ✉️ Enviar selecionadas
+            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background: selectedHistIds.size > 0 ? "rgba(13,148,136,.12)" : "var(--bg3)", borderBottom:"1px solid var(--border)", transition:"background .2s" }}>
+              <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)", width:15, height:15 }}
+                checked={appData.historico.length > 0 && selectedHistIds.size === appData.historico.length}
+                onChange={toggleHistSelectAll}
+                title="Selecionar todas"
+              />
+              <span style={{ fontSize:12, color: selectedHistIds.size > 0 ? "var(--teal)" : "var(--text2)", fontWeight: selectedHistIds.size > 0 ? 600 : 400 }}>
+                {selectedHistIds.size > 0 ? `${selectedHistIds.size} de ${appData.historico.length} selecionada(s)` : "Marque para selecionar e exportar em lote"}
+              </span>
+              {selectedHistIds.size > 0 && (<>
+                <button
+                  className="scih-btn scih-btn-teal"
+                  style={{ fontSize:12, padding:"4px 14px", marginLeft:"auto" }}
+                  disabled={bulkPdfExporting}
+                  onClick={handleBulkExportPdf}
+                >
+                  {bulkPdfExporting ? `⏳ ${bulkPdfProgress || "Gerando…"}` : `📄 Exportar PDF (${selectedHistIds.size})`}
                 </button>
-                <button className="scih-btn scih-btn-outline" style={{ fontSize:12, padding:"4px 10px" }} onClick={() => setSelectedHistIds(new Set())}>Limpar</button>
-              </div>
-            )}
+                <button
+                  className="scih-btn scih-btn-teal"
+                  style={{ fontSize:12, padding:"4px 14px", background:"#388bfd" }}
+                  onClick={() => { setScihEmailTo(""); setScihEmailCc(""); setScihEmailName(""); setScihBulkEmailOpen(true); }}
+                >
+                  ✉️ Enviar por e-mail ({selectedHistIds.size})
+                </button>
+                <button className="scih-btn scih-btn-outline" style={{ fontSize:12, padding:"4px 10px" }} onClick={() => setSelectedHistIds(new Set())}>✕ Limpar</button>
+              </>)}
+            </div>
             <table className="scih-table">
               <thead>
                 <tr>
-                  <th style={{ width:36 }}>
-                    <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)" }}
-                      checked={appData.historico.length > 0 && selectedHistIds.size === appData.historico.length}
-                      onChange={toggleHistSelectAll} />
-                  </th>
+                  <th style={{ width:36 }}></th>
                   <th>Setor</th><th>Data</th><th>Tipo</th><th>Auditor</th><th>Conformidade</th><th>NCs</th><th>Plano IA</th><th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {appData.historico.length === 0 && <tr><td colSpan={9} style={{ textAlign:"center", color:"var(--text2)", padding:24 }}>Nenhuma auditoria registrada.</td></tr>}
                 {appData.historico.map(h => (
-                  <tr key={h.id}>
+                  <tr key={h.id} style={{ background: selectedHistIds.has(h.id!) ? "rgba(26,158,117,.07)" : undefined }}>
                     <td>
-                      <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)" }}
+                      <input type="checkbox" style={{ cursor:"pointer", accentColor:"var(--teal)", width:15, height:15 }}
                         checked={selectedHistIds.has(h.id!)}
                         onChange={() => toggleHistSelect(h.id!)} />
                     </td>
