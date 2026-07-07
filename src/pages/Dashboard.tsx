@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { openGuardiaoWithSSO } from "@/lib/guardiaoSSO";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { hospitalId, loading: ctxLoading } = useHospitalContext();
   const [mes, setMes] = useState<string[]>([]);
   const [ano, setAno] = useState<string[]>([]);
@@ -432,6 +434,26 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Card — Relatório do Gestor */}
+      <div
+        onClick={() => navigate("/tools/scih-audits?openRelatorio=1")}
+        className="cursor-pointer rounded-xl border p-4 sm:p-5 flex items-center justify-between gap-4 transition-opacity hover:opacity-90"
+        style={{ background: "linear-gradient(135deg, #0f4c75 0%, #1a9e75 100%)", borderColor: "#1a9e75" }}
+      >
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 text-3xl">
+            📋
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm sm:text-base font-bold text-white">Gerar Relatório do Gestor</p>
+            <p className="text-xs text-white/75 mt-0.5 truncate">Selecione setor e período · exporte em PDF ou envie por e-mail</p>
+          </div>
+        </div>
+        <div className="shrink-0 rounded-lg border border-white/30 bg-white/15 px-4 py-2 text-sm font-semibold text-white">
+          Criar relatório →
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

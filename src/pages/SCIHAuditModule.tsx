@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
 import type { Json } from "@/integrations/supabase/types";
@@ -256,6 +257,7 @@ const NAV: { key: Page; label: string; icon: string }[] = [
 
 export default function SCIHAuditModule() {
   const { hospitalId, hospitalName } = useHospitalContext();
+  const [searchParams] = useSearchParams();
 
   // ── persistence ──
   const [appData, setAppDataRaw] = useState<AppData>(EMPTY_DATA);
@@ -295,6 +297,15 @@ export default function SCIHAuditModule() {
 
   // ── navigation ──
   const [activePage, setActivePage] = useState<Page>("dashboard");
+
+  // Abre modal de relatório automaticamente se vier de ?openRelatorio=1
+  useEffect(() => {
+    if (!loaded) return;
+    if (searchParams.get("openRelatorio") === "1") {
+      openManagerReportModal();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   // ── AI state ──
   const [aiLoading, setAiLoading] = useState(false);
