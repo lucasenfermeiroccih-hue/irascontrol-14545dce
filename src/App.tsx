@@ -68,6 +68,10 @@ import { RequireAdmin } from "./components/RequireAdmin.tsx";
 import { RequireHospitalAccess } from "./components/RequireHospitalAccess.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Maternidade from "./pages/Maternidade.tsx";
+import MaternityDashboard from "./pages/MaternityDashboard.tsx";
+import MaternityMonthlyForm from "./pages/MaternityMonthlyForm.tsx";
+import MaternityActionPlan from "./pages/MaternityActionPlan.tsx";
+import MaternityReport from "./pages/MaternityReport.tsx";
 import ProtocolosIA from "./pages/ProtocolosIA.tsx";
 import ReunioesMeetingsModule from "./pages/ReunioesMeetingsModule.tsx";
 import PermissoesUsuarios from "./pages/PermissoesUsuarios.tsx";
@@ -152,6 +156,10 @@ const App = () => (
               <Route path="/notificacoes/historico" element={<NotificacoesHistory />} />
               <Route path="/notificacoes/dashboard" element={<NotificacoesDashboard />} />
               <Route path="/maternidade" element={<Maternidade />} />
+              <Route path="/maternidade/dashboard" element={<MaternityDashboard />} />
+              <Route path="/maternidade/lancamento" element={<MaternityMonthlyForm />} />
+              <Route path="/maternidade/plano-acao" element={<MaternityActionPlan />} />
+              <Route path="/maternidade/relatorio" element={<MaternityReport />} />
               <Route path="/protocolos-ia" element={<ProtocolosIA />} />
               <Route path="/reunioes-atas" element={<ReunioesMeetingsModule />} />
             </Route>
