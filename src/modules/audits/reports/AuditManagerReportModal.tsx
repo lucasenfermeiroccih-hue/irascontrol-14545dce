@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Copy, Download, FileText, ArrowLeft, CheckCircle, ImageIcon } from "lucide-react";
+import { Loader2, Copy, Download, FileText, ArrowLeft, CheckCircle, ImageIcon, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import type { AuditReportMode, AuditManagerReportMetrics, MonthlySectorCompiledAuditMetrics } from "./auditReportTypes";
 import { fetchAuditsForReport, fetchHospitalLogos, generateAIReportSections } from "./auditReportService";
@@ -79,6 +80,13 @@ export function AuditManagerReportModal({
   const [generatedMode, setGeneratedMode] = useState<AuditReportMode>("single_audit_type");
   const [generatedHospitalLogoUrl, setGeneratedHospitalLogoUrl] = useState<string | undefined>();
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // E-mail dialog state
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailCc, setEmailCc] = useState("");
+  const [emailMgrName, setEmailMgrName] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
 
   const chartsRef = useRef<HTMLDivElement>(null);
 
@@ -289,6 +297,83 @@ export function AuditManagerReportModal({
       toast.error("Erro ao exportar PDF com gráficos: " + e?.message);
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  const handleOpenEmail = () => {
+    setEmailTo(managerEmail);
+    setEmailMgrName(managerName);
+    setEmailCc("");
+    setEmailOpen(true);
+  };
+
+  const handleSendReportEmail = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const to = emailTo.trim();
+    if (!emailRegex.test(to)) {
+      toast.error("Informe um e-mail válido para o destinatário.");
+      return;
+    }
+    if (!generatedMetrics) return;
+
+    const ccList = emailCc.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    const invalidCc = ccList.filter(e => !emailRegex.test(e));
+    if (invalidCc.length > 0) {
+      toast.error("E-mail(s) de cópia inválido(s): " + invalidCc.join(", "));
+      return;
+    }
+
+    setEmailSending(true);
+    try {
+      toast.info("Gerando PDF e enviando e-mail, aguarde...");
+
+      const auditTypeName = generatedMode === "single_audit_type" ? getAuditTypeName(auditType) : "Compilado Mensal";
+      const period = `${periodStart} a ${periodEnd}`;
+
+      // Gera PDF como base64 (sem salvar no disco)
+      const pdfBase64 = await generateReportPdfWithCharts({
+        chartsContainerRef: chartsRef,
+        markdownContent,
+        hospitalName,
+        sectorName: selectedSectors.join(", "),
+        auditTypeName,
+        period,
+        hospitalLogoUrl: generatedHospitalLogoUrl,
+        metrics: generatedMetrics,
+        mode: generatedMode,
+        outputMode: "base64",
+      });
+
+      const { data, error } = await supabase.functions.invoke("send-audit-email", {
+        body: {
+          reportMode: true,
+          to,
+          cc: ccList,
+          managerName: emailMgrName.trim(),
+          reportPdfBase64: pdfBase64,
+          markdownContent,
+          hospitalName,
+          sectorName: selectedSectors.join(", "),
+          auditTypeName,
+          period,
+          metrics: {
+            generalComplianceRate: generatedMetrics.generalComplianceRate,
+            totalAudits: generatedMetrics.totalAudits,
+            compliantItems: generatedMetrics.compliantItems,
+            nonCompliantItems: generatedMetrics.nonCompliantItems,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Relatório enviado com sucesso para ${to}!`);
+      setEmailOpen(false);
+    } catch (e: any) {
+      toast.error("Erro ao enviar e-mail: " + (e?.message || "tente novamente."));
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -510,18 +595,80 @@ export function AuditManagerReportModal({
               <Button variant="outline" size="sm" onClick={handleDownloadMd}>
                 <Download className="h-4 w-4 mr-1" />Baixar .md
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadPdfText} disabled={pdfLoading}>
+              <Button variant="outline" size="sm" onClick={handleDownloadPdfText} disabled={pdfLoading || emailSending}>
                 {pdfLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
                 PDF (texto)
               </Button>
-              <Button size="sm" onClick={handleDownloadPdfWithCharts} disabled={pdfLoading}>
+              <Button variant="outline" size="sm" onClick={handleDownloadPdfWithCharts} disabled={pdfLoading || emailSending}>
                 {pdfLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1" />}
                 PDF com Gráficos
+              </Button>
+              <Button size="sm" onClick={handleOpenEmail} disabled={pdfLoading || emailSending}>
+                <Mail className="h-4 w-4 mr-1" />
+                Enviar por E-mail
               </Button>
             </>
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* ── DIÁLOGO DE E-MAIL ── */}
+      <Dialog open={emailOpen} onOpenChange={(o) => { if (!emailSending) setEmailOpen(o); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Mail className="h-4 w-4 text-primary" />
+              Enviar Relatório por E-mail
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              O PDF completo com gráficos será gerado e enviado como anexo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Para (e-mail do gestor) *</Label>
+              <Input
+                type="email"
+                value={emailTo}
+                onChange={e => setEmailTo(e.target.value)}
+                placeholder="gestor@hospital.com"
+                disabled={emailSending}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Cópia (CC) — separar por vírgula</Label>
+              <Input
+                value={emailCc}
+                onChange={e => setEmailCc(e.target.value)}
+                placeholder="outro@email.com, chefia@email.com"
+                disabled={emailSending}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Nome do gestor</Label>
+              <Input
+                value={emailMgrName}
+                onChange={e => setEmailMgrName(e.target.value)}
+                placeholder="Dr. João Silva"
+                disabled={emailSending}
+              />
+            </div>
+            <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              Serão enviados em anexo: <strong>PDF com gráficos</strong> e <strong>relatório em texto (.md)</strong>.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setEmailOpen(false)} disabled={emailSending}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSendReportEmail} disabled={emailSending}>
+              {emailSending
+                ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Enviando...</>
+                : <><Mail className="h-4 w-4 mr-1" />Enviar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
