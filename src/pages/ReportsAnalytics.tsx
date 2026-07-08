@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import DashboardAIInsights from "@/components/DashboardAIInsights";
 import { toast } from "sonner";
 import { useReportsAnalytics } from "@/hooks/useReportsAnalytics";
 import { useHospitalContext } from "@/hooks/useHospitalContext";
-import { exportPdf } from "@/lib/pdf-export";
+import { captureElementAsPdf } from "@/lib/pdf-export";
 
 const COLORS = ["hsl(168,66%,34%)", "hsl(210,80%,55%)", "hsl(45,93%,47%)", "hsl(0,84%,60%)", "hsl(280,60%,55%)", "hsl(150,60%,40%)"];
 
@@ -23,6 +23,7 @@ export default function ReportsAnalytics() {
   const [generating, setGenerating] = useState(false);
   const { hospitalId } = useHospitalContext();
   const { analytics, loading } = useReportsAnalytics(periodo);
+  const reportContentRef = useRef<HTMLDivElement>(null);
 
   const handleGenerateReport = () => {
     setGenerating(true);
@@ -33,18 +34,9 @@ export default function ReportsAnalytics() {
   };
 
   const handleExport = () => {
-    if (!hospitalId) return;
-    exportPdf({
-      type: "analytics",
-      hospitalId,
-      data: {
-        kpis: analytics.kpis,
-        monthlyTrend: analytics.monthlyTrend,
-        infectionBySector: analytics.infectionBySector,
-        resistanceProfile: analytics.resistanceProfile,
-      },
-      filenamePrefix: "analytics",
-    });
+    if (!reportContentRef.current) return;
+    const date = new Date().toISOString().split("T")[0];
+    captureElementAsPdf(reportContentRef.current, `analytics-${date}.pdf`);
   };
 
   const { kpis: kpiData, monthlyTrend, infectionBySector, complianceRadar, resistanceProfile, deviceDistribution } = analytics;
@@ -100,6 +92,9 @@ export default function ReportsAnalytics() {
           </Button>
         </div>
       </div>
+
+      {/* Conteúdo capturado no PDF */}
+      <div ref={reportContentRef} className="space-y-4">
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -233,6 +228,8 @@ export default function ReportsAnalytics() {
           </TabsContent>
         </Tabs>
       )}
+
+      </div>{/* fim reportContentRef */}
     </div>
   );
 }

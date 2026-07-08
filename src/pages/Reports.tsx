@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import ChartActions from "@/components/ChartActions";
+import { captureElementAsPdf } from "@/lib/pdf-export";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -113,6 +114,7 @@ const Reports = () => {
 
   const [metas, setMetas] = useState<Record<string, number | undefined>>({});
   const setMeta = (key: string, val: number | undefined) => setMetas(prev => ({ ...prev, [key]: val }));
+  const reportContentRef = useRef<HTMLDivElement>(null);
   const chartRefs = {
     distribution: useRef<HTMLDivElement>(null),
     trend: useRef<HTMLDivElement>(null),
@@ -408,40 +410,14 @@ const Reports = () => {
   };
 
   const handleExportPDF = async () => {
-    toast.info("Gerando PDF...");
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-pdf", {
-        body: {
-          type: "microorganisms",
-          hospitalId,
-          data: {
-            records: filtered.map(r => ({
-              data: r.collection_date,
-              prontuario: r.patient?.medical_record || "",
-              setor: r.patient?.sector || "",
-              tipo: r.sample_type || "",
-              microorganismo: r.organism || "",
-            })),
-            distribution,
-            total: filtered.length,
-          },
-        },
-      });
-      if (error) throw error;
-      if (data?.pdf) {
-        const byteArray = Uint8Array.from(atob(data.pdf), c => c.charCodeAt(0));
-        const blob = new Blob([byteArray], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `microorganismos-${format(new Date(), "yyyy-MM-dd")}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("PDF exportado!");
-      }
-    } catch {
-      toast.error("Erro ao gerar PDF");
+    if (!reportContentRef.current) {
+      toast.error("Conteúdo do relatório não encontrado.");
+      return;
     }
+    await captureElementAsPdf(
+      reportContentRef.current,
+      `microorganismos-${format(new Date(), "yyyy-MM-dd")}.pdf`
+    );
   };
 
   const handleGenerateAI = async () => {
@@ -770,6 +746,9 @@ const Reports = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Conteúdo capturado no PDF */}
+      <div ref={reportContentRef} className="space-y-4 md:space-y-6">
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1151,6 +1130,8 @@ const Reports = () => {
           )}
         </CardContent>
       </Card>
+
+      </div>{/* fim reportContentRef */}
     </div>
   );
 };
