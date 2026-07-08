@@ -25,199 +25,9 @@ interface ChartsRendererProps {
   mode: AuditReportMode;
 }
 
-export const AuditReportChartsRenderer = forwardRef<HTMLDivElement, ChartsRendererProps>(
-  ({ audits, items, metrics, mode }, ref) => {
-    const monthlyTrend = useMemo(() => {
-      const byMonth: Record<string, { sum: number; count: number }> = {};
-      audits.forEach(a => {
-        const month = a.audit_date.slice(0, 7);
-        if (!byMonth[month]) byMonth[month] = { sum: 0, count: 0 };
-        byMonth[month].sum += a.compliance_rate ?? 0;
-        byMonth[month].count++;
-      });
-      return Object.entries(byMonth)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, v]) => ({
-          month: month.slice(0, 7),
-          compliance: Math.round((v.sum / v.count) * 10) / 10,
-        }));
-    }, [audits]);
+// ─── Hook de dados compartilhado ──────────────────────────────────────────────
 
-    const categoryData = useMemo(() => {
-      const cat = ("complianceByCategory" in metrics ? metrics.complianceByCategory : {}) as Record<string, number>;
-      return Object.entries(cat)
-        .sort((a, b) => a[1] - b[1])
-        .map(([name, value]) => ({ name: name.length > 20 ? name.slice(0, 18) + "…" : name, value }));
-    }, [metrics]);
-
-    const sectorData = useMemo(() => {
-      const sec = ("complianceBySector" in metrics ? metrics.complianceBySector : {}) as Record<string, number>;
-      return Object.entries(sec)
-        .sort((a, b) => a[1] - b[1])
-        .map(([name, value]) => ({ name: name.length > 18 ? name.slice(0, 16) + "…" : name, value }));
-    }, [metrics]);
-
-    const topNC = useMemo(() => {
-      const ncs = (metrics.topNonCompliances ?? []) as Array<{ question: string; count: number; category?: string }>;
-      return ncs.slice(0, 8).map(n => ({
-        name: n.question.length > 30 ? n.question.slice(0, 28) + "…" : n.question,
-        count: n.count,
-      }));
-    }, [metrics]);
-
-    const notApplicable = "notApplicableItems" in metrics ? (metrics.notApplicableItems ?? 0) : 0;
-    const donutData = useMemo(() => [
-      { name: "Conforme", value: metrics.compliantItems, color: COLORS.compliant },
-      { name: "Não Conforme", value: metrics.nonCompliantItems, color: COLORS.nonCompliant },
-      { name: "N/A", value: notApplicable, color: "#94a3b8" },
-    ].filter(d => d.value > 0), [metrics, notApplicable]);
-
-    const compiledTypeData = useMemo(() => {
-      if (mode !== "monthly_sector_compiled") return [];
-      const byType = (metrics as MonthlySectorCompiledAuditMetrics).complianceByAuditType ?? {};
-      return Object.entries(byType)
-        .sort((a, b) => a[1] - b[1])
-        .map(([type, value], i) => ({
-          name: type.replace(/_/g, " ").slice(0, 18),
-          value,
-          fill: CHART_COLORS[i % CHART_COLORS.length],
-        }));
-    }, [metrics, mode]);
-
-    const chartStyle = { background: "#fff", padding: "8px" };
-
-    return (
-      <div
-        ref={ref}
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: 0,
-          width: "720px",
-          background: "#ffffff",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        {/* Chart 1: Donut — Conformidade Geral */}
-        <div id="chart-overall" style={{ ...chartStyle, width: 420, height: 320, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-            Conformidade Geral
-          </div>
-          <PieChart width={400} height={280}>
-            <Pie
-              data={donutData}
-              cx={200}
-              cy={130}
-              innerRadius={70}
-              outerRadius={110}
-              dataKey="value"
-              label={({ name, value }) => `${name}: ${value}`}
-              labelLine
-            >
-              {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
-            </Pie>
-            <Legend />
-            <Tooltip />
-          </PieChart>
-        </div>
-
-        {/* Chart 2: Bar — Conformidade por Categoria */}
-        <div id="chart-category" style={{ ...chartStyle, width: 700, height: 360, marginTop: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-            Conformidade por Categoria (%)
-          </div>
-          <BarChart width={680} height={320} data={categoryData} layout="vertical" margin={{ left: 120, right: 30, top: 5, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} />
-            <YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-            <Bar dataKey="value" fill={COLORS.primary} radius={[0, 4, 4, 0]}>
-              {categoryData.map((d, i) => (
-                <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
-              ))}
-            </Bar>
-          </BarChart>
-        </div>
-
-        {/* Chart 3: Bar — Conformidade por Setor */}
-        {sectorData.length > 0 && (
-          <div id="chart-sector" style={{ ...chartStyle, width: 700, height: 320, marginTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-              Conformidade por Setor (%)
-            </div>
-            <BarChart width={680} height={280} data={sectorData} margin={{ left: 20, right: 30, top: 5, bottom: 30 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" />
-              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-              <Bar dataKey="value" fill={COLORS.primary} radius={[4, 4, 0, 0]}>
-                {sectorData.map((d, i) => (
-                  <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
-                ))}
-              </Bar>
-            </BarChart>
-          </div>
-        )}
-
-        {/* Chart 4: Bar — Top Não Conformidades */}
-        {topNC.length > 0 && (
-          <div id="chart-noncompliance" style={{ ...chartStyle, width: 700, height: 360, marginTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-              Principais Não Conformidades (ocorrências)
-            </div>
-            <BarChart width={680} height={320} data={topNC} layout="vertical" margin={{ left: 180, right: 30, top: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" allowDecimals={false} />
-              <YAxis type="category" dataKey="name" width={175} tick={{ fontSize: 10 }} />
-              <Tooltip />
-              <Bar dataKey="count" fill={COLORS.nonCompliant} radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </div>
-        )}
-
-        {/* Chart 5: Area — Evolução Mensal */}
-        {monthlyTrend.length > 1 && (
-          <div id="chart-trend" style={{ ...chartStyle, width: 700, height: 280, marginTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-              Evolução Mensal da Conformidade (%)
-            </div>
-            <AreaChart width={680} height={240} data={monthlyTrend} margin={{ left: 20, right: 30, top: 5, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-              <Area type="monotone" dataKey="compliance" stroke={COLORS.primary} fill={`${COLORS.primary}33`} strokeWidth={2} dot />
-            </AreaChart>
-          </div>
-        )}
-
-        {/* Chart 6: Por tipo de auditoria (compilado) */}
-        {mode === "monthly_sector_compiled" && compiledTypeData.length > 0 && (
-          <div id="chart-by-type" style={{ ...chartStyle, width: 700, height: 360, marginTop: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
-              Conformidade por Tipo de Auditoria (%)
-            </div>
-            <BarChart width={680} height={320} data={compiledTypeData} margin={{ left: 20, right: 30, top: 5, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" />
-              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
-              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                {compiledTypeData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-              </Bar>
-            </BarChart>
-          </div>
-        )}
-      </div>
-    );
-  }
-);
-
-AuditReportChartsRenderer.displayName = "AuditReportChartsRenderer";
-
-// ─── Visible chart preview for modal ──────────────────────────────────────────
-
-export function AuditReportChartsPreview({ audits, items, metrics, mode }: ChartsRendererProps) {
+function useChartsData(audits: AuditRecord[], items: AuditItemRecord[], metrics: ChartsRendererProps["metrics"], mode: AuditReportMode) {
   const monthlyTrend = useMemo(() => {
     const byMonth: Record<string, { sum: number; count: number }> = {};
     audits.forEach(a => {
@@ -233,96 +43,329 @@ export function AuditReportChartsPreview({ audits, items, metrics, mode }: Chart
 
   const categoryData = useMemo(() => {
     const cat = ("complianceByCategory" in metrics ? metrics.complianceByCategory : {}) as Record<string, number>;
-    return Object.entries(cat).sort((a, b) => a[1] - b[1]).map(([name, value]) => ({ name, value }));
+    return Object.entries(cat)
+      .sort((a, b) => a[1] - b[1])
+      .map(([name, value]) => ({ name: name.length > 22 ? name.slice(0, 20) + "…" : name, value }));
+  }, [metrics]);
+
+  const sectorData = useMemo(() => {
+    const sec = ("complianceBySector" in metrics ? metrics.complianceBySector : {}) as Record<string, number>;
+    return Object.entries(sec)
+      .sort((a, b) => a[1] - b[1])
+      .map(([name, value]) => ({ name: name.length > 18 ? name.slice(0, 16) + "…" : name, value }));
   }, [metrics]);
 
   const topNC = useMemo(() => {
-    const ncs = (metrics.topNonCompliances ?? []) as Array<{ question: string; count: number }>;
-    return ncs.slice(0, 6).map(n => ({
-      name: n.question.length > 35 ? n.question.slice(0, 33) + "…" : n.question,
+    const ncs = (metrics.topNonCompliances ?? []) as Array<{ question: string; count: number; category?: string }>;
+    return ncs.slice(0, 8).map(n => ({
+      name: n.question.length > 32 ? n.question.slice(0, 30) + "…" : n.question,
       count: n.count,
     }));
   }, [metrics]);
 
-  const donutData = [
+  const notApplicable = "notApplicableItems" in metrics ? (metrics.notApplicableItems ?? 0) : 0;
+  const donutData = useMemo(() => [
     { name: "Conforme", value: metrics.compliantItems ?? 0, color: COLORS.compliant },
     { name: "Não Conforme", value: metrics.nonCompliantItems ?? 0, color: COLORS.nonCompliant },
-  ].filter(d => d.value > 0);
+    { name: "N/A", value: notApplicable, color: "#94a3b8" },
+  ].filter(d => d.value > 0), [metrics, notApplicable]);
+
+  const compiledTypeData = useMemo(() => {
+    if (mode !== "monthly_sector_compiled") return [];
+    const byType = (metrics as MonthlySectorCompiledAuditMetrics).complianceByAuditType ?? {};
+    return Object.entries(byType)
+      .sort((a, b) => a[1] - b[1])
+      .map(([type, value], i) => ({
+        name: type.replace(/_/g, " ").slice(0, 18),
+        value,
+        fill: CHART_COLORS[i % CHART_COLORS.length],
+      }));
+  }, [metrics, mode]);
+
+  return { monthlyTrend, categoryData, sectorData, topNC, donutData, compiledTypeData };
+}
+
+// ─── Renderer oculto para captura PDF (dimensões fixas + sem animação) ────────
+
+export const AuditReportChartsRenderer = forwardRef<HTMLDivElement, ChartsRendererProps>(
+  ({ audits, items, metrics, mode }, ref) => {
+    const { monthlyTrend, categoryData, sectorData, topNC, donutData, compiledTypeData } = useChartsData(audits, items, metrics, mode);
+
+    const s = { background: "#fff", padding: "8px" };
+
+    return (
+      <div
+        ref={ref}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          width: "720px",
+          background: "#ffffff",
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        {/* Chart 1: Donut */}
+        <div id="chart-overall" style={{ ...s, width: 420, height: 320, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+            Conformidade Geral
+          </div>
+          <PieChart width={400} height={280}>
+            <Pie
+              data={donutData} cx={200} cy={130} innerRadius={70} outerRadius={110} dataKey="value"
+              label={({ name, value }) => `${name}: ${value}`} labelLine
+              isAnimationActive={false}
+            >
+              {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+            </Pie>
+            <Legend />
+            <Tooltip />
+          </PieChart>
+        </div>
+
+        {/* Chart 2: Conformidade por Categoria */}
+        <div id="chart-category" style={{ ...s, width: 700, height: Math.max(300, categoryData.length * 36 + 60), marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+            Conformidade por Categoria (%)
+          </div>
+          <BarChart
+            width={680} height={Math.max(260, categoryData.length * 36)}
+            data={categoryData} layout="vertical"
+            margin={{ left: 130, right: 30, top: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" domain={[0, 100]} tickFormatter={v => `${v}%`} />
+            <YAxis type="category" dataKey="name" width={125} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+            <Bar dataKey="value" isAnimationActive={false} radius={[0, 4, 4, 0]}>
+              {categoryData.map((d, i) => (
+                <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
+              ))}
+            </Bar>
+          </BarChart>
+        </div>
+
+        {/* Chart 3: Conformidade por Setor */}
+        {sectorData.length > 0 && (
+          <div id="chart-sector" style={{ ...s, width: 700, height: 320, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+              Conformidade por Setor (%)
+            </div>
+            <BarChart width={680} height={280} data={sectorData} margin={{ left: 20, right: 30, top: 5, bottom: 30 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+              <Bar dataKey="value" isAnimationActive={false} radius={[4, 4, 0, 0]}>
+                {sectorData.map((d, i) => (
+                  <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
+                ))}
+              </Bar>
+            </BarChart>
+          </div>
+        )}
+
+        {/* Chart 4: Top Não Conformidades */}
+        {topNC.length > 0 && (
+          <div id="chart-noncompliance" style={{ ...s, width: 700, height: Math.max(300, topNC.length * 40 + 60), marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+              Principais Não Conformidades (ocorrências)
+            </div>
+            <BarChart
+              width={680} height={Math.max(260, topNC.length * 40)}
+              data={topNC} layout="vertical"
+              margin={{ left: 185, right: 30, top: 5, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" allowDecimals={false} />
+              <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 10 }} />
+              <Tooltip />
+              <Bar dataKey="count" fill={COLORS.nonCompliant} isAnimationActive={false} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </div>
+        )}
+
+        {/* Chart 5: Evolução Mensal */}
+        {monthlyTrend.length > 1 && (
+          <div id="chart-trend" style={{ ...s, width: 700, height: 280, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+              Evolução Mensal da Conformidade (%)
+            </div>
+            <AreaChart width={680} height={240} data={monthlyTrend} margin={{ left: 20, right: 30, top: 5, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+              <Area type="monotone" dataKey="compliance" stroke={COLORS.primary} fill={`${COLORS.primary}33`} strokeWidth={2} dot isAnimationActive={false} />
+            </AreaChart>
+          </div>
+        )}
+
+        {/* Chart 6: Por tipo de auditoria (compilado) */}
+        {mode === "monthly_sector_compiled" && compiledTypeData.length > 0 && (
+          <div id="chart-by-type" style={{ ...s, width: 700, height: 360, marginTop: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 8, color: "#1e293b" }}>
+              Conformidade por Tipo de Auditoria (%)
+            </div>
+            <BarChart width={680} height={320} data={compiledTypeData} margin={{ left: 20, right: 30, top: 5, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" />
+              <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+              <Bar dataKey="value" isAnimationActive={false} radius={[4, 4, 0, 0]}>
+                {compiledTypeData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+              </Bar>
+            </BarChart>
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+AuditReportChartsRenderer.displayName = "AuditReportChartsRenderer";
+
+// ─── Preview visual dos gráficos na aba do modal ──────────────────────────────
+// Usa dimensões fixas para garantir renderização dentro de Dialog/ScrollArea
+// (ResponsiveContainer width="100%" falha quando o pai não tem largura computada)
+
+export function AuditReportChartsPreview({ audits, items, metrics, mode }: ChartsRendererProps) {
+  const { monthlyTrend, categoryData, sectorData, topNC, donutData, compiledTypeData } = useChartsData(audits, items, metrics, mode);
+
+  const W = 620; // largura fixa que cabe no Dialog max-w-4xl com px-6
+
+  if (donutData.length === 0 && categoryData.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
+        Sem dados suficientes para exibir gráficos.
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 p-2">
+    <div className="space-y-5 py-2" style={{ minWidth: W }}>
+
+      {/* Linha 1: Donut + Tendência lado a lado */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Donut */}
-        <div className="bg-white rounded-lg border p-3">
-          <p className="text-xs font-semibold mb-2 text-slate-700">Conformidade Geral</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={donutData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+        {donutData.length > 0 && (
+          <div className="bg-white rounded-lg border p-3">
+            <p className="text-xs font-semibold mb-2 text-slate-700">Conformidade Geral</p>
+            <PieChart width={280} height={220}>
+              <Pie
+                data={donutData} cx={140} cy={100}
+                innerRadius={50} outerRadius={80}
+                dataKey="value"
+                label={({ name, value }) => `${value}`}
+                isAnimationActive={false}
+              >
                 {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Pie>
               <Tooltip />
               <Legend />
             </PieChart>
-          </ResponsiveContainer>
-        </div>
+          </div>
+        )}
 
-        {/* Trend */}
         {monthlyTrend.length > 1 && (
           <div className="bg-white rounded-lg border p-3">
             <p className="text-xs font-semibold mb-2 text-slate-700">Evolução Mensal (%)</p>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={monthlyTrend} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 9 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-                <Area type="monotone" dataKey="compliance" stroke={COLORS.primary} fill={`${COLORS.primary}33`} strokeWidth={2} dot />
-              </AreaChart>
-            </ResponsiveContainer>
+            <AreaChart width={280} height={220} data={monthlyTrend} margin={{ left: 0, right: 10, top: 5, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" tick={{ fontSize: 9 }} angle={-20} textAnchor="end" />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
+              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+              <Area type="monotone" dataKey="compliance" stroke={COLORS.primary} fill={`${COLORS.primary}33`} strokeWidth={2} dot isAnimationActive={false} />
+            </AreaChart>
           </div>
         )}
       </div>
 
-      {/* Category */}
+      {/* Conformidade por Categoria */}
       {categoryData.length > 0 && (
-        <div className="bg-white rounded-lg border p-3">
+        <div className="bg-white rounded-lg border p-3 overflow-x-auto">
           <p className="text-xs font-semibold mb-2 text-slate-700">Conformidade por Categoria (%)</p>
-          <ResponsiveContainer width="100%" height={Math.max(180, categoryData.length * 32)}>
-            <BarChart data={categoryData} layout="vertical" margin={{ left: 120, right: 20, top: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
-              <YAxis type="category" dataKey="name" width={115} tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {categoryData.map((d, i) => (
-                  <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart
+            width={W} height={Math.max(180, categoryData.length * 32)}
+            data={categoryData} layout="vertical"
+            margin={{ left: 130, right: 20, top: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
+            <YAxis type="category" dataKey="name" width={125} tick={{ fontSize: 10 }} />
+            <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+            <Bar dataKey="value" isAnimationActive={false} radius={[0, 4, 4, 0]}>
+              {categoryData.map((d, i) => (
+                <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
+              ))}
+            </Bar>
+          </BarChart>
         </div>
       )}
 
-      {/* Top NC */}
+      {/* Conformidade por Setor */}
+      {sectorData.length > 0 && (
+        <div className="bg-white rounded-lg border p-3 overflow-x-auto">
+          <p className="text-xs font-semibold mb-2 text-slate-700">Conformidade por Setor (%)</p>
+          <BarChart
+            width={W} height={Math.max(180, sectorData.length * 36)}
+            data={sectorData} layout="vertical"
+            margin={{ left: 130, right: 20, top: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
+            <YAxis type="category" dataKey="name" width={125} tick={{ fontSize: 10 }} />
+            <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+            <Bar dataKey="value" isAnimationActive={false} radius={[0, 4, 4, 0]}>
+              {sectorData.map((d, i) => (
+                <Cell key={i} fill={d.value >= 85 ? COLORS.compliant : d.value >= 70 ? COLORS.warning : COLORS.nonCompliant} />
+              ))}
+            </Bar>
+          </BarChart>
+        </div>
+      )}
+
+      {/* Top Não Conformidades */}
       {topNC.length > 0 && (
-        <div className="bg-white rounded-lg border p-3">
+        <div className="bg-white rounded-lg border p-3 overflow-x-auto">
           <p className="text-xs font-semibold mb-2 text-slate-700">Principais Não Conformidades</p>
-          <ResponsiveContainer width="100%" height={Math.max(180, topNC.length * 36)}>
-            <BarChart data={topNC} layout="vertical" margin={{ left: 180, right: 20, top: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 9 }} />
-              <YAxis type="category" dataKey="name" width={175} tick={{ fontSize: 9 }} />
-              <Tooltip />
-              <Bar dataKey="count" fill={COLORS.nonCompliant} radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart
+            width={W} height={Math.max(180, topNC.length * 36)}
+            data={topNC} layout="vertical"
+            margin={{ left: 180, right: 20, top: 5, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis type="number" allowDecimals={false} tick={{ fontSize: 9 }} />
+            <YAxis type="category" dataKey="name" width={175} tick={{ fontSize: 9 }} />
+            <Tooltip />
+            <Bar dataKey="count" fill={COLORS.nonCompliant} isAnimationActive={false} radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </div>
+      )}
+
+      {/* Por tipo de auditoria (compilado) */}
+      {mode === "monthly_sector_compiled" && compiledTypeData.length > 0 && (
+        <div className="bg-white rounded-lg border p-3 overflow-x-auto">
+          <p className="text-xs font-semibold mb-2 text-slate-700">Conformidade por Tipo de Auditoria (%)</p>
+          <BarChart
+            width={W} height={300}
+            data={compiledTypeData}
+            margin={{ left: 20, right: 20, top: 5, bottom: 50 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-20} textAnchor="end" />
+            <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickFormatter={v => `${v}%`} />
+            <Tooltip formatter={(v: number) => [`${v}%`, "Conformidade"]} />
+            <Bar dataKey="value" isAnimationActive={false} radius={[4, 4, 0, 0]}>
+              {compiledTypeData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+            </Bar>
+          </BarChart>
         </div>
       )}
     </div>
   );
 }
 
-// ─── PDF generation with charts ───────────────────────────────────────────────
+// ─── PDF com gráficos ─────────────────────────────────────────────────────────
 
 export async function generateReportPdfWithCharts(params: {
   chartsContainerRef: React.RefObject<HTMLDivElement>;
@@ -337,37 +380,25 @@ export async function generateReportPdfWithCharts(params: {
 }): Promise<void> {
   const { chartsContainerRef, markdownContent, hospitalName, sectorName, auditTypeName, period, hospitalLogoUrl, metrics, mode } = params;
 
-  // Dynamic import to avoid SSR issues
-  const jsPDFModule = await import("jspdf");
-  const jsPDF = jsPDFModule.default;
+  const { default: jsPDF } = await import("jspdf");
   const html2canvas = (await import("html2canvas")).default;
+
+  // Aguarda recharts finalizar renderização (sem animação, mas ainda precisa de um tick)
+  await new Promise(r => setTimeout(r, 300));
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pageW = 210;
   const pageH = 297;
-  const marginL = 30;
+  const marginL = 20;
   const marginR = 20;
-  const marginT = 30;
+  const marginT = 25;
   const marginB = 20;
   const contentW = pageW - marginL - marginR;
   let y = marginT;
-  let pageNum = 1;
-
-  const addPageNumber = () => {
-    const cur = doc.getNumberOfPages();
-    doc.setPage(cur);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`${cur}`, pageW - marginR, pageH - 8, { align: "right" });
-    doc.setTextColor(0, 0, 0);
-  };
 
   const checkBreak = (needed: number) => {
     if (y + needed > pageH - marginB) {
-      addPageNumber();
       doc.addPage();
-      pageNum++;
       y = marginT;
     }
   };
@@ -390,26 +421,21 @@ export async function generateReportPdfWithCharts(params: {
     y += 5;
   };
 
-  // ── Cover page ──────────────────────────────────────────────────────────────
-  // Try hospital logo
+  // ── Capa ──────────────────────────────────────────────────────────────────
   if (hospitalLogoUrl) {
     try {
       const resp = await fetch(hospitalLogoUrl);
       const blob = await resp.blob();
-      const reader = new FileReader();
       const b64 = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
         reader.onload = () => res(reader.result as string);
         reader.onerror = rej;
         reader.readAsDataURL(blob);
       });
-      const ext = blob.type.includes("png") ? "PNG" : "JPEG";
-      doc.addImage(b64, ext, marginL, marginT, 40, 15);
-    } catch (_) {
-      // skip logo if fetch fails
-    }
+      doc.addImage(b64, blob.type.includes("png") ? "PNG" : "JPEG", marginL, marginT, 40, 15);
+    } catch (_) { /* logo opcional */ }
   }
 
-  // Header bar
   doc.setFillColor(37, 99, 235);
   doc.rect(0, 45, pageW, 28, "F");
   doc.setTextColor(255, 255, 255);
@@ -427,15 +453,15 @@ export async function generateReportPdfWithCharts(params: {
   y += 4;
   addDivider();
 
-  // ── Key metrics ─────────────────────────────────────────────────────────────
+  // ── Indicadores principais ────────────────────────────────────────────────
   addText("INDICADORES PRINCIPAIS", 12, true, [37, 99, 235]);
   y += 2;
   const r = metrics.generalComplianceRate;
-  const kpis = [
-    [`Conformidade Geral`, `${r}%`],
-    [`Total de Auditorias`, `${metrics.totalAudits}`],
-    [`Itens Conformes`, `${metrics.compliantItems}`],
-    [`Itens Não Conformes`, `${metrics.nonCompliantItems}`],
+  const kpis: [string, string][] = [
+    ["Conformidade Geral", `${r}%`],
+    ["Total de Auditorias", `${metrics.totalAudits}`],
+    ["Itens Conformes", `${metrics.compliantItems}`],
+    ["Itens Não Conformes", `${metrics.nonCompliantItems}`],
     ["Classificação", r >= 95 ? "Excelente" : r >= 85 ? "Bom" : r >= 70 ? "Regular" : "Crítico"],
   ];
   kpis.forEach(([label, value]) => {
@@ -450,55 +476,52 @@ export async function generateReportPdfWithCharts(params: {
   y += 4;
   addDivider();
 
-  // ── Markdown text (sections) ─────────────────────────────────────────────────
-  const lines = markdownContent.split("\n");
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed === "---") { y += 2; continue; }
-    if (trimmed.startsWith("[LOGO") || trimmed.startsWith("___")) continue;
-    if (trimmed.startsWith("# ")) {
-      addText(trimmed.slice(2), 14, true, [37, 99, 235]);
-    } else if (trimmed.startsWith("## ")) {
+  // ── Conteúdo textual do markdown ─────────────────────────────────────────
+  for (const line of markdownContent.split("\n")) {
+    const t = line.trim();
+    if (!t || t === "---") { y += 2; continue; }
+    if (t.startsWith("[LOGO") || t.startsWith("___") || t.startsWith("![")) continue;
+    if (t.startsWith("# ")) {
+      addText(t.slice(2), 14, true, [37, 99, 235]);
+    } else if (t.startsWith("## ")) {
       y += 2;
-      addText(trimmed.slice(3), 12, true, [30, 64, 175]);
-    } else if (trimmed.startsWith("### ")) {
-      addText(trimmed.slice(4), 11, true, [55, 65, 81]);
-    } else if (trimmed.startsWith("|")) {
-      // Table row
-      const cells = trimmed.split("|").filter(c => c.trim()).map(c => c.trim());
+      addText(t.slice(3), 12, true, [30, 64, 175]);
+    } else if (t.startsWith("### ")) {
+      addText(t.slice(4), 11, true, [55, 65, 81]);
+    } else if (t.startsWith("|")) {
+      const cells = t.split("|").filter(c => c.trim()).map(c => c.trim());
       if (cells.every(c => /^[-:]+$/.test(c))) continue;
       const cellW = contentW / Math.max(cells.length, 1);
       checkBreak(7);
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
       cells.forEach((cell, ci) => {
-        const cx = marginL + ci * cellW;
-        const textLines = doc.splitTextToSize(cell, cellW - 2);
-        doc.text(textLines, cx + 1, y);
+        doc.text(doc.splitTextToSize(cell, cellW - 2), marginL + ci * cellW + 1, y);
       });
       y += 6;
-    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-      addText("• " + trimmed.slice(2), 10);
-    } else if (/^\d+\. /.test(trimmed)) {
-      addText(trimmed, 10);
-    } else if (trimmed.startsWith(">")) {
+    } else if (t.startsWith("- ") || t.startsWith("* ")) {
+      addText("• " + t.slice(2), 10);
+    } else if (/^\d+\. /.test(t)) {
+      addText(t, 10);
+    } else if (t.startsWith(">")) {
       doc.setFillColor(239, 246, 255);
       checkBreak(9);
       doc.rect(marginL, y - 5, contentW, 9, "F");
       doc.setFontSize(9);
       doc.setFont("helvetica", "italic");
-      const t = trimmed.slice(1).replace(/^\s*\*?\*?/, "").replace(/\*?\*?\s*$/, "");
-      doc.text(doc.splitTextToSize(t, contentW - 4), marginL + 2, y);
+      doc.setTextColor(0, 0, 0);
+      const txt = t.slice(1).replace(/^\s*\*?\*?/, "").replace(/\*?\*?\s*$/, "");
+      doc.text(doc.splitTextToSize(txt, contentW - 4), marginL + 2, y);
       doc.setFont("helvetica", "normal");
       y += 9;
     } else {
-      // Regular paragraph — strip markdown bold/italic markers for plain text
-      const plain = trimmed.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+      const plain = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
       addText(plain, 10);
     }
   }
 
-  // ── Charts ───────────────────────────────────────────────────────────────────
+  // ── Página de gráficos ────────────────────────────────────────────────────
   if (chartsContainerRef.current) {
     const chartIds = mode === "monthly_sector_compiled"
       ? ["chart-overall", "chart-category", "chart-noncompliance", "chart-trend", "chart-by-type"]
@@ -513,7 +536,6 @@ export async function generateReportPdfWithCharts(params: {
       "chart-by-type": "Conformidade por Tipo de Auditoria",
     };
 
-    addPageNumber();
     doc.addPage();
     y = marginT;
 
@@ -530,32 +552,36 @@ export async function generateReportPdfWithCharts(params: {
       const el = chartsContainerRef.current.querySelector(`#${chartId}`) as HTMLElement | null;
       if (!el) continue;
       try {
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", logging: false, useCORS: true });
-        const imgData = canvas.toDataURL("image/png");
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          logging: false,
+          useCORS: true,
+        });
+        if (canvas.width === 0 || canvas.height === 0) continue;
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
         const imgH = (canvas.height / canvas.width) * contentW;
-        checkBreak(imgH + 20);
-        // Title
+        checkBreak(imgH + 18);
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 64, 175);
         doc.text(chartTitles[chartId] || chartId, marginL, y);
         doc.setTextColor(0, 0, 0);
         y += 5;
-        doc.addImage(imgData, "PNG", marginL, y, contentW, imgH);
-        y += imgH + 12;
+        doc.addImage(imgData, "JPEG", marginL, y, contentW, imgH);
+        y += imgH + 10;
       } catch (e) {
-        console.warn("Chart capture failed:", chartId, e);
+        console.warn("Captura do gráfico falhou:", chartId, e);
       }
     }
   }
 
-  // ── Finalize page numbers ────────────────────────────────────────────────────
-  addPageNumber();
+  // ── Numerar todas as páginas ──────────────────────────────────────────────
   const total = doc.getNumberOfPages();
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    doc.setTextColor(130, 130, 130);
     doc.text(`Página ${i} de ${total}`, pageW - marginR, pageH - 8, { align: "right" });
     doc.text(`IRAS Control — ${hospitalName}`, marginL, pageH - 8);
   }
