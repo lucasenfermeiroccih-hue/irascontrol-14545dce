@@ -391,6 +391,7 @@ export function AuditManagerReportModal({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-5 pb-3 border-b">
@@ -611,9 +612,10 @@ export function AuditManagerReportModal({
           )}
         </DialogFooter>
       </DialogContent>
+    </Dialog>
 
-      {/* ── DIÁLOGO DE E-MAIL ── */}
-      <Dialog open={emailOpen} onOpenChange={(o) => { if (!emailSending) setEmailOpen(o); }}>
+    {/* ── DIÁLOGO DE E-MAIL (irmão do main Dialog, não aninhado) ── */}
+    <Dialog open={emailOpen} onOpenChange={(o) => { if (!emailSending) setEmailOpen(o); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
@@ -669,6 +671,6 @@ export function AuditManagerReportModal({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Dialog>
+    </>
   );
 }

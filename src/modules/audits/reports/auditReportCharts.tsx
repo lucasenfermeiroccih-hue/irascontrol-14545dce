@@ -377,7 +377,9 @@ export async function generateReportPdfWithCharts(params: {
   hospitalLogoUrl?: string;
   metrics: AuditManagerReportMetrics | MonthlySectorCompiledAuditMetrics;
   mode: AuditReportMode;
-}): Promise<void> {
+  /** "save" (padrão) salva o arquivo; "base64" retorna o conteúdo como string base64 */
+  outputMode?: "save" | "base64";
+}): Promise<string | void> {
   const { chartsContainerRef, markdownContent, hospitalName, sectorName, auditTypeName, period, hospitalLogoUrl, metrics, mode } = params;
 
   const { default: jsPDF } = await import("jspdf");
@@ -403,15 +405,19 @@ export async function generateReportPdfWithCharts(params: {
     }
   };
 
+  // line height: 1pt ≈ 0.352mm; multiply by 1.4 for comfortable reading
+  const ptToMm = (pt: number) => pt * 0.352 * 1.45;
+
   const addText = (text: string, fontSize: number, bold = false, color: [number, number, number] = [0, 0, 0]) => {
     doc.setFontSize(fontSize);
     doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.setTextColor(...color);
     const lines = doc.splitTextToSize(text, contentW);
-    const lineH = fontSize * 0.5;
-    checkBreak(lines.length * lineH + 4);
+    const lineH = ptToMm(fontSize);
+    checkBreak(lines.length * lineH + 3);
     doc.text(lines, marginL, y);
-    y += lines.length * lineH + 3;
+    y += lines.length * lineH + 2.5;
+    doc.setTextColor(0, 0, 0);
   };
 
   const addDivider = () => {
@@ -477,47 +483,77 @@ export async function generateReportPdfWithCharts(params: {
   addDivider();
 
   // ── Conteúdo textual do markdown ─────────────────────────────────────────
+  // Constante de espaçamento de linha para 8pt: ≈ 3.5mm por linha
+  const LINE_H_8 = 3.8;
+  const LINE_H_10 = 4.8;
+
   for (const line of markdownContent.split("\n")) {
     const t = line.trim();
-    if (!t || t === "---") { y += 2; continue; }
+    if (!t || t === "---") { y += 1.5; continue; }
     if (t.startsWith("[LOGO") || t.startsWith("___") || t.startsWith("![")) continue;
+
     if (t.startsWith("# ")) {
-      addText(t.slice(2), 14, true, [37, 99, 235]);
-    } else if (t.startsWith("## ")) {
       y += 2;
-      addText(t.slice(3), 12, true, [30, 64, 175]);
+      addText(t.slice(2), 13, true, [37, 99, 235]);
+    } else if (t.startsWith("## ")) {
+      y += 3;
+      addText(t.slice(3), 11, true, [30, 64, 175]);
     } else if (t.startsWith("### ")) {
-      addText(t.slice(4), 11, true, [55, 65, 81]);
+      y += 1;
+      addText(t.slice(4), 10, true, [55, 65, 81]);
     } else if (t.startsWith("|")) {
+      // ── Tabela Markdown ──────────────────────────────────────────────────
       const cells = t.split("|").filter(c => c.trim()).map(c => c.trim());
-      if (cells.every(c => /^[-:]+$/.test(c))) continue;
+      // Linha separadora (--- ou :---:)
+      if (cells.every(c => /^[-: ]+$/.test(c))) continue;
+
+      const isHeader = cells.some(c => /^\*\*/.test(c));
       const cellW = contentW / Math.max(cells.length, 1);
-      checkBreak(7);
+
       doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(0, 0, 0);
-      cells.forEach((cell, ci) => {
-        doc.text(doc.splitTextToSize(cell, cellW - 2), marginL + ci * cellW + 1, y);
+      doc.setFont("helvetica", isHeader ? "bold" : "normal");
+
+      // Calcula o máximo de linhas nas células (para definir a altura da linha)
+      const wrappedCells = cells.map(c => {
+        const stripped = c.replace(/\*\*([^*]+)\*\*/g, "$1");
+        return doc.splitTextToSize(stripped, cellW - 4);
       });
-      y += 6;
-    } else if (t.startsWith("- ") || t.startsWith("* ")) {
-      addText("• " + t.slice(2), 10);
-    } else if (/^\d+\. /.test(t)) {
-      addText(t, 10);
-    } else if (t.startsWith(">")) {
-      doc.setFillColor(239, 246, 255);
-      checkBreak(9);
-      doc.rect(marginL, y - 5, contentW, 9, "F");
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "italic");
+      const maxLines = Math.max(...wrappedCells.map(l => l.length), 1);
+      const rowH = maxLines * LINE_H_8 + 3; // padding top+bottom
+
+      checkBreak(rowH + 1);
       doc.setTextColor(0, 0, 0);
-      const txt = t.slice(1).replace(/^\s*\*?\*?/, "").replace(/\*?\*?\s*$/, "");
-      doc.text(doc.splitTextToSize(txt, contentW - 4), marginL + 2, y);
+      if (isHeader) {
+        doc.setFillColor(240, 245, 255);
+        doc.rect(marginL, y - LINE_H_8, contentW, rowH, "F");
+      }
+      wrappedCells.forEach((cellLines, ci) => {
+        doc.text(cellLines, marginL + ci * cellW + 2, y);
+      });
+      y += rowH;
+
+    } else if (t.startsWith("- ") || t.startsWith("* ")) {
+      const plain = t.slice(2).replace(/\*\*([^*]+)\*\*/g, "$1");
+      addText("• " + plain, 9.5);
+    } else if (/^\d+\. /.test(t)) {
+      addText(t.replace(/\*\*([^*]+)\*\*/g, "$1"), 9.5);
+    } else if (t.startsWith(">")) {
+      const txt = t.slice(1).trim().replace(/\*\*/g, "");
+      const quoteLs = doc.splitTextToSize(txt, contentW - 6);
+      const quoteH = quoteLs.length * LINE_H_10 + 4;
+      checkBreak(quoteH);
+      doc.setFillColor(239, 246, 255);
+      doc.rect(marginL, y - LINE_H_10 + 1, contentW, quoteH, "F");
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(30, 64, 175);
+      doc.text(quoteLs, marginL + 3, y);
       doc.setFont("helvetica", "normal");
-      y += 9;
+      doc.setTextColor(0, 0, 0);
+      y += quoteH;
     } else {
       const plain = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
-      addText(plain, 10);
+      addText(plain, 9.5);
     }
   }
 
@@ -548,27 +584,40 @@ export async function generateReportPdfWithCharts(params: {
     doc.setTextColor(0, 0, 0);
     y += 16;
 
+    const maxChartH = pageH - marginT - marginB - 20; // máx por gráfico ≈ 232mm
+
     for (const chartId of chartIds) {
       const el = chartsContainerRef.current.querySelector(`#${chartId}`) as HTMLElement | null;
       if (!el) continue;
       try {
         const canvas = await html2canvas(el, {
-          scale: 2,
+          scale: 1.5,
           backgroundColor: "#ffffff",
           logging: false,
           useCORS: true,
         });
         if (canvas.width === 0 || canvas.height === 0) continue;
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
-        const imgH = (canvas.height / canvas.width) * contentW;
-        checkBreak(imgH + 18);
-        doc.setFontSize(10);
+        const imgData = canvas.toDataURL("image/jpeg", 0.88);
+
+        // Calcula dimensões mantendo proporção, limitando à página
+        let imgW = contentW;
+        let imgH = (canvas.height / canvas.width) * imgW;
+        if (imgH > maxChartH) {
+          imgH = maxChartH;
+          imgW = (canvas.width / canvas.height) * imgH;
+        }
+
+        const titleH = 8;
+        checkBreak(imgH + titleH + 8);
+        doc.setFontSize(9);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 64, 175);
         doc.text(chartTitles[chartId] || chartId, marginL, y);
         doc.setTextColor(0, 0, 0);
-        y += 5;
-        doc.addImage(imgData, "JPEG", marginL, y, contentW, imgH);
+        y += titleH;
+        // Centraliza se imgW < contentW
+        const xOffset = marginL + (contentW - imgW) / 2;
+        doc.addImage(imgData, "JPEG", xOffset, y, imgW, imgH);
         y += imgH + 10;
       } catch (e) {
         console.warn("Captura do gráfico falhou:", chartId, e);
@@ -586,5 +635,9 @@ export async function generateReportPdfWithCharts(params: {
     doc.text(`IRAS Control — ${hospitalName}`, marginL, pageH - 8);
   }
 
+  if (params.outputMode === "base64") {
+    const dataUri = doc.output("datauristring") as string;
+    return dataUri.split(",")[1]; // retorna apenas a parte base64
+  }
   doc.save(`relatorio-auditoria-${Date.now()}.pdf`);
 }
